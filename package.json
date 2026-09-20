@@ -1,0 +1,32 @@
+{
+  "name": "upaznet-scaffold",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "test": "npm run test:unit",
+    "test:unit": "tsc -p tsconfig.test.json && node --test .test-build/tests/domain/*.test.js .test-build/tests/providers/*.test.js",
+    "test:network:local": "tsc -p tsconfig.test.json && node --test .test-build/tests/integration/network.test.js"
+  },
+  "dependencies": {
+    "@supabase/ssr": "^0.12.7",
+    "@supabase/supabase-js": "^2.116.0",
+    "next": "16.3.5",
+    "react": "19.2.8",
+    "react-dom": "19.2.8"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.3.5",
+    "supabase": "2.117.0",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  }
+}
