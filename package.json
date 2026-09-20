@@ -9,7 +9,9 @@
     "lint": "eslint",
     "test": "npm run test:unit",
     "test:unit": "tsc -p tsconfig.test.json && node --test .test-build/tests/domain/*.test.js .test-build/tests/providers/*.test.js",
-    "test:network:local": "tsc -p tsconfig.test.json && node --test .test-build/tests/integration/network.test.js"
+    "test:network:local": "tsc -p tsconfig.test.json && node --test .test-build/tests/integration/network.test.js",
+    "test:identity:local": "tsc -p tsconfig.test.json && node --test .test-build/tests/integration/identity.test.js",
+    "test:triage:local": "tsc -p tsconfig.test.json && node --test .test-build/tests/integration/triage.test.js"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",

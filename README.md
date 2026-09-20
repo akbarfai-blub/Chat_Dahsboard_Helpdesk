@@ -1,4 +1,4 @@
-﻿# Upaznet Helpdesk Automation
+# Upaznet Helpdesk Automation
 
 Prototype respons pertama komplain ISP: Telegram → rule + data jaringan dummy → antrean dashboard → balasan staf. Stack Next.js/TypeScript, Supabase Postgres/Auth, target deploy Vercel. Belum memerlukan akses OLT/NMS.
 
@@ -17,7 +17,9 @@ Prototype respons pertama komplain ISP: Telegram → rule + data jaringan dummy 
 - `/dashboard/customers`: pencarian nama/kode, filter status administrasi, pagination 25 pelanggan, layanan → ODP → ODC, identitas channel, dan pengirim belum ditautkan.
 - Halaman memakai sesi staf + RLS, tanpa service-role. Status administrasi aktif **bukan** status jaringan online. Halaman direktori belum menampilkan pemeriksaan; API mock tersedia terpisah.
 - Tersedia tambahan: schema/fixture ONU dan upstream, NetworkStatusProvider/MockProvider, domain freshness/area, serta API pemeriksaan read-only khusus staf. Lihat [panduan pemeriksaan mock](docs/NETWORK_PROVIDER.md).
-- Belum tersedia: domain auto-triage/pemilihan balasan, inbox/antrean percakapan, webhook Telegram, serta pengiriman balasan. Pemeriksaan belum ditampilkan dalam UI pelanggan.
+- P1.1 tersedia: resolusi identitas sender dan klasifikasi keyword, hasil berversi, safe reason, serta pengujian. [Rangkuman untuk review](docs/P1_1_REVIEW.md).
+- P1.2 tersedia: decision engine pemilihan kandidat template, alasan/bukti dan aturan mode. [Rangkuman untuk review](docs/P1_2_REVIEW.md). Hasil belum mengotorisasi pengiriman.
+- Belum tersedia: lifecycle/claim, rendering/pengelolaan template, inbox/antrean percakapan, webhook Telegram, serta pengiriman balasan. Pemeriksaan belum ditampilkan dalam UI pelanggan.
 - Deployment dan integrasi produksi belum diverifikasi. Semua outbound prototype nantinya hanya ke tester allowlist dan berlabel simulasi.
 
 Migration aktual di [supabase/migrations](supabase/migrations) adalah source of truth schema. Empat tabel mock tambahan dijelaskan pada [kontrak provider](docs/NETWORK_PROVIDER.md#schema-aktual-tambahan). Enam tabel awal: `customers`, `services`, `odcs`, `odps`, `service_topology`, `channel_identities`. [SQL lama](docs/database_schema.sql) adalah snapshot historis Mass Outage; **jangan apply langsung**. Perubahan schema selanjutnya harus melalui migration baru.
@@ -81,6 +83,8 @@ Get-Content -Raw -Encoding utf8 supabase/seed.sql |
 
 ```powershell
 npm test
+npm run test:identity:local
+npm run test:triage:local
 npm run test:network:local
 npm run lint
 npm run build
@@ -88,7 +92,7 @@ npm run build
 
 Pemeriksaan lokal 20 September 2026: build/lint, seed dua kali dengan checksum tetap (termasuk akun Auth), HTTP halaman dengan sesi uji sementara, filter literal/empty state, redirect tanpa sesi, penolakan baca anonim dan insert langsung staf. Akun uji dihapus sesudah pemeriksaan. Tampilan belum diverifikasi melalui browser visual otomatis.
 
-Berikutnya: domain klasifikasi/auto-triage beserta unit test → Telegram shadow dan inbox → balasan otomatis/staf. Tiket tetap dibuat manual di Custpanel; akses OLT/NMS dan lookup pelanggan nyata masih perlu dikaji. WhatsApp menyusul setelah prototype Telegram.
+Berikutnya: review P1.2 → P1.3 lifecycle → P1.4 transaksi/claim dan concurrency → P2 Telegram shadow dan inbox → balasan otomatis/staf. Tiket tetap dibuat manual di Custpanel; akses OLT/NMS dan lookup pelanggan nyata masih perlu dikaji. WhatsApp menyusul setelah prototype Telegram.
 
 
 

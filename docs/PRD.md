@@ -1,4 +1,4 @@
-﻿# PRD — Upaznet Helpdesk Automation
+# PRD — Upaznet Helpdesk Automation
 **Versi:** 2.1 · **Tanggal:** 20 September 2026 · **Status:** baseline prototype terpadu  
 **Pemilik produk:** Akbar · **Persetujuan:** pengguna menyetujui rekomendasi yang dibahas, termasuk lifecycle episode, balasan staf dari dashboard, dan evaluasi otomatis saat inbound.
 
@@ -108,7 +108,7 @@ Evaluasi top-down. Tidak menjalankan pengirim Mass Outage dan triage secara inde
 | Prioritas | Syarat | Kandidat | Handoff |
 |---|---|---|---|
 | 1 | Manual GENERAL ACTIVE | MASS_GENERAL, tanpa lookup atau syarat identitas pelanggan terverifikasi | Inbox/episode + incident |
-| 2 | Manual AREA_SPECIFIC ACTIVE, identitas valid dan area match | MASS_AREA | Episode + incident |
+| 2 | Komplain koneksi, manual AREA_SPECIFIC ACTIVE, identitas valid dan area match | MASS_AREA | Episode + incident |
 | 3 | Komplain koneksi, upstream down fresh dan dampak ke layanan valid | NETWORK_DISRUPTION, walau ONU online/unknown | Episode + event/bukti |
 | 4 | Komplain koneksi, pelanggan LOS fresh, threshold area valid | LOS_AREA | Episode + snapshot/event |
 | 5 | Komplain koneksi, pelanggan LOS fresh tanpa bukti area memadai | LOS_INDIVIDUAL | Episode + status |
@@ -257,6 +257,14 @@ Rollout tester: seluruh acceptance keselamatan lulus → Akbar memilih tahap kir
 | P5 Pilot lengkap | FULL, dataset label, UX/accessibility, uji burst | Acceptance suite dan metrik dilaporkan, demo Akbar |
 
 Rincian kesiapan implementasi ada di [README](../README.md#status-implementasi-lokal). Persiapan bertahap P0/P2: akses Supabase project prototype, bot token/secret dan tester IDs, Vercel project/env. Tidak memerlukan OLT/NMS. Credential diberikan melalui environment, tidak dimasukkan ke PRD/log/repo. Tidak ada commit/push/deploy yang diklaim telah dilakukan dalam pekerjaan spesifikasi ini.
+
+
+### Status implementasi P1 (21 September 2026)
+
+- Fondasi provider jaringan dan P1.1 identitas/klasifikasi selesai dalam scope masing-masing; lihat [review P1.1](P1_1_REVIEW.md).
+- P1.1 mengembalikan hasil analisis berversi, belum menyimpan assessment/label koreksi atau membuat identity sender baru. Penyimpanan ingress/inbox mengikuti P2.
+- P1.2 decision engine kandidat selesai: [review P1.2](P1_2_REVIEW.md). Kandidat dipisahkan dari penerapan mode; dispatchAuthorized=false sampai seluruh guard runtime terpenuhi. Rendering/pengelolaan template dan outbound belum dibuat.
+- P1.3 lifecycle dan P1.4 kontrak/transaksi/claim beserta concurrency tests masih belum selesai. P1 belum ditutup.
 
 ## 15. Pertanyaan terbuka dan migrasi produksi
 **Tidak memblokir prototype:** definisi FS, vendor/payload OLT/NMS, Custpanel lookup nyata, multi-service, real ODP/ODC IDs, failover upstream, kebijakan recovery event/hysteresis, real rate limits.

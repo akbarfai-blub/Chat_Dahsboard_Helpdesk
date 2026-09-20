@@ -174,3 +174,23 @@ Tanggal: 20 September 2026.
 
 Entry berikutnya D73. Ringkasan untuk disalin/referensi nomor tiket Custpanel masih usulan fitur berikutnya, bukan integrasi yang sudah dibuat.
 
+
+## P1.1 — Resolusi identitas dan klasifikasi — D73
+
+Tanggal: 21 September 2026. Pengguna meminta pengerjaan bertahap dimulai dari P1.1 dan rangkuman untuk review.
+
+| ID | Keputusan | Status / dampak |
+|---|---|---|
+| D73 | Implementasi read-only resolusi sender berdasarkan channel/account/sender, verified customer dan satu layanan; klasifikasi literal lima keyword PRD, hasil berversi dan safe reason. Tidak mengambil identitas dari isi chat. | IMPLEMENTASI dalam scope P1.1. ASSUMPTION/default: layanan ganda termasuk inactive → manual, customer/layanan inactive → manual; timeout 2 detik; normalisasi NFKC/huruf/spasi dan batas 10.000 unit UTF-16; hint ambigu error/wifi/internet/lemot/gangguan/mati → review. Batas literal matching dan hasil uji ada di P1_1_REVIEW.md. |
+
+P1.2–P1.4 belum selesai. Entry berikutnya D74. Tidak ada keputusan baru tentang vendor, tiket Custpanel, atau pengiriman pesan.
+
+## P1.2 — Decision engine kandidat template — D74
+
+Tanggal: 21 September 2026. Pengguna meminta implementasi P1.2 setelah review rancangan.
+
+| ID | Keputusan | Status / dampak |
+|---|---|---|
+| D74 | Fungsi domain murni memilih satu kandidat sesuai prioritas PRD, memisahkan candidate/effective template key, memvalidasi ulang scope/freshness/threshold, dan menerapkan SHADOW/LOS_AND_GENERIC/FULL serta emergency stop. GENERAL satu-satunya pengecualian keyword; AREA tetap mensyaratkan komplain sesuai §4/§7. | IMPLEMENTASI P1.2. DEFAULT: mode kosong SHADOW; incident ACTIVE konflik/invalid → review; dispatchAuthorized selalu false. Mapping memakai batas 24 jam, observasi 5 menit. Event target yang diketahui dipertahankan, tidak mengarang event area. Detail review/pengujian pada P1_2_REVIEW.md. |
+
+P1.3 lifecycle dan P1.4 transaksi/claim menyusul. P1.2 belum menyediakan renderer/template management, runtime outbound atau otorisasi dispatch. Entry berikutnya D75.
