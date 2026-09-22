@@ -11,7 +11,7 @@ export async function login(formData: FormData) {
     typeof emailValue !== "string" ||
     typeof passwordValue !== "string" ||
     !emailValue.trim() ||
-    !passwordValue
+    !passwordValue.trim()
   ) {
     redirect("/login?error=required");
   }
