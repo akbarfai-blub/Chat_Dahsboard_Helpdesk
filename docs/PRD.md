@@ -179,7 +179,7 @@ Fondasi implementasi, schema tambahan, endpoint staf dan cara uji tersedia di [N
 Seed idempotent wajib memakai ID deterministik dan namespace data simulasi; jangan menghapus log uji sebelumnya untuk mengganti skenario. Kontrol fixture hanya ada pada environment prototype.
 
 ## 10. Model data dan invariant
-Model ini spesifikasi target, bukan daftar seluruh fitur yang sudah diimplementasikan. supabase/migrations/ adalah source of truth schema aktual; database_schema.sql lama adalah snapshot arsip. Enam tabel foundation dan empat tabel mock telah memiliki migration; entitas target lain menyusul.
+Model ini spesifikasi target, bukan daftar seluruh fitur yang sudah diimplementasikan. supabase/migrations/ adalah source of truth definisi schema; database_schema.sql lama adalah snapshot arsip. Enam tabel foundation dan empat tabel mock memiliki migration sebelumnya. Migration persistence P1.4 sudah ditambahkan tetapi belum diterapkan oleh agent; schema database aktual bergantung pada migration yang dijalankan pengguna.
 | Entitas | Relasi/field penting |
 |---|---|
 | customers, services, channel_identities | Customer ↔ layanan; identity unik channel/account/sender; link nullable dan verification status |
@@ -259,12 +259,13 @@ Rollout tester: seluruh acceptance keselamatan lulus → Akbar memilih tahap kir
 Rincian kesiapan implementasi ada di [README](../README.md#status-implementasi-lokal). Persiapan bertahap P0/P2: akses Supabase project prototype, bot token/secret dan tester IDs, Vercel project/env. Tidak memerlukan OLT/NMS. Credential diberikan melalui environment, tidak dimasukkan ke PRD/log/repo. Tidak ada commit/push/deploy yang diklaim telah dilakukan dalam pekerjaan spesifikasi ini.
 
 
-### Status implementasi P1 (21 September 2026)
+### Status implementasi P1 (22 September 2026)
 
 - Fondasi provider jaringan dan P1.1 identitas/klasifikasi selesai dalam scope masing-masing; lihat [review P1.1](P1_1_REVIEW.md).
 - P1.1 mengembalikan hasil analisis berversi, belum menyimpan assessment/label koreksi atau membuat identity sender baru. Penyimpanan ingress/inbox mengikuti P2.
 - P1.2 decision engine kandidat selesai: [review P1.2](P1_2_REVIEW.md). Kandidat dipisahkan dari penerapan mode; dispatchAuthorized=false sampai seluruh guard runtime terpenuhi. Rendering/pengelolaan template dan outbound belum dibuat.
-- P1.3 lifecycle dan P1.4 kontrak/transaksi/claim beserta concurrency tests masih belum selesai. P1 belum ditutup.
+- P1.3 lifecycle episode direvisi setelah review: [kontrak dan langkah verifikasi](EPISODE_LIFECYCLE.md). Versi request, primary/target, rekonsiliasi identitas, riwayat berdasarkan closedAt, audit inbound/staf, split dan suppression tersedia sebagai domain murni. Revisi belum menjalankan test/lint/build sesuai instruksi pengguna. Belum ada persistence, migration, atau claim atomik.
+- P1.4 persistence, transaksi episode/audit, claim atomik, rekonsiliasi identity dan kode concurrency test diimplementasikan: [review P1.4](P1_4_REVIEW.md). Migration/test/lint/build belum dijalankan oleh agent sesuai instruksi pengguna. Belum ada dispatch; P1 belum ditutup sebelum verifikasi.
 
 ## 15. Pertanyaan terbuka dan migrasi produksi
 **Tidak memblokir prototype:** definisi FS, vendor/payload OLT/NMS, Custpanel lookup nyata, multi-service, real ODP/ODC IDs, failover upstream, kebijakan recovery event/hysteresis, real rate limits.

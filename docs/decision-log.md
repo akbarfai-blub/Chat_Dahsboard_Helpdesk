@@ -1,4 +1,4 @@
-﻿> **Acuan aktif:** [PRD v2.0](PRD.md) dan [Design System](DESIGN_SYSTEM.md). Baca D65–D69 untuk keputusan konsolidasi yang menggantikan status historis di bawah. Entry baru berikutnya D70.
+> **Acuan aktif:** [PRD v2.0](PRD.md) dan [Design System](DESIGN_SYSTEM.md). Baca D65–D69 untuk keputusan konsolidasi yang menggantikan status historis di bawah. Entry baru berikutnya D70.
 
 # Decision Log — Chat Automation Upaznet Helpdesk
 
@@ -194,3 +194,33 @@ Tanggal: 21 September 2026. Pengguna meminta implementasi P1.2 setelah review ra
 | D74 | Fungsi domain murni memilih satu kandidat sesuai prioritas PRD, memisahkan candidate/effective template key, memvalidasi ulang scope/freshness/threshold, dan menerapkan SHADOW/LOS_AND_GENERIC/FULL serta emergency stop. GENERAL satu-satunya pengecualian keyword; AREA tetap mensyaratkan komplain sesuai §4/§7. | IMPLEMENTASI P1.2. DEFAULT: mode kosong SHADOW; incident ACTIVE konflik/invalid → review; dispatchAuthorized selalu false. Mapping memakai batas 24 jam, observasi 5 menit. Event target yang diketahui dipertahankan, tidak mengarang event area. Detail review/pengujian pada P1_2_REVIEW.md. |
 
 P1.3 lifecycle dan P1.4 transaksi/claim menyusul. P1.2 belum menyediakan renderer/template management, runtime outbound atau otorisasi dispatch. Entry berikutnya D75.
+
+## P1.3 — Lifecycle episode dan kebijakan asosiasi — D75
+
+Tanggal: 21 September 2026. Pengguna meminta implementasi P1.3 setelah review P1.2.
+
+| ID | Keputusan | Status / dampak |
+|---|---|---|
+| D75 | Fungsi domain murni untuk state machine episode (NEW/IN_PROGRESS/RESOLVED/CLOSED), kebijakan asosiasi pesan ke episode, derivasi scope dari identity P1.1, split oleh staf, dan suppression automation intent. CLOSED final; reopen hanya dari RESOLVED; debounce tidak direset; suppression tidak dihapus oleh reopen/mode/conversation. Sender tanpa identityId menghasilkan review bukan scope semu. Scope "service" berbeda tidak pernah digabung. | IMPLEMENTASI P1.3. DEFAULT: expectedVersion dikembalikan untuk P1.4 optimistic locking; most_recent_closed dipilih berdasarkan version tertinggi; split mewarisi scope sumber. ASSUMPTION: isFirstMessageOnEpisode disuplai caller dari application layer. suppressAutomationIntent adalah intent domain; pembatalan in-flight adalah tanggung jawab P1.4. Detail pada P1_3_REVIEW.md. |
+
+P1.4 persistence/migration/transaksi/claim/concurrency menyusul. Entry berikutnya D76.
+
+## Revisi P1.3 setelah review — D76
+
+Tanggal: 22 September 2026. Pengguna meminta perbaikan P1.3, pembersihan kode/komentar, dan tidak menjalankan test atau pemeriksaan otomatis.
+
+| ID | Keputusan | Status / dampak |
+|---|---|---|
+| D76 | Kontrak episode-lifecycle-v2: command membawa expectedVersion dari request; hasil accepted/noop/rejected, perubahan dan audit terstruktur; closedAt menentukan riwayat dengan ID sebagai tie-break; perubahan scope identitas diarahkan ke rekonsiliasi; primary atau target eksplisit menentukan association; reopen inbound terpisah dari aktor staf. | Menggantikan default D75 tentang versi dan pemilihan riwayat. DEFAULT konservatif: reopen keluhan pada RESOLVED membutuhkan target masalah sama yang dipercaya; kombinasi open/resolved tanpa target masuk review. Split staf bukan primary dan menonaktifkan automation; resolve/close staf juga menonaktifkannya. Test diperbarui tetapi tidak dijalankan, termasuk lint/typecheck/build. Detail, batas kepercayaan dan langkah verifikasi ada di EPISODE_LIFECYCLE.md. |
+
+P1.4 tetap diperlukan untuk persistence, primary constraint, rekonsiliasi claim, atomic update/audit dan concurrency. Entry berikutnya D77.
+
+## P1.4 — Persistence dan transaksi — D77
+
+Tanggal: 22 September 2026. Pengguna meminta implementasi P1.4 tanpa menjalankan test/pemeriksaan dan review minimal.
+
+| ID | Keputusan | Status / dampak |
+|---|---|---|
+| D77 | Driver pg untuk transaksi satu koneksi; READ COMMITTED + satu advisory lock mutasi prototype; migration episode/ingress/job/assessment/claim/outbound/audit; savepoint reservasi episode+event; request idempotency dan versi staf; rekonsiliasi ledger identity/customer. | IMPLEMENTASI belum diverifikasi runtime. DEFAULT konservatif: linking mempertahankan episode/claim, memilih primary layanan yang sudah ada dan menonaktifkan automation pada episode terkait; pending dibatalkan, in-flight dilaporkan. Split menaikkan versi sumber. Manual reply hanya antrean tersimpan, bukan send. Snapshot mode/emergency saat receipt tidak dilonggarkan. Review: P1_4_REVIEW.md. |
+
+Migration dan seluruh test/lint/build diserahkan kepada pengguna. P2/P3 tetap diperlukan untuk webhook, conversation, worker/recovery, UI dan dispatch. Entry berikutnya D78.

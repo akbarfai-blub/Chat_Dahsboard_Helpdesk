@@ -16,7 +16,8 @@ Baca [docs/PRD.md](docs/PRD.md) sebelum implementasi dan [docs/DESIGN_SYSTEM.md]
 - Telegram prototype, WhatsApp Cloud API fase berikutnya; ChannelAdapter memisahkan parsing/format channel dari domain.
 - NetworkStatusProvider dan identity lookup port membungkus mock; tidak ada koneksi perangkat nyata pada prototype.
 - Kontrak provider dan cara uji fondasi mock: docs/NETWORK_PROVIDER.md. Seed ulang tidak merefresh observasi; endpoint read-only khusus staf memerlukan NETWORK_PROVIDER=mock. Tidak ada outbound pada tahap ini.
-- P1.1 identitas/klasifikasi dan batas implementasinya dirangkum di docs/P1_1_REVIEW.md. Keyword matching bukan bukti jaringan atau izin membalas. P1.2 decision engine dirangkum di docs/P1_2_REVIEW.md; hanya kandidat, dispatchAuthorized=false. P1.3–P1.4 menyusul.
+- P1.1 identitas/klasifikasi dirangkum di docs/P1_1_REVIEW.md; P1.2 kandidat keputusan di docs/P1_2_REVIEW.md. Kontrak P1.3 ada di docs/EPISODE_LIFECYCLE.md; implementasi P1.4 dan langkah verifikasi di docs/P1_4_REVIEW.md. Reservasi bukan izin dispatch; migration dan pengujian P1.4 belum dijalankan oleh agent.
+- P1.4 memakai pg pada server dan satu advisory lock transaksi. Gunakan inHelpdeskTransaction untuk mutasi terkait; jangan memecah transaksi menjadi request Supabase REST terpisah. Actor staf diambil dari session; provider/HTTP tidak dijalankan di dalam transaksi.
 - Domain berupa fungsi TypeScript murni di lib/domain/; waktu/hasil provider masuk sebagai input. Setiap fungsi domain punya unit test bermakna di **tests**/domain/.
 - Route handler parse/validate/auth → application service → response; orchestration transaksi/provider di application layer, rule bukan di route.
 - Business logic bukan Postgres trigger/function/stored procedure. DB tetap menegakkan FK/unique/basic checks; application transaction menjamin atomisitas.
@@ -50,7 +51,7 @@ Baca [docs/PRD.md](docs/PRD.md) sebelum implementasi dan [docs/DESIGN_SYSTEM.md]
 
 - supabase/migrations/ menjadi source of truth schema aktual ketika dibuat. docs/database_schema.sql adalah snapshot historis Mass Outage, tidak lengkap untuk PRD v2.0; jangan apply langsung.
 - Buat migration baru untuk perubahan schema, jangan edit migration yang sudah diaplikasikan. Update dokumentasi schema bila signifikan.
-- Decision log append-only; jangan menghapus histori. Entry berikutnya setelah D74 adalah D75. D43–D48 tidak tersedia, jangan dikarang.
+- Decision log append-only; jangan menghapus histori. Entry berikutnya setelah D77 adalah D78. D43–D48 tidak tersedia, jangan dikarang.
 - Pilihan teknis baru yang berdampak perilaku dicatat; default visual/operasional konsolidasi boleh diimplementasikan dalam scope.
 - Kode/nama variabel Bahasa Inggris; UI Bahasa Indonesia. Env UPPER_SNAKE_CASE, prefix layanan sesuai fungsi.
 - Rekomendasi commit message mengikuti Conventional Commits, tetapi agent tidak commit sendiri.

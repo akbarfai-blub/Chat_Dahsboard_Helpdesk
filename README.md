@@ -19,7 +19,9 @@ Prototype respons pertama komplain ISP: Telegram → rule + data jaringan dummy 
 - Tersedia tambahan: schema/fixture ONU dan upstream, NetworkStatusProvider/MockProvider, domain freshness/area, serta API pemeriksaan read-only khusus staf. Lihat [panduan pemeriksaan mock](docs/NETWORK_PROVIDER.md).
 - P1.1 tersedia: resolusi identitas sender dan klasifikasi keyword, hasil berversi, safe reason, serta pengujian. [Rangkuman untuk review](docs/P1_1_REVIEW.md).
 - P1.2 tersedia: decision engine pemilihan kandidat template, alasan/bukti dan aturan mode. [Rangkuman untuk review](docs/P1_2_REVIEW.md). Hasil belum mengotorisasi pengiriman.
-- Belum tersedia: lifecycle/claim, rendering/pengelolaan template, inbox/antrean percakapan, webhook Telegram, serta pengiriman balasan. Pemeriksaan belum ditampilkan dalam UI pelanggan.
+- P1.3 direvisi: lifecycle, versi request, pemilihan primary/target, rekonsiliasi identitas, actor inbound, split, dan suppression intent. [Kontrak dan langkah verifikasi](docs/EPISODE_LIFECYCLE.md). Revisi 22 September belum menjalankan test/lint/build sesuai instruksi pengguna; persistence dan claim atomik menyusul P1.4.
+- P1.4 diimplementasikan: transaksi episode/audit, ingress/job, claim atomik, rekonsiliasi identitas, dan antrean balasan manual. [Review dan langkah verifikasi](docs/P1_4_REVIEW.md). Migration, test, lint dan build belum dijalankan oleh agent.
+- Belum tersedia: rendering/pengelolaan template, inbox/antrean percakapan, webhook/worker Telegram dan pengiriman balasan. Reservasi outbound belum mengizinkan dispatch.
 - Deployment dan integrasi produksi belum diverifikasi. Semua outbound prototype nantinya hanya ke tester allowlist dan berlabel simulasi.
 
 Migration aktual di [supabase/migrations](supabase/migrations) adalah source of truth schema. Empat tabel mock tambahan dijelaskan pada [kontrak provider](docs/NETWORK_PROVIDER.md#schema-aktual-tambahan). Enam tabel awal: `customers`, `services`, `odcs`, `odps`, `service_topology`, `channel_identities`. [SQL lama](docs/database_schema.sql) adalah snapshot historis Mass Outage; **jangan apply langsung**. Perubahan schema selanjutnya harus melalui migration baru.
@@ -54,12 +56,12 @@ Buka `http://localhost:3000/login`, login, lalu klik **Lihat pelanggan** atau bu
 
 [Seed](supabase/seed.sql) berisi:
 
-| Data | Jumlah / relasi |
-|---|---|
+| Data                  | Jumlah / relasi                                                 |
+| --------------------- | --------------------------------------------------------------- |
 | Pelanggan dan layanan | 12 pelanggan, masing-masing 1 layanan aktif secara administrasi |
-| ODC / ODP | 1 ODC, 2 ODP; distribusi layanan 10 dan 2 |
-| Mapping layanan | 12 mapping versi 1, sumber MOCK |
-| Identitas Telegram | 4 terverifikasi ke pelanggan dummy, 1 belum ditautkan |
+| ODC / ODP             | 1 ODC, 2 ODP; distribusi layanan 10 dan 2                       |
+| Mapping layanan       | 12 mapping versi 1, sumber MOCK                                 |
+| Identitas Telegram    | 4 terverifikasi ke pelanggan dummy, 1 belum ditautkan           |
 
 **ASSUMPTION / pilihan fixture:** jumlah dan distribusi ini untuk latihan; bukan inventaris pelanggan nyata. ID `dummy-bot-upaznet` dan `dummy-sender-*` bukan ID Telegram yang bisa dipakai mengirim pesan. Verifikasi fixture tidak membuktikan kepemilikan akun nyata; penautan tester akan dibuat terpisah.
 
@@ -92,12 +94,8 @@ npm run build
 
 Pemeriksaan lokal 20 September 2026: build/lint, seed dua kali dengan checksum tetap (termasuk akun Auth), HTTP halaman dengan sesi uji sementara, filter literal/empty state, redirect tanpa sesi, penolakan baca anonim dan insert langsung staf. Akun uji dihapus sesudah pemeriksaan. Tampilan belum diverifikasi melalui browser visual otomatis.
 
-Berikutnya: review P1.2 → P1.3 lifecycle → P1.4 transaksi/claim dan concurrency → P2 Telegram shadow dan inbox → balasan otomatis/staf. Tiket tetap dibuat manual di Custpanel; akses OLT/NMS dan lookup pelanggan nyata masih perlu dikaji. WhatsApp menyusul setelah prototype Telegram.
-
-
+Berikutnya: verifikasi migration dan suite P1.4 oleh pengguna → P2 Telegram shadow dan inbox → balasan otomatis/staf. Tiket tetap dibuat manual di Custpanel; akses OLT/NMS dan lookup pelanggan nyata masih perlu dikaji. WhatsApp menyusul setelah prototype Telegram.
 
 Panduan commit/push pertama dan rename folder: [GIT_SETUP.md](docs/GIT_SETUP.md). Nama project_id Supabase tetap dipertahankan agar database lokal yang sama digunakan.
 
-
 Validasi fondasi provider (20 September 2026): 20 unit test lolos; integrasi database dan endpoint HTTP terautentikasi lolos, termasuk skenario, constraint, RLS, seed idempoten, serta envelope/no-cache. Lint dan build produksi lolos. Hash migration lama tidak berubah dan akun Auth uji dibersihkan. Default provider dapat dicoba sesuai [panduan mock](docs/NETWORK_PROVIDER.md); UI evidence belum dibuat.
-
