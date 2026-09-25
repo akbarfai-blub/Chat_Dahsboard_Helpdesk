@@ -1,0 +1,56 @@
+[
+  {
+    "scenario": "FAIL_login Login melalui proxy (mode pass)",
+    "status": "PASS",
+    "evidence": "url=/dashboard, dashHeadingVisible=true",
+    "limitation": "isolated: env aplikasi 3001 menunjuk proxy setempat, bukan Supabase langsung — membuktikan env gagal benar-benar dipakai"
+  },
+  {
+    "scenario": "AC6a Kegagalan 500: tanpa redirect sukses menyesatkan (mendarat di /login?error=logout, bukan klaim berhasil)",
+    "status": "PASS",
+    "evidence": "final=/login?error=logout, afterSettle=/login, alerts=[\"Logout belum berhasil. Periksa koneksi lalu coba kembali.\"], cookiesBefore=1, cookiesAfter=0, formVisible=true, dashHeadingVisible=false",
+    "limitation": ""
+  },
+  {
+    "scenario": "AC6b Pesan generik Bahasa Indonesia tampil di jalur error sesi-hilang",
+    "status": "PASS",
+    "evidence": "alerts=[\"Logout belum berhasil. Periksa koneksi lalu coba kembali.\"], final=/login?error=logout",
+    "limitation": ""
+  },
+  {
+    "scenario": "AC6c Tidak ada raw error/token di halaman",
+    "status": "PASS",
+    "evidence": "leaks=[]",
+    "limitation": ""
+  },
+  {
+    "scenario": "AC6d1 Sesi hilang setelah kegagalan: /login?error=logout, tanpa redirect loop (browser E2E nyata, HTTP 500)",
+    "status": "PASS",
+    "evidence": "final=/login?error=logout, afterSettle=/login, alerts=[\"Logout belum berhasil. Periksa koneksi lalu coba kembali.\"], cookiesAfter=0",
+    "limitation": "metode: browser nyata + Server Action nyata + Supabase lokal (via proxy yang hanya memutus POST /logout); cabang dipilih karena getUser() setelah error tidak menemukan sesi (auth-js meng-evict sesi pada error non-401/403/404)"
+  },
+  {
+    "scenario": "AC6d3 Sesi valid: pesan kegagalan tampil di /dashboard?error=logout, tombol Keluar tersedia, tanpa redirect loop (browser E2E)",
+    "status": "PASS",
+    "evidence": "final=/dashboard?error=logout, alerts=[\"Logout belum berhasil. Periksa koneksi lalu coba kembali.\"], alertVisible=true, keluarAvailable=true, staysOnDashboard=true, dashHeadingVisible=true",
+    "limitation": "urutan: login nyata (proxy pass) -> buka /dashboard?error=logout (target yang dipilih cabang sesi-valid) -> assert pesan + retry tersedia; pemilihan cabang itu sendiri dibuktikan terpisah (mock terisolasi ac6d2)"
+  },
+  {
+    "scenario": "AC6d3b Retry logout setelah kondisi pulih (sesi valid): sukses -> /login tanpa alert error",
+    "status": "PASS",
+    "evidence": "final=/login, alerts=[]",
+    "limitation": ""
+  },
+  {
+    "scenario": "AC6e Setelah kondisi pulih, login ulang + logout sukses -> /login tanpa alert error",
+    "status": "PASS",
+    "evidence": "url=/login, alerts=[]",
+    "limitation": "isolated: gunakan proxy pass setelah kegagalan, bukan mematikan/menyalakan Supabase"
+  },
+  {
+    "scenario": "AC6f Console bersih (tanpa token/password)",
+    "status": "PASS",
+    "evidence": "consoleIssues=[\"error: Failed to load resource: the server responded with a status of 404 (Not Found)\"]",
+    "limitation": "pengecualian: 404 favicon (repo tanpa public/favicon)"
+  }
+]

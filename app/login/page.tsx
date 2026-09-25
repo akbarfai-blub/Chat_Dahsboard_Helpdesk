@@ -23,7 +23,9 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
       ? "Email dan password wajib diisi."
       : params.error === "login"
         ? "Login belum berhasil. Periksa email, password, dan koneksi."
-        : null;
+        : params.error === "logout"
+          ? "Logout belum berhasil. Periksa koneksi lalu coba kembali."
+          : null;
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-slate-50 p-6 text-slate-900">

@@ -1,0 +1,32 @@
+[
+  {
+    "scenario": "Preamble: kode asli diimpor, redirect() Next asli dipakai",
+    "status": "PASS",
+    "evidence": "actionsSource=/D:/Web%20Dev/Chat_Automation_Helpdesk/app/login/actions.ts, nextNavigation=/D:/Web%20Dev/Chat_Automation_Helpdesk/node_modules/next/navigation.js",
+    "limitation": "module yang dimock HANYA @/lib/supabase/server; cabang yang diuji adalah logika pemilihan redirect pada logout() asli"
+  },
+  {
+    "scenario": "AC6d2a Sesi masih valid: signOut error + getUser valid -> redirect /dashboard?error=logout (bisa coba lagi), 1 redirect, tanpa loop",
+    "status": "PASS",
+    "evidence": "digest=NEXT_REDIRECT;replace;/dashboard?error=logout;307;, parsedTarget=/dashboard?error=logout, signOutCalls=1, getUserCalls=1, redirectsThrown=1",
+    "limitation": "mock terisolasi: hanya createClient() yang dimock; logika pemilihan cabang dan redirect() Next adalah kode asli; bukan bukti browser/Supabase E2E"
+  },
+  {
+    "scenario": "AC6d2b Sesi sudah hilang: signOut error + getUser tanpa user -> redirect /login?error=logout, 1 redirect",
+    "status": "PASS",
+    "evidence": "digest=NEXT_REDIRECT;replace;/login?error=logout;307;, parsedTarget=/login?error=logout, signOutCalls=1, getUserCalls=1",
+    "limitation": "mock terisolasi; konsisten dengan AC6d1 (browser E2E HTTP 500) dan dengan analisis auth-js yang meng-evict sesi pada error non-401/403/404"
+  },
+  {
+    "scenario": "AC6d2c Logout sukses: signOut tanpa error -> redirect /login tanpa error=logout, getUser TIDAK dipanggil",
+    "status": "PASS",
+    "evidence": "digest=NEXT_REDIRECT;replace;/login;307;, parsedTarget=/login, signOutCalls=1, getUserCalls=0",
+    "limitation": "mock terisolasi; konsisten dengan AC2 (browser E2E logout sukses tanpa alert)"
+  },
+  {
+    "scenario": "AC6d2d Tidak ada loop/klaim ganda pada kode logout: tepat satu redirect per invokasi, logout() tidak pernah resolve normal",
+    "status": "PASS",
+    "evidence": "redirectsPerBranch=[1,1,1]",
+    "limitation": "bukti di level kode; perilaku loop di level navigasi dibuktikan oleh AC6d1/AC6d3 (settle di URL akhir)"
+  }
+]

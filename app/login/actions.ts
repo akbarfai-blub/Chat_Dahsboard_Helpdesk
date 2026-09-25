@@ -35,7 +35,13 @@ export async function logout() {
   const { error } = await supabase.auth.signOut();
 
   if (error) {
-    redirect("/dashboard?error=logout");
+    // auth-js evicts the local session on signOut errors (non-401/403/404), so
+    // /dashboard?error=logout would bounce to /login before rendering the message.
+    const { data, error: sessionError } = await supabase.auth.getUser();
+    if (!sessionError && data.user) {
+      redirect("/dashboard?error=logout");
+    }
+    redirect("/login?error=logout");
   }
 
   redirect("/login");

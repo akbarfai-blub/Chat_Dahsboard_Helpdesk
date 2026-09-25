@@ -1,0 +1,146 @@
+[
+  {
+    "scenario": "Login uji",
+    "status": "PASS",
+    "evidence": "url=/dashboard, dashHeadingVisible=true, staffEmailVisible=true, authCookies=1",
+    "limitation": "temporary account, deleted after the run"
+  },
+  {
+    "scenario": "AC1a Keluar tersedia (mouse)",
+    "status": "PASS",
+    "evidence": "buttons=1",
+    "limitation": ""
+  },
+  {
+    "scenario": "AC1b Keluar dapat difokus keyboard + fokus terlihat",
+    "status": "PASS",
+    "evidence": "focused=Keluar, outline={\"outlineWidth\":\"2px\",\"outlineStyle\":\"solid\"}",
+    "limitation": ""
+  },
+  {
+    "scenario": "AC2 Logout mouse: /login + cookie auth hilang + form kosong tanpa identitas staf",
+    "status": "PASS",
+    "evidence": "url=/login, authCookiesBefore=1, authCookiesAfter=0, formVisible=true, emailInput=\"\", dashHeadingVisible=false, staffEmailVisible=false",
+    "limitation": ""
+  },
+  {
+    "scenario": "AC2_chain Redirect ke /login dari Server Action",
+    "status": "PASS",
+    "evidence": "actionPosts=[\"POST /dashboard nextAction=00668ceb…\"], actionRedirectHeader=[\"200 /dashboard redirect=\\\"/login;push\\\"\"], final=/login, authCookiesAfter=0",
+    "limitation": "bukti redirect = header x-action-redirect pada respons Server Action POST /dashboard (navigasi ke /login dikerjakan client-side oleh router Next, sehingga tidak ada request /login terpisah) + cookie sesi hilang; status HTTP saja tidak dipakai sebagai bukti"
+  },
+  {
+    "scenario": "AC2_obs Cache header (observasi, di luar AC)",
+    "status": "INFO",
+    "evidence": "staticReview=proxy.ts matcher [login, dashboard/:path*] menetapkan Cache-Control \"private, no-cache, no-store, must-revalidate, max-age=0\"; observedLoginResponses=[]; observedActionResponse=\"200 /dashboard cc=\\\"no-cache, must-revalidate\\\"\"",
+    "limitation": "statis+observasi header respons; tidak menguji semantik cache browser dan bukan syarat kelulusan AC P0.5"
+  },
+  {
+    "scenario": "AC8a Tanpa alert saat logout sukses (tidak ada pesan error menyesatkan)",
+    "status": "PASS",
+    "evidence": "alerts=[]",
+    "limitation": ""
+  },
+  {
+    "scenario": "AC2_kbd Enter — Logout keyboard (Tab+Enter, tanpa click/submit JS): server action berjalan, sesi berakhir, halaman login tampil",
+    "status": "PASS",
+    "evidence": "focused=Keluar, final=/login, authCookiesBefore=1, authCookiesAfter=0, formVisible=true, dashHeadingVisible=false",
+    "limitation": ""
+  },
+  {
+    "scenario": "AC2_kbd_deny Akses ulang /dashboard setelah logout keyboard ditolak",
+    "status": "PASS",
+    "evidence": "final=/login, formVisible=true",
+    "limitation": ""
+  },
+  {
+    "scenario": "AC2_kbd Space — Logout keyboard (Tab+Space, tanpa click): server action berjalan, sesi berakhir",
+    "status": "PASS",
+    "evidence": "focused=Keluar, final=/login, authCookiesAfter=0, formVisible=true",
+    "limitation": ""
+  },
+  {
+    "scenario": "AC3a /dashboard langsung -> /login (dashboard tidak pernah dirender)",
+    "status": "PASS",
+    "evidence": "status=200, final=/login, formVisible=true, dashHeadingVisible=false",
+    "limitation": ""
+  },
+  {
+    "scenario": "AC3b Reload halaman terlindungi -> /login (tidak pernah dirender)",
+    "status": "PASS",
+    "evidence": "final=/login, formVisible=true, dashHeadingVisible=false",
+    "limitation": ""
+  },
+  {
+    "scenario": "AC3c /dashboard/customers tidak menampilkan data pelanggan",
+    "status": "PASS",
+    "evidence": "status=200, final=/login, formVisible=true, customersHeadingVisible=false",
+    "limitation": ""
+  },
+  {
+    "scenario": "AC3d Injeksi ulang cookie pra-logout (skenario di luar alur normal)",
+    "status": "PASS",
+    "evidence": "final=/login, status=200, formVisible=true",
+    "limitation": "server menolak karena sesi GoTrue sudah dicabut via logout (endpoint /user memvalidasi session_id); akses token JWT mentah tetap berlaku hingga kedaluwarsa untuk pemegang lain (perilaku Supabase/GoTrue) — di luar kendali aplikasi ini"
+  },
+  {
+    "scenario": "AC4 Back setelah logout tidak membuka dashboard",
+    "status": "PASS",
+    "evidence": "backUrl=/login, dashHeadingVisible=false, formVisible=true, dashRequestsAfterBack=2, dashTextOnlyInScripts=true",
+    "limitation": ""
+  },
+  {
+    "scenario": "AC5 Tab2 reload setelah logout di tab1 -> /login (dashboard tab2 tidak terlihat)",
+    "status": "PASS",
+    "evidence": "tab2InitialDashboard=true, tab2AfterReload=/login",
+    "limitation": "Sinkronisasi UI antar-tab seketika bukan requirement; reload eksplisit yang diuji"
+  },
+  {
+    "scenario": "AC5b Tab2 navigasi baru ke /dashboard -> /login",
+    "status": "PASS",
+    "evidence": "final=/login",
+    "limitation": ""
+  },
+  {
+    "scenario": "AC7a Keluar dua kali beruntun tidak crash/tidak loop (mendarat di /login, bukan /dashboard)",
+    "status": "PASS",
+    "evidence": "final=/login, afterSettle=/login, appError=false",
+    "limitation": ""
+  },
+  {
+    "scenario": "AC7b Logout saat sesi sudah berakhir (cookie hilang) -> /login aman, tanpa loop",
+    "status": "PASS",
+    "evidence": "final=/login, afterSettle=/login, formVisible=true",
+    "limitation": ""
+  },
+  {
+    "scenario": "AC8a2 Tanpa alert saat logout sukses pada sesi yang sudah berakhir",
+    "status": "PASS",
+    "evidence": "alerts=[]",
+    "limitation": ""
+  },
+  {
+    "scenario": "AC9a Login kembali setelah logout -> /dashboard",
+    "status": "PASS",
+    "evidence": "url=/dashboard, dashHeadingVisible=true",
+    "limitation": ""
+  },
+  {
+    "scenario": "AC9b Regresi P0.4: password spasi ditolak sebagai input kosong",
+    "status": "PASS",
+    "evidence": "query=/login?error=required, alerts=[\"Email dan password wajib diisi.\"]",
+    "limitation": ""
+  },
+  {
+    "scenario": "AC9c Tanpa secret/raw error di HTML",
+    "status": "PASS",
+    "evidence": "htmlHits=[]",
+    "limitation": ""
+  },
+  {
+    "scenario": "AC9d Console/bad responses bersih (tanpa token/password)",
+    "status": "PASS",
+    "evidence": "consoleIssues=[\"error: Failed to load resource: the server responded with a status of 404 (Not Found)\"]",
+    "limitation": "pengecualian: 404 favicon (repo tanpa public/favicon), bukan isu logout"
+  }
+]
