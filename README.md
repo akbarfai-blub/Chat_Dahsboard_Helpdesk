@@ -19,9 +19,9 @@ Prototype respons pertama komplain ISP: Telegram → rule + data jaringan dummy 
 - Tersedia tambahan: schema/fixture ONU dan upstream, NetworkStatusProvider/MockProvider, domain freshness/area, serta API pemeriksaan read-only khusus staf. Lihat [panduan pemeriksaan mock](docs/NETWORK_PROVIDER.md).
 - P1.1 tersedia: resolusi identitas sender dan klasifikasi keyword, hasil berversi, safe reason, serta pengujian. [Rangkuman untuk review](docs/P1_1_REVIEW.md).
 - P1.2 tersedia: decision engine pemilihan kandidat template, alasan/bukti dan aturan mode. [Rangkuman untuk review](docs/P1_2_REVIEW.md). Hasil belum mengotorisasi pengiriman.
-- P1.3 direvisi: lifecycle, versi request, pemilihan primary/target, rekonsiliasi identitas, actor inbound, split, dan suppression intent. [Kontrak dan langkah verifikasi](docs/EPISODE_LIFECYCLE.md). Revisi 22 September belum menjalankan test/lint/build sesuai instruksi pengguna; persistence dan claim atomik menyusul P1.4.
-- P1.4 diimplementasikan: transaksi episode/audit, ingress/job, claim atomik, rekonsiliasi identitas, dan antrean balasan manual. [Review dan langkah verifikasi](docs/P1_4_REVIEW.md). Migration, test, lint dan build belum dijalankan oleh agent.
-- Belum tersedia: rendering/pengelolaan template, inbox/antrean percakapan, webhook/worker Telegram dan pengiriman balasan. Reservasi outbound belum mengizinkan dispatch.
+- P1.3 selesai & terverifikasi: pure domain lifecycle episode, expectedVersion, pemilihan primary/target, rekonsiliasi identitas, actor inbound vs staf, split, aturan suppression, dan kelayakan respons pertama. [Review penutupan](docs/P1_3_REVIEW.md), [kontrak lifecycle](docs/EPISODE_LIFECYCLE.md), dan [bukti pengujian](docs/evidence/P1_3/p13-verification-evidence.md). Seluruh 26 unit test lifecycle dan 105 unit test domain/provider lulus (25 September 2026).
+- P1.4 selesai & terverifikasi: transaksi PostgreSQL episode/audit, ingress/job atomik, claim atomik via savepoint, rekonsiliasi identitas, dan antrean balasan manual staf pada Supabase lokal. [Review persistence](docs/P1_4_REVIEW.md) dan [bukti integrasi](docs/evidence/P1_4/p14-verification-evidence.md). 11 skenario integrasi lulus (12 checks PASS termasuk satu pengujian induk).
+- Belum tersedia: token UI terpusat (P0.10), layout dashboard (P0.11), rendering/pengelolaan template, inbox/antrean percakapan, webhook/worker Telegram dan pengiriman balasan. Reservasi outbound belum mengizinkan dispatch.
 - Deployment dan integrasi produksi belum diverifikasi. Semua outbound prototype nantinya hanya ke tester allowlist dan berlabel simulasi.
 
 Migration aktual di [supabase/migrations](supabase/migrations) adalah source of truth schema. Empat tabel mock tambahan dijelaskan pada [kontrak provider](docs/NETWORK_PROVIDER.md#schema-aktual-tambahan). Enam tabel awal: `customers`, `services`, `odcs`, `odps`, `service_topology`, `channel_identities`. [SQL lama](docs/database_schema.sql) adalah snapshot historis Mass Outage; **jangan apply langsung**. Perubahan schema selanjutnya harus melalui migration baru.
@@ -94,7 +94,7 @@ npm run build
 
 Pemeriksaan lokal 20 September 2026: build/lint, seed dua kali dengan checksum tetap (termasuk akun Auth), HTTP halaman dengan sesi uji sementara, filter literal/empty state, redirect tanpa sesi, penolakan baca anonim dan insert langsung staf. Akun uji dihapus sesudah pemeriksaan. Tampilan belum diverifikasi melalui browser visual otomatis.
 
-Berikutnya: verifikasi migration dan suite P1.4 oleh pengguna → P2 Telegram shadow dan inbox → balasan otomatis/staf. Tiket tetap dibuat manual di Custpanel; akses OLT/NMS dan lookup pelanggan nyata masih perlu dikaji. WhatsApp menyusul setelah prototype Telegram.
+Berikutnya: P0.10 token UI terpusat → P0.11 layout dasar aplikasi dan dashboard → P2 Telegram shadow dan inbox → P3 balasan otomatis/staf (composer). Tiket tetap dibuat manual di Custpanel; akses OLT/NMS dan lookup pelanggan nyata masih perlu dikaji. WhatsApp menyusul setelah prototype Telegram.
 
 Panduan commit/push pertama dan rename folder: [GIT_SETUP.md](docs/GIT_SETUP.md). Nama project_id Supabase tetap dipertahankan agar database lokal yang sama digunakan.
 

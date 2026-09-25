@@ -224,3 +224,13 @@ Tanggal: 22 September 2026. Pengguna meminta implementasi P1.4 tanpa menjalankan
 | D77 | Driver pg untuk transaksi satu koneksi; READ COMMITTED + satu advisory lock mutasi prototype; migration episode/ingress/job/assessment/claim/outbound/audit; savepoint reservasi episode+event; request idempotency dan versi staf; rekonsiliasi ledger identity/customer. | IMPLEMENTASI belum diverifikasi runtime. DEFAULT konservatif: linking mempertahankan episode/claim, memilih primary layanan yang sudah ada dan menonaktifkan automation pada episode terkait; pending dibatalkan, in-flight dilaporkan. Split menaikkan versi sumber. Manual reply hanya antrean tersimpan, bukan send. Snapshot mode/emergency saat receipt tidak dilonggarkan. Review: P1_4_REVIEW.md. |
 
 Migration dan seluruh test/lint/build diserahkan kepada pengguna. P2/P3 tetap diperlukan untuk webhook, conversation, worker/recovery, UI dan dispatch. Entry berikutnya D78.
+
+## Baseline Desain Sistem dan Token UI Terpusat — D78
+
+Tanggal: 25 September 2026. Penyelarasan arah desain visual sebelum implementasi P0.10.
+
+| ID | Keputusan | Status / dampak |
+|---|---|---|
+| D78 | Penyelarasan arah desain visual: identitas navy (`#003C71`), aksen brand hijau (`#00A651`), tombol aksi terkalibrasi kontras (`#007A3D`, hover `#006633`); pemisahan token warna dua lapisan (palet dasar primitives dan pemetaan semantik); tipografi Geist Sans dan Geist Mono dengan hierarki terdefinisi (display 24px sampai micro 10px, tanpa micro-tight 9px); pemakaian komponen standar; serta validasi rasio kontras WCAG 2.2 AA. | BASELINE DOKUMENTASI untuk P0.10. Menggantikan baseline visual awal D69. DEFAULT/BATASAN: #00A651 dan #008C44 dilarang untuk latar tombol teks putih normal (kontras 3,19:1 & 4,34:1 < 4,5:1); #64748B dilarang untuk teks normal pada rail-bg (kontras 4,34:1); focus.ring #2563EB pada navy diganti ring terang. Hijau brand bukan bukti jaringan sehat. Token belum diimplementasikan di kode CSS/font; implementasi dilakukan pada task P0.10. Detail lengkap di [DESIGN_SYSTEM.md](DESIGN_SYSTEM.md) v2.0. |
+
+P0.10 tetap Not Started sampai token diimplementasikan di CSS. Entry berikutnya D79.

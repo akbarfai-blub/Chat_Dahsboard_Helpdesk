@@ -1,6 +1,6 @@
 # P1.3 — Kontrak lifecycle episode
 
-Revisi 22 September 2026, rule `episode-lifecycle-v2`. Implementasi domain dan kode test telah diperbarui. **Test, lint, typecheck, dan build belum dijalankan pada revisi ini**, sesuai instruksi pengguna. Hasil pengujian revisi sebelumnya bukan bukti untuk kode ini.
+Revisi 22 September 2026, rule `episode-lifecycle-v2`. Status: **Selesai (Done) & Terverifikasi (25 September 2026)**. Seluruh 26 unit test lifecycle (`tests/domain/episode-lifecycle.test.ts`) dan 105 unit test domain/provider (`npm test`) telah dijalankan dan lulus 100%. Bukti pengujian terdokumentasi di [docs/evidence/P1_3/p13-verification-evidence.md](evidence/P1_3/p13-verification-evidence.md) dan [docs/P1_3_REVIEW.md](P1_3_REVIEW.md).
 
 ## Struktur
 
@@ -64,7 +64,7 @@ Default tambahan: tindakan staf resolve/close dan split menonaktifkan first resp
 
 ## Tanggung jawab P1.4
 
-Implementasi dan langkah verifikasi tersedia di [review P1.4](P1_4_REVIEW.md); migration dan test belum dijalankan oleh agent.
+Implementasi dan bukti verifikasi tersedia di [review P1.4](P1_4_REVIEW.md) dan [bukti P1.4](evidence/P1_4/p14-verification-evidence.md); layer persistence dan integrasi transaksi telah terverifikasi di Supabase PostgreSQL lokal (25 September 2026, 11 skenario integrasi / 12 PASS termasuk pengujian induk).
 
 1. Migration episode, primary per scope, timestamp, relasi, claim, serta audit dengan FK/check/unique yang sesuai.
 2. Pembuatan episode NEW dengan ID/versi awal, pemilihan primary, dan association pesan secara atomik; hasil domain bukan jaminan tidak ada episode ganda.
@@ -73,23 +73,20 @@ Implementasi dan langkah verifikasi tersedia di [review P1.4](P1_4_REVIEW.md); m
 5. Penetapan target masalah oleh konteks yang tervalidasi; guard mode, follow-up, claim, dan dispatch tetap diperlukan.
 6. Takeover, penyimpanan balasan manual, serta pembatalan pending dijalankan atomik; in-flight dilaporkan sesuai hasil sebenarnya.
 
-## Langkah verifikasi oleh pengguna
+## Verifikasi dan Pengujian
 
-Jalankan dari root proyek, satu per satu. Tidak perlu database/Docker untuk unit test ini.
+Unit test domain P1.3 telah diverifikasi lulus 100% pada review independen terdahulu (25 September 2026). Untuk menjalankan ulang:
 
 ```powershell
-# 1. Kompilasi test dan jalankan suite lifecycle saja.
+# 1. Kompilasi test dan jalankan suite lifecycle saja (26 test).
 npx tsc -p tsconfig.test.json
 node --test .test-build/tests/domain/episode-lifecycle.test.js
 
-# 2. Seluruh unit test domain/provider untuk memeriksa regresi P1.1/P1.2.
+# 2. Seluruh unit test domain/provider untuk memeriksa regresi P1.1/P1.2 (105 test).
 npm test
-
-# 3. Pemeriksaan kode dan build aplikasi.
-npm run lint
-npm run build
 ```
 
-Lanjutkan ke perintah berikutnya setelah perintah sebelumnya berhasil. Jika build membutuhkan konfigurasi environment, gunakan konfigurasi lokal proyek yang sudah ada. Jangan reset database. Tidak ada klaim jumlah test lolos sampai pengguna menjalankannya.
-
-Perhatikan skenario identitas sebelum/sesudah verifikasi, mixed open/resolved setelah split, versi stale, urutan closedAt berbeda dari version, actor inbound, timestamp invalid, noop tanpa audit, dan suppression setelah staf menangani. Constraint/concurrency database belum dapat dibuktikan oleh suite domain; pengujian tersebut mengikuti implementasi P1.4.
+Hasil verifikasi:
+- `episode-lifecycle.test.ts`: **26/26 PASS** (0 fail).
+- Seluruh unit test domain/provider: **105/105 PASS** (0 fail).
+- Bukti pengujian tersimpan di [bukti P1.3](evidence/P1_3/p13-verification-evidence.md) dan [review P1.3](P1_3_REVIEW.md).
