@@ -234,3 +234,24 @@ Tanggal: 25 September 2026. Penyelarasan arah desain visual sebelum implementasi
 | D78 | Penyelarasan arah desain visual: identitas navy (`#003C71`), aksen brand hijau (`#00A651`), tombol aksi terkalibrasi kontras (`#007A3D`, hover `#006633`); pemisahan token warna dua lapisan (palet dasar primitives dan pemetaan semantik); tipografi Geist Sans dan Geist Mono dengan hierarki terdefinisi (display 24px sampai micro 10px, tanpa micro-tight 9px); pemakaian komponen standar; serta validasi rasio kontras WCAG 2.2 AA. | BASELINE DOKUMENTASI untuk P0.10. Menggantikan baseline visual awal D69. DEFAULT/BATASAN: #00A651 dan #008C44 dilarang untuk latar tombol teks putih normal (kontras 3,19:1 & 4,34:1 < 4,5:1); #64748B dilarang untuk teks normal pada rail-bg (kontras 4,34:1); focus.ring #2563EB pada navy diganti ring terang. Hijau brand bukan bukti jaringan sehat. Token belum diimplementasikan di kode CSS/font; implementasi dilakukan pada task P0.10. Detail lengkap di [DESIGN_SYSTEM.md](DESIGN_SYSTEM.md) v2.0. |
 
 P0.10 tetap Not Started sampai token diimplementasikan di CSS. Entry berikutnya D79.
+
+## Implementasi Token UI Terpusat dan Pemuatan Font — D79
+
+Tanggal: 26 September 2026. Implementasi P0.10 pada CSS dan layout root.
+
+| ID | Keputusan | Status / dampak |
+|---|---|---|
+| D79 | Implementasi token UI terpusat dua lapisan di `app/globals.css`, integrasi `@theme` Tailwind CSS v4, pemuatan font Geist & Geist Mono via `next/font/google` di `app/layout.tsx`, penetapan token `--focus-ring-color-navy: #ffffff` (kontras 11,14:1 terhadap navy #003C71), serta dukungan `prefers-reduced-motion`. | IMPLEMENTASI P0.10 SELESAI. DEFAULT: ring fokus pada navy ditetapkan ke #FFFFFF (kontras 11,14:1); fallback font Sans menggunakan Arial, sans-serif; fallback font Mono menggunakan ui-monospace, monospace; layout dashboard P0.11 tetap pekerjaan terpisah. Detail dan bukti verifikasi pada P0_10_REVIEW.md. |
+
+P0.10 selesai (Done). Layout antrean dan shell dashboard menyusul pada P0.11. Entry berikutnya D80.
+
+## Layout Dasar Aplikasi dan Dashboard — D80
+
+Tanggal: 26 September 2026. Implementasi P0.11 pada layout bersama dashboard dan navigasi responsif.
+
+| ID | Keputusan | Status / dampak |
+|---|---|---|
+| D80 | Implementasi layout shell bersama dashboard (`app/dashboard/layout.tsx` dan `components/layout/dashboard-shell.tsx`) dengan desktop sidebar lebar 216px navy `#003C71`, topbar tinggi 64px, area konten fleksibel tanpa batas `max-w` sempit, identitas "Upaznet Helpdesk" dan penanda "Prototype · Data dummy". Navigasi menyajikan route yang tersedia (`/dashboard` dan `/dashboard/customers`) dengan penanda `aria-current="page"` dan border aksen hijau, serta menyajikan menu yang belum dibangun (Inbox, Gangguan, Template, Log, Pengaturan) sebagai item noninteraktif dengan badge "Belum tersedia". Viewport sempit (<1024px) menggunakan drawer modal aksesibel dengan focus trap, penutupan Escape, pengembalian fokus ke pemicu, dan scroll lock bersih. Proteksi sesi server-side dan Server Action logout dipertahankan. | IMPLEMENTASI P0.11 SELESAI. DEFAULT: Landing `/dashboard` menyajikan ringkasan workspace jujur dan tautan direktori pelanggan tanpa fabrikasi metrik/antrean; halaman `/dashboard/customers` diintegrasikan ke layout bersama tanpa duplikasi aside/header. Review dan bukti: docs/P0_11_REVIEW.md. |
+
+P0.11 selesai (Done). Entry berikutnya D81.
+

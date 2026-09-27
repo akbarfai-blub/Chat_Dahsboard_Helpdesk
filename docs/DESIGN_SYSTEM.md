@@ -59,7 +59,7 @@ Token warna disusun ke dalam dua lapisan arsitektur terpisah:
 | `field-bg` | `#F8FAFC` | Latar kontrol input form & textarea (Slate 50) |
 | `rail-bg` | `#F1F5F9` | Latar header netral, panel navigasi sekunder (Slate 100) |
 | `panel-text` | `#DBEAFE` | Teks sekunder/keterangan pada panel navy (Blue 100) |
-| `panel-border` | `#1E3A8A` | Border dekoratif varian panel navy (Blue 900) |
+| `panel-border` | `#1E3A8A` | Border dekoratif varian panel navy (Blue 900); kontras ~1,08:1 pada navy (hanya aksen dekoratif) |
 | `panel-on-navy` | `#FFFFFF` | Teks putih/judul utama pada panel navy |
 
 ### 3.2 Pemetaan semantik (Semantic Tokens)
@@ -115,7 +115,7 @@ Token warna disusun ke dalam dua lapisan arsitektur terpisah:
   Digunakan secara ketat HANYA untuk ID komplain (`C-001`), kode ODP/ODC (`ODP-DUMMY-01`), error code, payload teknis, dan catatan audit transaksi. Teks nama pelanggan dan percakapan chat tetap menggunakan Sans.
 
 > **Catatan Kebutuhan Font (P0.10):**  
-> Pada saat implementasi task P0.10, font Geist dan Geist Mono harus benar-benar dimuat ke dalam aplikasi (misalnya melalui package `@next/font` atau `next/font/google` di Next.js App Router) dengan fallback yang terkonfigurasi. Deklarasi CSS `font-family` semata tanpa pemuatan font tidak mencukupi acceptance criteria P0.10.
+> Pada saat implementasi task P0.10, font Geist dan Geist Mono harus benar-benar dimuat ke dalam aplikasi menggunakan `next/font/google` atau `next/font/local` sesuai dokumentasi versi Next.js yang terpasang (tanpa package `@next/font` lawas) dengan fallback yang terkonfigurasi. Deklarasi CSS `font-family` semata tanpa pemuatan font tidak mencukupi acceptance criteria P0.10.
 
 ### 4.2 Hierarki ukuran dan bobot
 
@@ -178,6 +178,8 @@ Token warna disusun ke dalam dua lapisan arsitektur terpisah:
   Menggunakan latar `surface` (`#FFFFFF`), teks `ink` (`#1E293B`) atau navy (`#003C71`), dengan batas kontrol `border.control` (`#64748B`) agar batas kontrol dapat dikenali dengan jelas.
 - **Tombol Bahaya (Danger):**  
   Menggunakan teks putih pada latar `danger.text` (`#B91C1C`) hanya untuk aksi destruktif terkonfirmasi (Force-close insiden).
+- **Tombol Ikon (Icon Button):**  
+  Tombol ikon tanpa teks pendamping wajib memiliki accessible name (`aria-label` atau `aria-labelledby`) dan tooltip penjelas. Ukuran ikon standar adalah 16–20px (16px untuk badge/tombol padat, 20px untuk aksi utama dan navigasi). Ikon pendukung yang bersifat dekoratif wajib disembunyikan dari screen reader (`aria-hidden="true"`).
 
 ### 6.2 Kontrol form (Input & Textarea)
 - Menggunakan latar `field-bg` (`#F8FAFC`), teks `ink` (`#1E293B`), teks petunjuk `text.muted` (`#64748B`), dan batas `border.control` (`#64748B`).
@@ -187,7 +189,7 @@ Token warna disusun ke dalam dua lapisan arsitektur terpisah:
 ### 6.3 Varian panel navy
 - Menggunakan latar `primary` (`#003C71`), judul `panel-on-navy` (`#FFFFFF`), keterangan `panel-text` (`#DBEAFE`), dan pembatas `panel-border` (`#1E3A8A`).
 - **Batasan Varian:** Panel navy murni merupakan varian visual kontras (misal ringkasan darurat atau kartu informasi status topbar). Dilarang keras menambahkan fitur terminal/CLI atau simulator command generator pada panel ini.
-- **Larangan `panel-border`:** Token `panel-border` (`#1E3A8A`) dilarang diterapkan secara universal sebagai batas kontrol input atau fokus keyboard karena kontrasnya tidak memenuhi syarat pada latar terang.
+- **Peran dan Batasan `panel-border`:** Token `panel-border` (`#1E3A8A`) memiliki rasio kontras terhadap putih sekitar 10,36:1, namun terhadap navy (`#003C71`) hanya sekitar 1,08:1. Oleh karena itu, pada varian panel navy token ini hanya berfungsi sebagai aksen dekoratif subtle, bukan satu-satunya penanda batas kontrol atau indikator fokus keyboard.
 
 ### 6.4 Spacing, radius, dan motion (Tetap dari baseline)
 - **Spacing Scale:** 4, 8, 12, 16, 24, 32, 48 px. Padding panel 16–24 px, gap komponen 12–16 px.
@@ -201,8 +203,8 @@ Token warna disusun ke dalam dua lapisan arsitektur terpisah:
 
 Perhitungan rasio kontras berikut didasarkan pada rumus luminansi relatif standar WCAG 2.2 (`(L1 + 0.05) / (L2 + 0.05)`).  
 Standar kepatuhan:
-- **WCAG AA Teks Normal (< 18px atau < 14px bold):** Minimal **4,5:1**.
-- **WCAG AA Teks Besar (≥ 18px atau ≥ 14px bold) & Kontrol Non-Teks:** Minimal **3,0:1**.
+- **WCAG AA Teks Normal (< 24px reguler atau < 18,67px / 14pt bold):** Minimal **4,5:1**. (Catatan: teks 16px bold tetap tergolong teks normal dan membutuhkan rasio minimal 4,5:1).
+- **WCAG AA Teks Besar (≥ 18pt / 24px reguler atau ≥ 14pt / sekitar 18,67px bold) & Kontrol Non-Teks:** Minimal **3,0:1**.
 
 ### 7.1 Tabel hasil perhitungan kontras aktual
 
@@ -242,7 +244,7 @@ Standar kepatuhan:
 ### 7.2 Pasangan dengan pembatasan penggunaan khusus
 
 1. **`brand.accent` (`#00A651`) dan `accent-hover` (`#008C44`) pada Teks Putih:**  
-   Kedua warna ini tidak boleh digunakan sebagai latar belakang tombol dengan teks putih. Rasio 3,19:1 dan 4,34:1 hanya memenuhi syarat teks besar (≥18px) atau elemen grafis non-teks.
+   Kedua warna ini tidak boleh digunakan sebagai latar belakang tombol dengan teks putih. Rasio 3,19:1 dan 4,34:1 hanya memenuhi syarat teks besar (≥ 18pt / 24px reguler atau ≥ 14pt / sekitar 18,67px bold) atau elemen grafis non-teks.
 2. **`text.muted` (`#64748B`) pada `rail-bg` (`#F1F5F9`):**  
    Rasio kontras berada di 4,34:1 (kurang dari 4,5:1). Pada area sidebar atau header rail, teks sekunder wajib menggunakan `text.secondary` (`#475569`, rasio 6,92:1).
 3. **`focus.ring` (`#2563EB`) pada Navy (`#003C71`):**  
@@ -278,7 +280,9 @@ Standar kepatuhan:
 ### 8.2 Perilaku utama
 - **Daftar Default:** episode belum CLOSED, NEW/unread di atas, lalu waktu tunggu terlama. Staf boleh mengubah sorting; polling tidak memindahkan item yang sedang dipilih saat mengetik.
 - **Filter:** status, unread, kategori, jenis bukti, send failure, manual incident/event. “Data basi” berbeda dari “LOS”.
-- **Row:** episode ID (Geist Mono), nama/ID masked bila unresolved, preview pesan, badge kondisi, unread count, last inbound; timestamp lengkap melalui tooltip/detail.
+- **Row:** episode ID (Geist Mono), nama/ID masked bila unresolved, preview pesan maksimal dua baris (`line-clamp-2`), badge kondisi, unread count, last inbound; timestamp lengkap melalui tooltip/detail. Tinggi baris tabel operasional default adalah **56px** untuk menjamin keterbacaan data multi-baris dan kenyamanan ruang sentuh.
+- **Penanda Baris Terpilih (Selected Row):** Baris yang sedang dipilih atau aktif wajib memiliki penanda bentuk visual selain warna (misal: border samping tebal beraksen atau indikator penanda/radio), bukan hanya mengandalkan perbedaan warna latar belakang.
+- **Integritas Status Gagal:** Status gagal kirim (`attempt failed`) atau kegagalan operasional krusial tidak boleh terpotong atau tersembunyi di dalam ellipsis; status kegagalan wajib selalu tampil utuh dan eksplisit.
 - **Detail:** nomor episode/status, layanan, channel, riwayat kronologis; label jelas “Pelanggan”, “Automation”, “Akbar (staf)” dan “Catatan internal”.
 - **Composer:** tab “Balasan ke pelanggan” default, tab “Catatan internal” berbeda latar dan label. Tombol berubah menjadi “Kirim ke Telegram” (`action.primary`) atau “Simpan catatan”. Channel penerima selalu terlihat.
 - **Keyboard Shortcuts:** Enter membuat baris baru; Ctrl/Cmd+Enter mengirim bila valid. Tidak mengirim pada Enter biasa. Kosong/whitespace → tombol disabled, alasan inline.
@@ -321,10 +325,10 @@ Standar kepatuhan:
 
 | Komponen | Kontrak state/perilaku |
 |---|---|
-| `Button` | primary (`action.primary`), secondary/outline, ghost, danger; loading mempertahankan lebar; disabled dengan alasan eksplisit |
+| `Button` | primary (`action.primary`), secondary/outline, ghost, danger; tombol ikon tanpa teks wajib memiliki accessible name (`aria-label`) dan tooltip; loading mempertahankan lebar; disabled dengan alasan eksplisit |
 | `Input` / `Textarea` / `Select` | label nyata terlihat, hint, required, error inline; placeholder tidak menggantikan label; latar `field-bg` |
-| `StatusBadge` | domain semantik + label teks + ikon; tidak menerima warna sembarang per halaman |
-| `DataTable` / `List` | loading skeleton, empty, filtered-empty, error, pagination 25 baris; navigasi selection keyboard |
+| `StatusBadge` | domain semantik + label teks + ikon (16px, `aria-hidden="true"`); tidak menerima warna sembarang per halaman |
+| `DataTable` / `List` | loading skeleton, empty, filtered-empty, error, pagination 25 baris; tinggi baris default 56px; penanda terpilih selain warna; preview teks maksimal 2 baris; status gagal tidak tersembunyi dalam ellipsis; navigasi selection keyboard |
 | `Tabs` | label jumlah opsional, aria selected, keyboard arrow navigation |
 | `EvidenceCard` | status/source/observed_at/checked_at/coverage dan safe reason; status unknown bukan sukses |
 | `MessageItem` | actor/channel/time/text/delivery; catatan internal memiliki visual pembeda dari bubble pelanggan |

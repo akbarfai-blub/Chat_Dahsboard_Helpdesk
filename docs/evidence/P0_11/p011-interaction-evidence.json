@@ -1,0 +1,187 @@
+{
+  "timestamp": "2026-09-26T14:55:13.273Z",
+  "summary": {
+    "total": 11,
+    "passed": 10,
+    "failed": 0,
+    "notRun": 1
+  },
+  "assertions": [
+    {
+      "id": "compact_sidebar_tooltip_hover",
+      "name": "Tooltip Sidebar Ringkas tampil utuh di luar area scroll saat hover mouse",
+      "status": "PASS",
+      "expected": {
+        "found": true,
+        "text": "Pelanggan",
+        "isOutsideNavScroll": true,
+        "notClippedByViewport": true
+      },
+      "actual": {
+        "found": true,
+        "text": "Pelanggan",
+        "left": 80,
+        "top": 225,
+        "sidebarRight": 72,
+        "isOutsideNavScroll": true,
+        "isRightOfSidebar": true,
+        "notClippedByViewport": true
+      }
+    },
+    {
+      "id": "compact_sidebar_tooltip_keyboard_tab",
+      "name": "Tooltip Sidebar Ringkas tampil utuh saat fokus keyboard via Tab native",
+      "status": "PASS",
+      "expected": {
+        "isFocused": true,
+        "found": true,
+        "text": "Pelanggan",
+        "isOutsideNavScroll": true,
+        "notClippedByViewport": true
+      },
+      "actual": {
+        "found": true,
+        "text": "Pelanggan",
+        "isFocused": true,
+        "isOutsideNavScroll": true,
+        "notClippedByViewport": true,
+        "left": 80,
+        "top": 225
+      }
+    },
+    {
+      "id": "compact_sidebar_no_horizontal_overflow",
+      "name": "Sidebar Ringkas bebas dari horizontal overflow",
+      "status": "PASS",
+      "expected": {
+        "hasSidebarHorizontalOverflow": false,
+        "hasNavHorizontalOverflow": false,
+        "pageOverflowX": false
+      },
+      "actual": {
+        "sidebarScrollWidth": 71,
+        "sidebarClientWidth": 71,
+        "hasSidebarHorizontalOverflow": false,
+        "navScrollWidth": 71,
+        "navClientWidth": 71,
+        "hasNavHorizontalOverflow": false,
+        "pageOverflowX": false
+      }
+    },
+    {
+      "id": "drawer_tab_cycle_last_to_first",
+      "name": "Tab dari elemen terakhir drawer berputar kembali ke elemen pertama via keyboard native",
+      "status": "PASS",
+      "expected": {
+        "firstElementFocusedAfterTab": true
+      },
+      "actual": {
+        "firstElementFocusedAfterTab": true
+      }
+    },
+    {
+      "id": "drawer_shift_tab_cycle_first_to_last",
+      "name": "Shift+Tab dari elemen pertama drawer berputar kembali ke elemen terakhir via keyboard native",
+      "status": "PASS",
+      "expected": {
+        "lastElementFocusedAfterShiftTab": true
+      },
+      "actual": {
+        "lastElementFocusedAfterShiftTab": true
+      }
+    },
+    {
+      "id": "drawer_escape_key_restores_focus",
+      "name": "Escape menutup drawer, mengembalikan fokus ke pemicu hamburger, dan memulihkan scroll body",
+      "status": "PASS",
+      "expected": {
+        "drawerRemoved": true,
+        "isTriggerFocused": true,
+        "bodyOverflowRestored": true
+      },
+      "actual": {
+        "drawerRemoved": true,
+        "isTriggerFocused": true,
+        "bodyOverflowRestored": true
+      }
+    },
+    {
+      "id": "drawer_resize_cleanup",
+      "name": "Resize dari drawer terbuka ke desktop (1280px) menutup drawer dan membersihkan scroll lock",
+      "status": "PASS",
+      "expected": {
+        "afterIsDrawerOpen": false,
+        "afterBodyOverflow": ""
+      },
+      "actual": {
+        "afterIsDrawerOpen": false,
+        "afterBodyOverflow": ""
+      }
+    },
+    {
+      "id": "narrow_viewport_control_heights",
+      "name": "Kontrol viewport sempit (<640px) memenuhi target sentuh 44px pada hamburger, tombol direktori, dan logout",
+      "status": "PASS",
+      "expected": {
+        "hamburgerHeight": ">=44",
+        "customerActionBtnHeight": ">=44",
+        "logoutBtnHeight": ">=44"
+      },
+      "actual": {
+        "viewport": {
+          "width": 375,
+          "height": 667,
+          "dpr": 2
+        },
+        "pointerType": "fine",
+        "hamburgerHeight": 44,
+        "customerActionBtnHeight": 44,
+        "logoutBtnHeight": 44
+      }
+    },
+    {
+      "id": "desktop_control_heights",
+      "name": "Kontrol desktop pointer presisi memenuhi tinggi minimum default 40px",
+      "status": "PASS",
+      "expected": {
+        "customerActionBtnHeight": ">=40",
+        "logoutBtnHeight": ">=40"
+      },
+      "actual": {
+        "viewport": {
+          "width": 1440,
+          "height": 900,
+          "dpr": 1
+        },
+        "pointerType": "fine",
+        "customerActionBtnHeight": 40,
+        "logoutBtnHeight": 40
+      }
+    },
+    {
+      "id": "pointer_coarse_hardware_test",
+      "name": "Pengujian hardware pointer: coarse pada layar sentuh fisik",
+      "status": "NOT_RUN",
+      "reason": "matchMedia('(pointer: coarse)').matches === false; lingkungan headless Chromium tidak memiliki hardware layar sentuh fisik"
+    },
+    {
+      "id": "customer_directory_data_loading",
+      "name": "Tabel pelanggan memuat 12 data dummy normal, ukuran halaman 25, tanpa error alert",
+      "status": "PASS",
+      "expected": {
+        "tableFound": true,
+        "rowCount": 12,
+        "hasErrorAlert": false,
+        "pageSize": 25,
+        "hasPaginationLinks": false
+      },
+      "actual": {
+        "tableFound": true,
+        "rowCount": 12,
+        "hasErrorAlert": false,
+        "paginationText": "Halaman 1 dari 1 · Maksimal 25 pelanggan per halaman",
+        "hasPaginationLinks": false
+      }
+    }
+  ]
+}

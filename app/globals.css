@@ -1,1 +1,389 @@
 @import "tailwindcss";
+
+/* ==========================================================================
+   UPAZNET HELPDESK DESIGN SYSTEM — CENTRALIZED UI TOKENS (P0.10)
+   Acuan: docs/DESIGN_SYSTEM.md v2.0 (D78)
+   Arsitektur: Dua lapisan (Palet Dasar Primitives + Pemetaan Semantik)
+   ========================================================================== */
+
+:root {
+  /* ------------------------------------------------------------------------
+     LAPISAN 1: PALET DASAR (PRIMITIVES)
+     ------------------------------------------------------------------------ */
+  --color-primary: #003c71;          /* Navy identitas Upaznet, topbar/sidebar, varian panel */
+  --color-accent: #00a651;           /* Hijau aksen brand resmi; BUKAN untuk tombol teks putih */
+  --color-accent-hover: #008c44;     /* Hover aksen brand */
+  --color-neutral-bg: #fbfcfd;       /* Latar belakang kanvas aplikasi */
+  --color-surface: #ffffff;          /* Permukaan kartu, panel, tabel, modal dialog */
+  --color-ink: #1e293b;              /* Teks utama dengan tingkat kontras tertinggi (Slate 800) */
+  --color-muted: #64748b;            /* Teks sekunder/muted, border kontrol (Slate 500) */
+  --color-border: #e2e8f0;           /* Border subtle, pemisah dekoratif (Slate 200) */
+  --color-border-strong: #cbd5e1;    /* Border tegas, divider pembagi kolom (Slate 300) */
+  --color-field-bg: #f8fafc;         /* Latar kontrol input form & textarea (Slate 50) */
+  --color-rail-bg: #f1f5f9;          /* Latar header netral, navigasi sekunder (Slate 100) */
+  --color-panel-text: #dbeafe;       /* Teks sekunder/keterangan pada panel navy (Blue 100) */
+  --color-panel-border: #1e3a8a;     /* Border dekoratif varian panel navy (Blue 900; dekoratif) */
+  --color-panel-on-navy: #ffffff;    /* Teks putih/judul utama pada panel navy */
+
+  /* ------------------------------------------------------------------------
+     LAPISAN 2: PEMETAAN SEMANTIK (SEMANTIC TOKENS)
+     ------------------------------------------------------------------------ */
+  /* Brand */
+  --brand-primary: var(--color-primary);
+  --brand-accent: var(--color-accent);
+  --brand-accent-hover: var(--color-accent-hover);
+
+  /* Aksi (Action) - Terkalibrasi kontras WCAG 2.2 AA (5,45:1 & 7,12:1) */
+  --action-primary: #007a3d;
+  --action-primary-hover: #006633;
+  --action-on-primary: #ffffff;
+  --action-danger: #b91c1c;
+  --action-danger-hover: #991b1b;
+  --action-on-danger: #ffffff;
+
+  /* Teks (Text) */
+  --text-primary: var(--color-ink);
+  --text-secondary: #475569;         /* Slate 600 - kontras 7,58:1 pada surface, 6,92:1 pada rail */
+  --text-muted: var(--color-muted);  /* Hanya pada latar surface, field-bg, atau neutral-bg */
+  --text-on-navy: var(--color-panel-on-navy);
+  --text-on-navy-secondary: var(--color-panel-text);
+
+  /* Batas (Border) */
+  --border-subtle: var(--color-border);
+  --border-strong: var(--color-border-strong);
+  --border-control: var(--color-muted);       /* Memenuhi WCAG non-teks 3:1 (4,55:1 - 4,76:1) */
+  --border-panel-navy: var(--color-panel-border);
+
+  /* Latar & Permukaan (Background & Surface) */
+  --bg-canvas: var(--color-neutral-bg);
+  --bg-surface: var(--color-surface);
+  --bg-field: var(--color-field-bg);
+  --bg-rail: var(--color-rail-bg);
+  --bg-panel-navy: var(--color-primary);
+  --bg-panel-item-hover: rgba(255, 255, 255, 0.1); /* Hover item navigasi panel navy */
+  --bg-panel-badge: rgba(255, 255, 255, 0.1);      /* Latar badge pada panel navy */
+  --bg-overlay-backdrop: rgba(15, 23, 42, 0.6);   /* Overlay modal/drawer (Slate 900 60%) */
+
+  /* Indikator Fokus Keyboard (Focus Ring) */
+  --focus-ring-color: #2563eb;          /* Indikator fokus pada latar terang (kontras > 4,7:1) */
+  --focus-ring-color-navy: #ffffff;     /* Indikator fokus pada panel navy (kontras 11,14:1) */
+  --focus-ring-width: 2px;
+  --focus-ring-offset: 2px;
+
+  /* Status Semantik (5 Domain Status - WCAG 2.2 AA Pass) */
+  --status-success-text: #166534;
+  --status-success-bg: #f0fdf4;
+  --status-success-border: #bbf7d0;
+
+  --status-warning-text: #92400e;
+  --status-warning-bg: #fffbeb;
+  --status-warning-border: #fde68a;
+
+  --status-danger-text: #b91c1c;
+  --status-danger-bg: #fef2f2;
+  --status-danger-border: #fecaca;
+
+  --status-info-text: #1e40af;
+  --status-info-bg: #eff6ff;
+  --status-info-border: #bfdbfe;
+
+  --status-neutral-text: #475569;
+  --status-neutral-bg: #f1f5f9;
+  --status-neutral-border: #e2e8f0;
+
+  /* ------------------------------------------------------------------------
+     TIPOGRAFI: FONT FAMILY & HIERARKI
+     ------------------------------------------------------------------------ */
+  --font-family-sans: var(--font-geist-sans), Arial, sans-serif;
+  --font-family-mono: var(--font-geist-mono), ui-monospace, monospace;
+
+  /* Display: 24px, 700 bold, line-height 1.2 (28.8px) */
+  --font-display-size: 1.5rem;       /* 24px */
+  --font-display-weight: 700;
+  --font-display-leading: 1.2;
+  --font-display-tracking: normal;
+
+  /* Headline: 16px, 700 bold, line-height 1.4 (22.4px) */
+  --font-headline-size: 1rem;        /* 16px */
+  --font-headline-weight: 700;
+  --font-headline-leading: 1.4;
+  --font-headline-tracking: normal;
+
+  /* Body: 14px, 400 regular, line-height 1.5 (21px) */
+  --font-body-size: 0.875rem;        /* 14px */
+  --font-body-weight: 400;
+  --font-body-leading: 1.5;
+  --font-body-tracking: normal;
+
+  /* Action: 14px, 600 semibold, line-height 1.5 (21px) */
+  --font-action-size: 0.875rem;      /* 14px */
+  --font-action-weight: 600;
+  --font-action-leading: 1.5;
+  --font-action-tracking: normal;
+
+  /* Label: 12px, 600 semibold, line-height 1.333 (16px) */
+  --font-label-size: 0.75rem;        /* 12px */
+  --font-label-weight: 600;
+  --font-label-leading: 1.333333;
+  --font-label-tracking: normal;
+
+  /* Metadata: 12px, 400 regular, line-height 1.5 (18px) */
+  --font-metadata-size: 0.75rem;     /* 12px */
+  --font-metadata-weight: 400;
+  --font-metadata-leading: 1.5;
+  --font-metadata-tracking: normal;
+
+  /* Mono: 13px, 400 regular, line-height 1.625 (21.125px) */
+  --font-mono-size: 0.8125rem;       /* 13px */
+  --font-mono-weight: 400;
+  --font-mono-leading: 1.625;
+  --font-mono-tracking: normal;
+
+  /* Micro: 10px, 700 bold, line-height 1.25 (12.5px), tracking 0.1em */
+  --font-micro-size: 0.625rem;       /* 10px */
+  --font-micro-weight: 700;
+  --font-micro-leading: 1.25;
+  --font-micro-tracking: 0.1em;
+
+  /* ------------------------------------------------------------------------
+     SPACING, RADIUS, KONTROL & MOTION
+     ------------------------------------------------------------------------ */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-12: 48px;
+
+  --radius-control: 6px;             /* Input & Button */
+  --radius-container: 10px;          /* Card & Dialog */
+  --radius-full: 9999px;             /* Pill Badge */
+
+  --control-height-default: 40px;    /* Desktop */
+  --control-height-touch: 44px;      /* Touch/Mobile */
+  --table-row-height-default: 56px;  /* Baris tabel operasional */
+
+  --icon-size-compact: 16px;         /* Badge / kontrol padat */
+  --icon-size-default: 20px;         /* Navigasi / tombol utama */
+
+  --motion-duration-fast: 120ms;
+  --motion-duration-normal: 180ms;
+  --motion-ease: cubic-bezier(0, 0, 0.2, 1);
+}
+
+/* Aturan pointer sentuh: jika perangkat menggunakan pointer kasar (layar sentuh),
+   tinggi kontrol desktop diselaraskan ke ukuran target sentuh 44px */
+@media (pointer: coarse) {
+  :root {
+    --control-height-default: var(--control-height-touch);
+  }
+}
+
+/* --------------------------------------------------------------------------
+   INTEGRASI TEMA TAILWIND V4
+   -------------------------------------------------------------------------- */
+@theme {
+  --font-sans: var(--font-family-sans);
+  --font-mono: var(--font-family-mono);
+
+  --color-brand-primary: var(--brand-primary);
+  --color-brand-accent: var(--brand-accent);
+  --color-brand-accent-hover: var(--brand-accent-hover);
+
+  --color-action-primary: var(--action-primary);
+  --color-action-primary-hover: var(--action-primary-hover);
+  --color-action-on-primary: var(--action-on-primary);
+
+  --color-action-danger: var(--action-danger);
+  --color-action-danger-hover: var(--action-danger-hover);
+  --color-action-on-danger: var(--action-on-danger);
+
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-muted: var(--text-muted);
+  --color-text-on-navy: var(--text-on-navy);
+  --color-text-on-navy-secondary: var(--text-on-navy-secondary);
+
+  --color-bg-canvas: var(--bg-canvas);
+  --color-bg-surface: var(--bg-surface);
+  --color-bg-field: var(--bg-field);
+  --color-bg-rail: var(--bg-rail);
+  --color-bg-panel-navy: var(--bg-panel-navy);
+  --color-bg-panel-item-hover: var(--bg-panel-item-hover);
+  --color-bg-panel-badge: var(--bg-panel-badge);
+  --color-bg-overlay-backdrop: var(--bg-overlay-backdrop);
+
+  --color-border-subtle: var(--border-subtle);
+  --color-border-strong: var(--border-strong);
+  --color-border-control: var(--border-control);
+  --color-border-panel-navy: var(--border-panel-navy);
+
+  --color-focus-ring: var(--focus-ring-color);
+  --color-focus-ring-navy: var(--focus-ring-color-navy);
+
+  --color-status-success-text: var(--status-success-text);
+  --color-status-success-bg: var(--status-success-bg);
+  --color-status-success-border: var(--status-success-border);
+
+  --color-status-warning-text: var(--status-warning-text);
+  --color-status-warning-bg: var(--status-warning-bg);
+  --color-status-warning-border: var(--status-warning-border);
+
+  --color-status-danger-text: var(--status-danger-text);
+  --color-status-danger-bg: var(--status-danger-bg);
+  --color-status-danger-border: var(--status-danger-border);
+
+  --color-status-info-text: var(--status-info-text);
+  --color-status-info-bg: var(--status-info-bg);
+  --color-status-info-border: var(--status-info-border);
+
+  --color-status-neutral-text: var(--status-neutral-text);
+  --color-status-neutral-bg: var(--status-neutral-bg);
+  --color-status-neutral-border: var(--status-neutral-border);
+
+  --radius-control: var(--radius-control);
+  --radius-container: var(--radius-container);
+}
+
+/* --------------------------------------------------------------------------
+   GAYA DASAR & KELAS TIPOGRAFI
+   -------------------------------------------------------------------------- */
+body {
+  font-family: var(--font-family-sans);
+  background-color: var(--bg-canvas);
+  color: var(--text-primary);
+  line-height: var(--font-body-leading);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Tipografi Peran Terdefinisi */
+.type-display {
+  font-size: var(--font-display-size);
+  font-weight: var(--font-display-weight);
+  line-height: var(--font-display-leading);
+  letter-spacing: var(--font-display-tracking);
+}
+
+.type-headline {
+  font-size: var(--font-headline-size);
+  font-weight: var(--font-headline-weight);
+  line-height: var(--font-headline-leading);
+  letter-spacing: var(--font-headline-tracking);
+}
+
+.type-body {
+  font-size: var(--font-body-size);
+  font-weight: var(--font-body-weight);
+  line-height: var(--font-body-leading);
+  letter-spacing: var(--font-body-tracking);
+}
+
+.type-action {
+  font-size: var(--font-action-size);
+  font-weight: var(--font-action-weight);
+  line-height: var(--font-action-leading);
+  letter-spacing: var(--font-action-tracking);
+}
+
+.type-label {
+  font-size: var(--font-label-size);
+  font-weight: var(--font-label-weight);
+  line-height: var(--font-label-leading);
+  letter-spacing: var(--font-label-tracking);
+}
+
+.type-metadata {
+  font-size: var(--font-metadata-size);
+  font-weight: var(--font-metadata-weight);
+  line-height: var(--font-metadata-leading);
+  letter-spacing: var(--font-metadata-tracking);
+}
+
+.type-mono {
+  font-family: var(--font-family-mono);
+  font-size: var(--font-mono-size);
+  font-weight: var(--font-mono-weight);
+  line-height: var(--font-mono-leading);
+  letter-spacing: var(--font-mono-tracking);
+}
+
+.type-micro {
+  font-size: var(--font-micro-size);
+  font-weight: var(--font-micro-weight);
+  line-height: var(--font-micro-leading);
+  letter-spacing: var(--font-micro-tracking);
+  text-transform: uppercase;
+}
+
+/* Indikator Fokus Aksesibel */
+.focus-ring {
+  outline: none;
+}
+.focus-ring:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
+}
+
+.focus-ring-navy {
+  outline: none;
+}
+.focus-ring-navy:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color-navy);
+  outline-offset: var(--focus-ring-offset);
+}
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --motion-duration-fast: 0ms;
+    --motion-duration-normal: 0ms;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   RESPONSIVE BREAKPOINTS SIDEBAR DASHBOARD (D80 & Baseline DESIGN_SYSTEM §13)
+   - < 1024px: Tersembunyi (navigasi menggunakan mobile drawer)
+   - 1024px - 1439px: Sidebar ringkas selebar 72px
+   - >= 1440px: Sidebar penuh selebar 216px
+   -------------------------------------------------------------------------- */
+.dashboard-sidebar-container {
+  display: none;
+}
+
+@media (min-width: 1024px) {
+  .dashboard-sidebar-container {
+    display: flex;
+    flex-direction: column;
+    width: 72px;
+    flex-shrink: 0;
+  }
+  .sidebar-expanded-only {
+    display: none !important;
+  }
+  .sidebar-compact-only {
+    display: flex !important;
+  }
+}
+
+@media (min-width: 1440px) {
+  .dashboard-sidebar-container {
+    width: 216px;
+  }
+  .sidebar-expanded-only {
+    display: flex !important;
+  }
+  .sidebar-compact-only {
+    display: none !important;
+  }
+}
+

@@ -28,19 +28,28 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           : null;
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-slate-50 p-6 text-slate-900">
-      <section className="w-full max-w-sm rounded-xl border border-slate-300 bg-white p-6">
-        <p className="mb-2 text-sm text-slate-600">Prototype · Data dummy</p>
+    <main className="flex min-h-screen flex-col items-center justify-center bg-[var(--bg-canvas)] p-6 text-[var(--text-primary)]">
+      <section className="w-full max-w-sm rounded-[var(--radius-container)] border border-[var(--border-strong)] bg-[var(--bg-surface)] p-6 shadow-sm">
+        <div className="mb-3">
+          <span className="inline-flex items-center rounded-[var(--radius-full)] border border-[var(--status-neutral-border)] bg-[var(--status-neutral-bg)] px-2.5 py-0.5 type-micro text-[var(--status-neutral-text)]">
+            Prototype · Data dummy
+          </span>
+        </div>
 
-        <h1 className="text-2xl font-semibold">Masuk ke Upaznet</h1>
+        <h1 className="type-display text-[var(--text-primary)]">
+          Masuk ke Upaznet
+        </h1>
 
-        <p className="mt-2 text-sm text-slate-600">
+        <p className="mt-2 type-body text-[var(--text-secondary)]">
           Gunakan akun staf yang sudah dibuat.
         </p>
 
         <form action={login} className="mt-6 space-y-4">
           <div>
-            <label htmlFor="email" className="block text-sm font-medium">
+            <label
+              htmlFor="email"
+              className="block type-label text-[var(--text-primary)]"
+            >
               Email
             </label>
 
@@ -50,12 +59,15 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
               type="email"
               autoComplete="username"
               required
-              className="mt-1 min-h-10 w-full rounded-md border border-slate-500 px-3 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
+              className="mt-1 min-h-[var(--control-height-touch)] sm:min-h-[var(--control-height-default)] w-full rounded-[var(--radius-control)] border border-[var(--border-control)] bg-[var(--bg-field)] px-3 type-body text-[var(--text-primary)] focus-ring"
             />
           </div>
 
           <div>
-            <label htmlFor="password" className="block text-sm font-medium">
+            <label
+              htmlFor="password"
+              className="block type-label text-[var(--text-primary)]"
+            >
               Password
             </label>
 
@@ -65,19 +77,23 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
               type="password"
               autoComplete="current-password"
               required
-              className="mt-1 min-h-10 w-full rounded-md border border-slate-500 px-3 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
+              className="mt-1 min-h-[var(--control-height-touch)] sm:min-h-[var(--control-height-default)] w-full rounded-[var(--radius-control)] border border-[var(--border-control)] bg-[var(--bg-field)] px-3 type-body text-[var(--text-primary)] focus-ring"
             />
           </div>
 
           {errorMessage && (
-            <p role="alert" className="text-sm text-red-700">
+            <p
+              role="alert"
+              className="rounded-[var(--radius-control)] border border-[var(--status-danger-border)] bg-[var(--status-danger-bg)] p-3 type-body text-[var(--status-danger-text)]"
+            >
               {errorMessage}
             </p>
           )}
 
           <button
+            id="login-submit-button"
             type="submit"
-            className="min-h-10 w-full rounded-md bg-blue-700 px-4 py-2 font-medium text-white hover:bg-blue-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
+            className="inline-flex min-h-[var(--control-height-touch)] sm:min-h-[var(--control-height-default)] w-full items-center justify-center rounded-[var(--radius-control)] bg-[var(--action-primary)] px-4 py-2 type-action text-[var(--action-on-primary)] transition-colors duration-[var(--motion-duration-fast)] hover:bg-[var(--action-primary-hover)] focus-ring"
           >
             Masuk
           </button>
@@ -86,3 +102,4 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
     </main>
   );
 }
+

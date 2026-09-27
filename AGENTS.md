@@ -51,7 +51,7 @@ Baca [docs/PRD.md](docs/PRD.md) sebelum implementasi dan [docs/DESIGN_SYSTEM.md]
 
 - supabase/migrations/ menjadi source of truth schema aktual ketika dibuat. docs/database_schema.sql adalah snapshot historis Mass Outage, tidak lengkap untuk PRD v2.0; jangan apply langsung.
 - Buat migration baru untuk perubahan schema, jangan edit migration yang sudah diaplikasikan. Update dokumentasi schema bila signifikan.
-- Decision log append-only; jangan menghapus histori. Entry berikutnya setelah D78 adalah D79. D43–D48 tidak tersedia, jangan dikarang.
+- Decision log append-only; jangan menghapus histori. Sebelum menambahkan keputusan, periksa ID terakhir pada docs/decision-log.md dan gunakan nomor berikutnya. D43–D48 tidak tersedia, jangan dikarang.
 - Pilihan teknis baru yang berdampak perilaku dicatat; default visual/operasional konsolidasi boleh diimplementasikan dalam scope.
 - Kode/nama variabel Bahasa Inggris; UI Bahasa Indonesia. Env UPPER_SNAKE_CASE, prefix layanan sesuai fungsi.
 - Rekomendasi commit message mengikuti Conventional Commits, tetapi agent tidak commit sendiri.
@@ -64,7 +64,48 @@ Baca [docs/PRD.md](docs/PRD.md) sebelum implementasi dan [docs/DESIGN_SYSTEM.md]
 - Setelah task, jelaskan file dibuat/diubah/dihapus, alasan perubahan, asumsi/default baru, validasi dan kegagalan. Jangan mengklaim implementasi/deploy hanya karena spesifikasi ada.
 - Jika fakta vendor belum diketahui, gunakan interface/mock dan tandai OPEN ITEM. Jika bukti jaringan tidak cukup, jangan klaim gangguan terkonfirmasi; gunakan generic/manual sesuai PRD.
 
+## 7. Kebijakan review — berbasis risiko dan hemat token
 
+Kebijakan ini berlaku saat agent mereview hasil pekerjaan agent eksekutor. Tujuannya memastikan Acceptance Criteria terpenuhi dengan pemeriksaan secukupnya, tanpa mengulang pekerjaan eksekutor.
+
+### Penentuan risiko
+
+Tentukan tier berdasarkan perilaku yang berubah, bukan hanya nama file. Perubahan styling pada halaman login tidak otomatis menjadi perubahan auth. Jika satu task mencakup beberapa tier, terapkan kedalaman review sesuai bagian yang berubah.
+
+- **Risiko rendah:** UI/styling, layout, copy, token desain, dan sinkronisasi dokumentasi tanpa perubahan perilaku.
+  Baca ringkasan eksekutor, diff stat, dan diff bagian relevan. Untuk perubahan visual, periksa bukti screenshot yang terkait Acceptance Criteria. Jangan membaca file penuh atau menjelajahi codebase tanpa indikasi masalah.
+
+- **Risiko menengah:** business logic nonkritis, transformasi data, dan validasi form nonkeamanan.
+  Review diff dan cocokkan dengan Acceptance Criteria. Baca konteks tambahan hanya jika diperlukan untuk memahami pemanggil, kontrak, atau dampaknya. Fokus pada ketepatan perilaku, bukan preferensi gaya kode.
+
+- **Risiko tinggi:** auth, otorisasi, RLS/akses database, perubahan yang berkaitan dengan D66/D70, transaksi/klaim, idempotensi pengiriman, dan migrasi schema.
+  Baca penuh file terkait yang diperlukan untuk menilai perubahan serta batas kepercayaannya. Wajib ada bukti pengujian eksplisit sebelum menyetujui status Done. Tidak perlu membaca seluruh codebase.
+
+### Batas scope review
+
+- Identifikasi perubahan milik task yang sedang direview. Jangan menganggap seluruh working tree atau staging sebagai hasil task tersebut.
+- Gunakan konteks review sebelumnya; jangan membaca ulang file yang sama tanpa alasan baru.
+- Perluas pemeriksaan hanya jika ditemukan ketidaksesuaian, perubahan di luar scope, bukti bertentangan, atau risiko tambahan. Jelaskan alasannya singkat.
+- Jangan menjalankan sub-agent atau audit tambahan secara default; gunakan hanya jika pengguna memintanya.
+- Jangan mengubah kode saat tugasnya hanya review, kecuali pengguna juga meminta perbaikan.
+
+### Kebijakan pengujian
+
+- Jangan menjalankan ulang test, lint, build, integrasi database, atau pengujian browser saat review, kecuali pengguna secara eksplisit meminta verifikasi independen.
+- Utamakan bukti eksekutor: perintah yang dijalankan, hasil/exit code, jumlah passed/failed/skipped bila relevan, assertion kunci, dan versi kode yang diuji.
+- Periksa apakah bukti tersebut menutup Acceptance Criteria dan masih sesuai dengan perubahan terakhir.
+- Screenshot saja tidak membuktikan seluruh perilaku; build lulus tidak membuktikan aturan bisnis benar.
+- Untuk perubahan dokumentasi saja, pemeriksaan diff, rujukan, dan konsistensi klaim dapat menjadi bukti yang cukup. Tidak perlu meminta suite aplikasi.
+- Jika bukti kurang, minta hanya bukti tambahan yang spesifik terhadap kekurangan tersebut. Jangan meminta pengulangan seluruh suite tanpa alasan.
+
+### Status dan pelaporan
+
+- Setujui Done hanya jika Acceptance Criteria yang relevan memiliki bukti konkret.
+- Jika implementasi atau bukti penting belum lengkap, rekomendasikan In Progress dan sebutkan kekurangannya secara spesifik.
+- Catatan kosmetik yang tidak melanggar Acceptance Criteria tidak otomatis menghalangi Done.
+- Bedakan temuan implementasi, kekurangan bukti, dan saran opsional.
+- Nyatakan metode review secara jujur: pemeriksaan diff/dokumen/bukti eksekutor, bukan pengujian independen jika tidak dilakukan.
+- Jangan membuka ulang bagian yang sudah diterima tanpa perubahan atau bukti baru.
 
 <!-- BEGIN:nextjs-agent-rules -->
 

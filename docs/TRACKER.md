@@ -31,8 +31,8 @@ Acuan: [PRD v2.1](PRD.md) · [Decision log sampai D77](decision-log.md). D43–D
 | [P0.7](#task-p0-7)   | Migrasi schema awal identitas dan topologi       | ✅ Done        | P0.3        | D67, D70            |
 | [P0.8](#task-p0-8)   | Pembatasan akses database foundation             | ✅ Done        | P0.7        | D66, D70            |
 | [P0.9](#task-p0-9)   | Seed dummy identitas dan topologi yang idempoten | ✅ Done        | P0.7        | D70                 |
-| [P0.10](#task-p0-10) | Token UI terpusat                                | ⬜ Not Started | P0.1        | D69, D78            |
-| [P0.11](#task-p0-11) | Layout dasar aplikasi dan dashboard              | 🟡 In Progress | P0.1, P0.10 | D69                 |
+| [P0.10](#task-p0-10) | Token UI terpusat                                | ✅ Done        | P0.1        | D69, D78, D79       |
+| [P0.11](#task-p0-11) | Layout dasar aplikasi dan dashboard              | ✅ Done        | P0.1, P0.10 | D69, D80            |
 
 ### Detail task
 
@@ -222,15 +222,24 @@ Seed menyediakan pelanggan, layanan, topologi, dan identitas dummy; pengulangan 
 
 **Acceptance Criteria**
 
-Token warna dua lapisan (palet dasar primitives dan pemetaan semantik), tipografi Geist Sans dan Geist Mono dengan hierarki terdefinisi (display 24px sampai micro 10px), spacing scale, radius, batas kontrol, dan fokus ring mengikuti [DESIGN_SYSTEM.md](DESIGN_SYSTEM.md) v2.0; tersedia terpusat sebagai variabel CSS untuk dipakai konsisten oleh seluruh halaman dan komponen. Font Geist benar-benar dimuat dengan fallback terkonfigurasi.
+Token warna dua lapisan (palet dasar primitives dan pemetaan semantik), tipografi Geist Sans dan Geist Mono dengan hierarki terdefinisi (display 24px sampai micro 10px), spacing scale, radius, batas kontrol, dan fokus ring mengikuti [DESIGN_SYSTEM.md](DESIGN_SYSTEM.md) v2.0; tersedia terpusat sebagai variabel CSS untuk dipakai konsisten oleh seluruh halaman dan komponen. Font Geist benar-benar dimuat dengan fallback terkonfigurasi. Kontrol input dan tombol berukuran minimal 44px pada layar sentuh/mobile dan 40px pada desktop pointer presisi.
 
 **Bukti/Verifikasi**
 
-—
+`app/globals.css`, `app/layout.tsx`, `app/login/page.tsx`, `docs/DESIGN_SYSTEM.md`, `docs/P0_10_REVIEW.md`, dan direktori `docs/evidence/P0_10/`:
+- Token UI terpusat dua lapisan diimplementasikan pada `app/globals.css` bersama integrasi `@theme` Tailwind CSS v4, pemetaan kelas tipografi 8 peran (`type-display` s.d. `type-micro`), aturan adaptasi sentuh `@media (pointer: coarse)`, serta aturan fokus dan prefers-reduced-motion.
+- Pemuatan nyata font Geist Sans (`__Geist_f558ef`) dan Geist Mono (`__Geist_Mono_9ef393`) melalui `next/font/google` di `app/layout.tsx` dengan fallback (`Arial, sans-serif` dan `ui-monospace, monospace`), terbukti aktif pada static assets build Next.js, terverifikasi `document.fonts`, serta dibuktikan merender glyph aktif via selisih metrik teks Canvas 2D (170,52px vs 176,84px Arial).
+- Pengujian browser desktop dan mobile memverifikasi resolusi token semantik:
+  - Tinggi kontrol adaptif: 40px pada desktop (viewport web 1264×705 CSS px, sasaran 1280×800) dan 44px pada mobile sentuh (< 640px; viewport web screenshot 500×572 CSS px karena batas minimal jendela desktop Chromium) untuk input email, password, dan tombol Masuk.
+  - Lebar bebas overflow horizontal (`scrollWidth === innerWidth` pada desktop 1264px dan mobile 500px).
+  - Warna tombol aksi `#007A3D` normal dan `#006633` hover terkalibrasi kontras (5,45:1 dan 7,12:1 thd teks putih).
+  - Indikator fokus keyboard: outline biru `#2563EB` 2px offset 2px pada latar terang dan putih `#FFFFFF` pada panel navy (kontras 11,14:1 thd navy `#003C71`).
+- Pemeriksaan statis: typecheck pass (0 error), linter pass (0 error), production build pass (0 error).
+- Empat artefak screenshot tersimpan di `docs/evidence/P0_10/` (tiga halaman produksi final dan satu bukti probe sementara navy) dalam kondisi bersih tanpa kredensial atau alamat email pribadi; dimensi berkas PNG (1264×705 dan 500×572) telah direkonsiliasi secara faktual terhadap viewport web peramban.
 
 **Catatan/Blocker**
 
-[DESIGN_SYSTEM.md](DESIGN_SYSTEM.md) v2.0 (§3–§7) telah diselaraskan dengan identitas navy (`#003C71`), tombol aksi terkalibrasi (`#007A3D`), pemetaan semantik, tipografi Geist, pemakaian komponen, dan validasi kontras WCAG AA (D78). Implementasi token di kode belum dimulai (status tetap Not Started). Pekerjaan implementasi yang masih diperlukan di P0.10: pembuatan file token terpusat (`styles/tokens.css` atau variabel CSS di `app/globals.css`), pemuatan font Geist Sans dan Geist Mono di `app/layout.tsx`, serta pengujian bahwa variabel CSS aktif dan dapat dikonsumsi oleh P0.11 dan komponen UI lainnya.
+Implementasi dan penutupan bukti P0.10 selesai penuh (Done). Untuk status dan verifikasi layout dashboard berikutnya, rujuk bagian [P0.11](#task-p0-11).
 
 </details>
 
@@ -240,16 +249,42 @@ Token warna dua lapisan (palet dasar primitives dan pemetaan semantik), tipograf
 <summary>P0.11 — Layout dasar aplikasi dan dashboard</summary>
 
 **Acceptance Criteria**
-
-Layout menggunakan bahasa Indonesia, identitas prototype/data dummy, dan fondasi shell sesuai design system; tampilan dasar serta fokus keyboard diverifikasi.
-
+ 
+Layout menggunakan bahasa Indonesia, identitas prototype/data dummy, dan fondasi shell sesuai design system ([DESIGN_SYSTEM.md](DESIGN_SYSTEM.md) v2.0 & D80): breakpoint sidebar bertingkat (≥1440px sidebar penuh selebar 216px navy `#003C71`, 1024–1439px sidebar ringkas selebar 72px dengan ikon terpusat, accessible name, dan floating tooltip saat hover/focus, <1024px navigasi drawer modal responsif dengan focus trap, Escape key, dan scroll lock bersih), topbar tinggi 64px, area konten fleksibel tanpa batas `max-w` sempit, profil staf dari sesi Auth, Server Action logout, penanda menu aktif via `aria-current="page"` dan border aksen hijau, item unbuilt noninteraktif dengan badge "Belum tersedia", kontrol adaptif 44px sentuh dan 40px desktop, skip link aksesibel, serta direktori pelanggan berhasil memuat data dummy normal tanpa error alert.
 **Bukti/Verifikasi**
 
-`app/layout.tsx`, halaman login dan dashboard tersedia; V20 membuktikan halaman dapat diakses melalui HTTP.
+`app/dashboard/layout.tsx`, `components/layout/dashboard-shell.tsx`, `app/dashboard/page.tsx`, `app/dashboard/customers/page.tsx`, `docs/P0_11_REVIEW.md`, `tests/interactive/verify-p011.mjs`, `docs/evidence/P0_11/p011-interaction-evidence.json`, dan direktori `docs/evidence/P0_11/`:
+- Shell dashboard bersama diimplementasikan via `DashboardShell` dan `app/dashboard/layout.tsx`:
+  - Breakpoint sidebar teruji runtime pada viewport aktual:
+    - **≥1440px (1440×900 CSS px, DPR 1):** Sidebar penuh 216px (`desktop_wide_dashboard.png` - bukti historis dipertahankan), brand header lengkap, tombol aksi desktop 40px, bebas overflow horizontal (`scrollWidth === innerWidth`).
+    - **1024–1439px (1280×800 CSS px, DPR 1):** Sidebar ringkas 72px (`desktop_medium_1050.png` - bukti historis dipertahankan), ikon terpusat, accessible name (`aria-label` & `title`), label tersembunyi tanpa layout break, dan floating tooltip aksesibel pada hover/focus keyboard.
+    - **<1024px (375×667 CSS px, DPR 2):** Sidebar desktop disembunyikan (`display: none`), navigasi drawer modal (`mobile_drawer_open.png` - bukti historis dipertahankan) dibuka via hamburger button (44×44px), focus trap mengarahkan fokus awal ke tombol tutup (44×44px), scroll lock `body.style.overflow = "hidden"`, tombol Escape menutup drawer dan mengembalikan fokus ke pemicu, scroll lock dibersihkan bersih.
+- Resolusi temuan review P0.11 terverifikasi pada kode terbaru:
+  1. **Tooltip sidebar ringkas:** Tooltip menggunakan `position: fixed` di luar container scroll `<nav>` (`left: 80px`), tampil utuh saat hover mouse dan fokus keyboard via Tab native (`compact_sidebar_tooltip_hover.png`, `compact_sidebar_tooltip_focus.png`), tanpa terpotong overflow vertikal dan tanpa overflow horizontal (`hasSidebarHorizontalOverflow: false`, `sidebarScrollWidth === sidebarClientWidth === 71px`). Pengecekan DOM aktual membuktikan `!nav.contains(tooltip)` (`isOutsideNavScroll: true`). Scroll vertikal navigasi tetap berfungsi normal.
+  2. **Eliminasi tuntas warna literal shell:** Seluruh warna literal pada shell telah diganti dengan token semantik terpusat, termasuk `bg-[#002D56]`, `bg-blue-50`, `text-blue-800`, `text-slate-700`, `bg-slate-100`, `border-slate-300`, `hover:bg-white/10` (`hover:bg-[var(--bg-panel-item-hover)]`), `group-hover:text-white` (`group-hover:text-[var(--text-on-navy)]`), `bg-white/10` (`bg-[var(--bg-panel-badge)]`), `text-white` (`text-[var(--text-on-navy)]`), dan `bg-black/60` (`bg-[var(--bg-overlay-backdrop)]`). Tidak ada lagi kelas warna literal yang tersisa pada `components/layout/dashboard-shell.tsx`.
+  3. **Penyelarasan klaim dokumentasi:**
+     - Penyebab kegagalan rendering data pelanggan sebelumnya dicatat sebagai belum terkonfirmasi (keterlambatan kompilasi Turbopack hanya dugaan).
+     - Keberhasilan pemuatan 12 pelanggan dummy dan 1 unlinked sender dibuktikan runtime tanpa error alert (`rowCount: 12`, `hasErrorAlert: false`, `desktop_wide_customers.png`).
+     - Ukuran halaman diselaraskan dengan konstanta `CUSTOMER_PAGE_SIZE = 25` di `lib/repositories/customers.ts` ("Halaman 1 dari 1 · Maksimal 25 pelanggan per halaman").
+     - Karena 12 pelanggan < 25 per halaman, tautan paginasi tidak muncul di DOM; navigasi antarhalaman multi-halaman belum diuji dan tidak diklaim.
+  4. **Kelengkapan bukti interaksi & runner teruji:**
+     - Tab native dari elemen terakhir drawer berputar kembali ke tombol tutup: `drawer_tab_cycle_last_to_first: PASS`.
+     - Shift+Tab native dari tombol tutup berputar kembali ke link terakhir: `drawer_shift_tab_cycle_first_to_last: PASS`.
+     - Escape menutup drawer dan mengembalikan fokus ke hamburger: `drawer_escape_key_restores_focus: PASS`.
+     - Resize drawer dari 375px ke 1280px membersihkan scroll lock dan menutup drawer: `drawer_resize_cleanup: PASS`.
+     - Pembedaan kontrol: viewport sempit 375×667 CSS px DPR 2 pointer fine (diuji via `matchMedia`) mengukur hamburger = 44px, tombol direktori main content = 44px, dan logout = 44px; desktop 1440×900 CSS px DPR 1 mouse pointer mengukur tombol direktori main content = 40px dan logout = 40px.
+     - Skenario hardware `pointer: coarse` dicatat jujur sebagai `NOT_RUN` karena lingkungan headless Chromium tidak memiliki hardware layar sentuh fisik.
+     - Runner mengevaluasi expected vs actual; fail-mode teruji (`--test-fail-mode`) menghasilkan exit code 1; eksekusi normal menghasilkan exit code 0 (10 PASS, 0 FAIL, 1 NOT_RUN dari 11 assertion).
+  5. **Keamanan kredensial:** Kredensial tidak lagi tertanam dalam kode runner; script membaca `TEST_STAFF_EMAIL` dan `TEST_STAFF_PASSWORD` dari environment variable. Tidak ada password, token, atau cookie sesi dalam script maupun artefak JSON bukti.
+- Skip link `<a href="#main-content">` di awal DOM menerima fokus Tab pertama (`skip_link_focused.png` - bukti historis dipertahankan).
+- Proteksi sesi: unauthenticated redirect HTTP 307 ke `/login`; Server Action logout membersihkan sesi dan mengarahkan ke `/login`.
+- Pemeriksaan statis: typecheck pass (0 error), linter pass (0 error pada `app/` dan `components/`), unit tests pass (105/105 pass).
 
 **Catatan/Blocker**
 
-Dashboard masih berupa panel sederhana; shell dasar dan penerapan token belum lengkap. Belum ada bukti review visual/keyboard yang menutup acceptance criteria.
+P0.11 selesai penuh (Done) berdasarkan bukti empiris runtime pada kode terbaru. Seluruh temuan review tertutup. Tidak ada sisa literal color pada shell, tooltip sidebar ringkas tampil utuh tanpa horizontal overflow, drawer navigation memenuhi seluruh kriteria aksesibilitas, runner assertion terbukti mengevaluasi PASS/FAIL secara deterministik, dan direktori pelanggan memuat 12 data dummy normal.
+
+Catatan akun: Password akun staf mock `helpdesk@gmail.com` sempat ditimpa pada sesi eksekutor sebelumnya tanpa backup; status password lama belum terkonfirmasi dan tidak ada bukti pemulihan. Runner saat ini tidak lagi mengubah password atau menanam rahasia. Sebagai tindak lanjut pengembang/pemilik akun, re-seed auth atau rotasi password staf dapat dijalankan bila diperlukan. Fitur Inbox Telegram, triage assessment, dan composer balasan staf tetap menjadi pekerjaan tahap berikutnya (P2/P3).
 
 </details>
 
