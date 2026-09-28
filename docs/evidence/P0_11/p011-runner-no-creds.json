@@ -1,0 +1,102 @@
+{
+  "timestamp": "2026-09-27T15:54:18.163Z",
+  "summary": {
+    "overallStatus": "INCOMPLETE",
+    "exitCode": 1,
+    "total": 12,
+    "passed": 0,
+    "failed": 0,
+    "notRun": 12,
+    "mandatoryTotal": 11,
+    "mandatoryPassed": 0,
+    "mandatoryFailed": 0,
+    "mandatoryNotRun": 11,
+    "optionalNotRun": 1
+  },
+  "assertions": [
+    {
+      "id": "auth_setup",
+      "name": "Autentikasi sesi staf untuk pengujian dashboard",
+      "isOptional": false,
+      "status": "NOT_RUN",
+      "reason": "Kredensial staf (TEST_STAFF_EMAIL / TEST_STAFF_PASSWORD) tidak disediakan di environment"
+    },
+    {
+      "id": "compact_sidebar_tooltip_hover",
+      "name": "Tooltip Sidebar Ringkas tampil utuh di luar area scroll saat hover mouse",
+      "isOptional": false,
+      "status": "NOT_RUN",
+      "reason": "Prasyarat autentikasi tidak terpenuhi"
+    },
+    {
+      "id": "compact_sidebar_tooltip_keyboard_tab",
+      "name": "Tooltip Sidebar Ringkas tampil utuh saat fokus keyboard via Tab native",
+      "isOptional": false,
+      "status": "NOT_RUN",
+      "reason": "Prasyarat autentikasi tidak terpenuhi"
+    },
+    {
+      "id": "compact_sidebar_no_horizontal_overflow",
+      "name": "Sidebar Ringkas bebas dari horizontal overflow",
+      "isOptional": false,
+      "status": "NOT_RUN",
+      "reason": "Prasyarat autentikasi tidak terpenuhi"
+    },
+    {
+      "id": "drawer_tab_cycle_last_to_first",
+      "name": "Tab dari elemen terakhir drawer berputar kembali ke elemen pertama via keyboard native",
+      "isOptional": false,
+      "status": "NOT_RUN",
+      "reason": "Prasyarat autentikasi tidak terpenuhi"
+    },
+    {
+      "id": "drawer_shift_tab_cycle_first_to_last",
+      "name": "Shift+Tab dari elemen pertama drawer berputar kembali ke elemen terakhir via keyboard native",
+      "isOptional": false,
+      "status": "NOT_RUN",
+      "reason": "Prasyarat autentikasi tidak terpenuhi"
+    },
+    {
+      "id": "drawer_escape_key_restores_focus",
+      "name": "Escape menutup drawer, mengembalikan fokus ke pemicu hamburger, dan memulihkan scroll body",
+      "isOptional": false,
+      "status": "NOT_RUN",
+      "reason": "Prasyarat autentikasi tidak terpenuhi"
+    },
+    {
+      "id": "drawer_resize_cleanup",
+      "name": "Resize dari drawer terbuka ke desktop (1280px) menutup drawer dan membersihkan scroll lock",
+      "isOptional": false,
+      "status": "NOT_RUN",
+      "reason": "Prasyarat autentikasi tidak terpenuhi"
+    },
+    {
+      "id": "narrow_viewport_control_heights",
+      "name": "Kontrol viewport sempit (<640px) memenuhi target sentuh 44px pada hamburger, tombol direktori, dan logout",
+      "isOptional": false,
+      "status": "NOT_RUN",
+      "reason": "Prasyarat autentikasi tidak terpenuhi"
+    },
+    {
+      "id": "desktop_control_heights",
+      "name": "Kontrol desktop pointer presisi memenuhi tinggi minimum default 40px",
+      "isOptional": false,
+      "status": "NOT_RUN",
+      "reason": "Prasyarat autentikasi tidak terpenuhi"
+    },
+    {
+      "id": "customer_directory_data_loading",
+      "name": "Tabel pelanggan memuat 12 data dummy normal, ukuran halaman 25, tanpa error alert",
+      "isOptional": false,
+      "status": "NOT_RUN",
+      "reason": "Prasyarat autentikasi tidak terpenuhi"
+    },
+    {
+      "id": "pointer_coarse_hardware_test",
+      "name": "Pengujian hardware pointer: coarse",
+      "isOptional": true,
+      "status": "NOT_RUN",
+      "reason": "Belum diuji pada konfigurasi pengujian ini"
+    }
+  ]
+}

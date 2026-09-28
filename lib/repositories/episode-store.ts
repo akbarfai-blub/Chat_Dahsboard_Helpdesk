@@ -10,6 +10,12 @@ export type ReceiptRow = {
   id: string; identity_id: string; channel: string; account_id: string; chat_id: string;
   provider_message_id: string; body: string; received_at: Date; mode: AutomationMode;
   emergency_stop: boolean;
+  message_type?: string;
+  has_media?: boolean;
+  is_forwarded?: boolean;
+  caption?: string | null;
+  sent_at?: Date | null;
+  sender_info?: Record<string, unknown>;
 };
 type EpisodeRow = {
   id: string; version: number; status: EpisodeSnapshot["status"]; category: EpisodeSnapshot["category"];

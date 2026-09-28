@@ -273,18 +273,27 @@ Layout menggunakan bahasa Indonesia, identitas prototype/data dummy, dan fondasi
      - Escape menutup drawer dan mengembalikan fokus ke hamburger: `drawer_escape_key_restores_focus: PASS`.
      - Resize drawer dari 375px ke 1280px membersihkan scroll lock dan menutup drawer: `drawer_resize_cleanup: PASS`.
      - Pembedaan kontrol: viewport sempit 375×667 CSS px DPR 2 pointer fine (diuji via `matchMedia`) mengukur hamburger = 44px, tombol direktori main content = 44px, dan logout = 44px; desktop 1440×900 CSS px DPR 1 mouse pointer mengukur tombol direktori main content = 40px dan logout = 40px.
-     - Skenario hardware `pointer: coarse` dicatat jujur sebagai `NOT_RUN` karena lingkungan headless Chromium tidak memiliki hardware layar sentuh fisik.
-     - Runner mengevaluasi expected vs actual; fail-mode teruji (`--test-fail-mode`) menghasilkan exit code 1; eksekusi normal menghasilkan exit code 0 (10 PASS, 0 FAIL, 1 NOT_RUN dari 11 assertion).
-  5. **Keamanan kredensial:** Kredensial tidak lagi tertanam dalam kode runner; script membaca `TEST_STAFF_EMAIL` dan `TEST_STAFF_PASSWORD` dari environment variable. Tidak ada password, token, atau cookie sesi dalam script maupun artefak JSON bukti.
+     - Skenario hardware `pointer: coarse` dicatat jujur sebagai `NOT_RUN` dengan alasan belum diuji pada konfigurasi pengujian ini (lingkungan headless Chromium mengevaluasi pointer fine), tanpa menyimpulkan ada/tidaknya perangkat fisik dari media query.
+     - Jalur normal dan simulasi menggunakan satu fungsi pengolahan hasil autentikasi bersama: `handleAuthenticationOutcome()`.
+     - Pengujian terisolasi logika runner (`node tests/interactive/verify-p011.mjs --test-auth-logic`) lulus 5/5 skenario (exit 0), dicatat sebagai **bukti logika runner terisolasi** (bukan login Supabase/browser end-to-end).
+     - Runner membedakan assertion wajib dan opsional, dengan exit code deterministik non-zero pada setiap kegagalan atau ketidaklengkapan:
+       - Kredensial tidak diset: status `INCOMPLETE` (exit 1, `docs/evidence/P0_11/p011-runner-no-creds.json`).
+       - Login gagal: status `FAIL` (exit 1, `docs/evidence/P0_11/p011-runner-login-fail.json`).
+       - Assertion wajib gagal: status `FAIL` (exit 1, `docs/evidence/P0_11/p011-runner-assertion-fail.json`).
+       - Seluruh assertion wajib lulus: status `PASS` (exit 0, `docs/evidence/P0_11/p011-runner-pass.json`).
+     - Referensi variabel lama `TEST_FAIL_MODE` telah dihapus tuntas; pemeriksaan statis `no-undef` lulus 0 error, dan verifikasi akhir jalur normal (`node tests/interactive/verify-p011.mjs --test-normal-end`) membuktikan alur mencapai `finalize()` dan keluar dengan exit code 0 (`docs/evidence/P0_11/p011-runner-normal-end-proof.json`).
+     - Rekaman data interaksi browser historis (`docs/evidence/P0_11/p011-interaction-evidence.json`) dipertahankan persis sesuai timestamp aslinya (10 PASS wajib, 1 NOT_RUN opsional, exit 0) dan dicatat sebagai **anotasi review dokumentasi**.
+  5. **Keamanan kredensial & resolusi akun staf (Selesai):** Kredensial tidak tertanam dalam kode runner; script membaca `TEST_STAFF_EMAIL` dan `TEST_STAFF_PASSWORD` dari environment variable. Seluruh berkas bukti JSON bebas dari penulisan nilai password, token, atau cookie sesi. Pada 27 September 2026, dengan izin eksplisit pengguna, password akun staf mock `helpdesk@gmail.com` berhasil diperbarui melalui Supabase Admin API, diverifikasi berhasil login melalui Supabase Auth (sesi verifikasi kemudian ditutup), dan pengguna telah mengonfirmasi bahwa akun dapat digunakan kembali secara normal.
 - Skip link `<a href="#main-content">` di awal DOM menerima fokus Tab pertama (`skip_link_focused.png` - bukti historis dipertahankan).
 - Proteksi sesi: unauthenticated redirect HTTP 307 ke `/login`; Server Action logout membersihkan sesi dan mengarahkan ke `/login`.
-- Pemeriksaan statis: typecheck pass (0 error), linter pass (0 error pada `app/` dan `components/`), unit tests pass (105/105 pass).
+- Pemeriksaan statis: typecheck pass (0 error), linter pass (0 error pada `app/` dan `components/`), unit tests 105/105 pass (**bukti historis**, bukan pengujian baru).
 
 **Catatan/Blocker**
 
-P0.11 selesai penuh (Done) berdasarkan bukti empiris runtime pada kode terbaru. Seluruh temuan review tertutup. Tidak ada sisa literal color pada shell, tooltip sidebar ringkas tampil utuh tanpa horizontal overflow, drawer navigation memenuhi seluruh kriteria aksesibilitas, runner assertion terbukti mengevaluasi PASS/FAIL secara deterministik, dan direktori pelanggan memuat 12 data dummy normal.
+Implementasi dan penutupan bukti P0.11 selesai penuh (✅ Done).  
+Implementasi UI (sidebar penuh 216px, sidebar ringkas 72px dengan floating tooltip bebas overflow, drawer modal mobile dengan focus trap dan pembersihan scroll lock, 0 warna literal pada shell, direktori 12 pelanggan normal) dan determinisme runner (exit code nonzero pada kegagalan/ketidaklengkapan, exit code 0 saat wajib lulus) telah terverifikasi secara teknis.
 
-Catatan akun: Password akun staf mock `helpdesk@gmail.com` sempat ditimpa pada sesi eksekutor sebelumnya tanpa backup; status password lama belum terkonfirmasi dan tidak ada bukti pemulihan. Runner saat ini tidak lagi mengubah password atau menanam rahasia. Sebagai tindak lanjut pengembang/pemilik akun, re-seed auth atau rotasi password staf dapat dijalankan bila diperlukan. Fitur Inbox Telegram, triage assessment, dan composer balasan staf tetap menjadi pekerjaan tahap berikutnya (P2/P3).
+Seluruh temuan review dan kriteria penutupan telah terpenuhi, termasuk resolusi akun staf mock pada 27 September 2026 (pembaruan password via Supabase Admin API atas izin eksplisit pengguna, verifikasi login via Supabase Auth, penutupan sesi verifikasi, dan konfirmasi akun dari pengguna). Langkah berikutnya adalah [P2.1](#task-p2-1) (ChannelAdapter inbound Telegram dan pembatasan tester).
 
 </details>
 
@@ -554,8 +563,8 @@ Hasil tersedia melalui API; panel evidence dashboard mengikuti P2.7.
 
 | Task ID              | Nama Task                                             | Status         | Dependency                         | Decision ID Terkait |
 | -------------------- | ----------------------------------------------------- | -------------- | ---------------------------------- | ------------------- |
-| [P2.1](#task-p2-1)   | ChannelAdapter inbound Telegram dan pembatasan tester | ⬜ Not Started | P1.4.2                             | D50, D67, D68       |
-| [P2.2](#task-p2-2)   | Webhook Telegram dengan secret dan ACK persisten      | ⬜ Not Started | P2.1, P1.4.2                       | D68, D77            |
+| [P2.1](#task-p2-1)   | ChannelAdapter inbound Telegram dan pembatasan tester | ✅ Done        | P1.4.2                             | D50, D67, D68, D81, D82 |
+| [P2.2](#task-p2-2)   | Webhook Telegram dengan secret dan ACK persisten      | ✅ Done        | P2.1, P1.4.2                       | D68, D77, D82, D83, D84 |
 | [P2.3](#task-p2-3)   | Conversation 24 jam dan pengaitan riwayat pesan       | ⬜ Not Started | P1.4.2                             | D65, D69            |
 | [P2.4](#task-p2-4)   | Orkestrasi inbound ke assessment SHADOW               | 🟡 In Progress | P2.2, P2.3, P1.4.2, P1.5.2         | D65, D67, D68, D77  |
 | [P2.5](#task-p2-5)   | Worker pemrosesan job dengan lease dan attempt        | ⬜ Not Started | P2.4                               | D68                 |
@@ -579,11 +588,19 @@ Payload Telegram dinormalisasi tanpa rule domain di adapter; account/chat/messag
 
 **Bukti/Verifikasi**
 
-—
+`lib/adapters/channel-adapter-contracts.ts`, `lib/adapters/telegram/telegram-types.ts`, `lib/adapters/telegram/telegram-adapter.ts`, `tests/adapters/telegram-adapter.test.ts`, `docs/P2_1_REVIEW.md`, dan decision log D81, D82:
+- Kontrak `InboundChannelAdapter` dan implementasi `TelegramChannelAdapter` memvalidasi input tak tepercaya, membedakan ukuran byte raw payload (`MAX_PAYLOAD_BYTES = 64KB`) sebelum parsing dari panjang teks (`MAX_TEXT_LENGTH = 4096`), serta memvalidasi struktur Telegram Update.
+- Batas representasi tanggal: `message.date` divalidasi tidak melebihi batas atas representasi tanggal ECMAScript (`MAX_TELEGRAM_DATE_SECONDS = 8_640_000_000_000` detik); tanggal di luar rentang (termasuk `Number.MAX_SAFE_INTEGER`) ditolak sebagai `invalid_payload_structure` tanpa melempar exception `RangeError`, tanpa pembatasan usia pesan lampau atau penolakan tanggal masa depan yang valid.
+- Pembatasan tester fail-closed: hanya `chat.type === "private"` dan pengirim terdaftar pada `testerAllowlist` yang diterima (`accepted`); grup, supergroup, channel, atau allowlist kosong ditolak (`rejected`, fail-closed). Konfigurasi allowlist campuran (misal `"987654321,not_a_number"`), token kosong, atau ID invalid pada helper dan constructor melempar error langsung dan menolak penerapan parsial secara diam-diam.
+- Identitas terpisah: `channel="telegram"`, `channelAccountId` berasal dari konfigurasi tepercaya server, `senderExternalId` dari `from.id` numerik, `chatId` dari `chat.id`, dan `providerMessageId` dari `message_id`. Username Telegram tidak digunakan sebagai identitas tepercaya.
+- Luaran terstruktur: `accepted` (menghasilkan `InboundReceipt` kompatibel dengan `HelpdeskPersistence.receive()` dan `NormalizedInboundMessage` untuk review staf), `unsupported` (`edited_message_ignored`, `unsupported_update_type`), dan `rejected` (`payload_too_large`, `invalid_json`, `non_private_chat`, `not_in_tester_allowlist`, dsb.) tanpa membocorkan secret atau payload.
+- Pesan non-teks tester valid (foto, dokumen, suara, dsb.) dipertahankan metadata tipe pesannya; `receipt.text` diisi caption jika ada atau string kosong `""` jika tanpa caption, tanpa mengarang teks pelanggan.
+- Pesan forward hanya mencatat penanda boolean `isForwarded: true` pada `normalized`, bukan rincian asal forward.
+- 15 skenario unit test lulus 100% via `npm run test:unit` (total 120 unit tests proyek lulus, exit code 0); typecheck `npx tsc -p tsconfig.test.json` lulus 0 error; linter `npx eslint lib/adapters tests/adapters` lulus 0 error, 0 warning.
 
 **Catatan/Blocker**
 
-Adapter dan validasi tester/private chat belum tersedia; identity lookup bukan pengganti validasi channel.
+Implementasi ChannelAdapter selesai penuh (✅ Done). Adapter beroperasi murni in-memory tanpa I/O jaringan, mutasi DB, atau triage domain. Batas integrasi metadata: `result.receipt` kompatibel secara struktural dengan `HelpdeskPersistence.receive()`, tetapi pemanggilan `receive()` saja belum menyimpan metadata kaya (`messageType`, `hasMedia`, penanda `isForwarded`) ke tabel persistence `ingress_events`. Penerusan dan penyimpanan metadata ini ke persistence, bersama endpoint HTTP webhook dan verifikasi secret token, dilanjutkan pada [P2.2](#task-p2-2).
 
 </details>
 
@@ -594,15 +611,30 @@ Adapter dan validasi tester/private chat belum tersedia; identity lookup bukan p
 
 **Acceptance Criteria**
 
-Secret diperiksa sebelum efek samping; ingress+job committed sebelum ACK; DB gagal menghasilkan non-success; duplicate diterima idempoten tanpa membuat pekerjaan ganda.
+Secret diperiksa sebelum efek samping (fail-closed jika missing/invalid/unconfigured); body dibaca dengan batas ukuran keras (streaming byte limit 64 KB); payload diproses via adapter P2.1; ingress, metadata kaya (tipe pesan, media, forward, caption, sent_at, sender_info), dan processing job committed secara atomik sebelum ACK; DB gagal menghasilkan non-success (HTTP 500 PERSISTENCE_FAILED); duplicate diterima idempoten (HTTP 200 duplicate=true) tanpa membuat pekerjaan ganda atau menimpa metadata asli; update tak didukung dan penolakan kebijakan tester mengembalikan HTTP 200 tanpa mutasi DB agar tidak memicu retry loop Telegram; tidak ada pemanggilan provider jaringan atau outbound pada jalur ACK.
 
 **Bukti/Verifikasi**
 
-—
+`app/api/webhooks/telegram/route.ts`, `lib/application/telegram-inbound-service.ts`, `lib/application/helpdesk-persistence.ts`, `lib/application/persistence-contracts.ts`, `supabase/migrations/20260929100000_add_ingress_metadata.sql`, `tests/application/telegram-inbound-service.test.ts`, `tests/integration/telegram-webhook.test.ts`, `docs/P2_2_REVIEW.md`, dan decision log D83, D84:
+- **Verifikasi Secret & Fail-Closed:** Header `X-Telegram-Bot-Api-Secret-Token` divalidasi timing-safe terhadap `TELEGRAM_WEBHOOK_SECRET`. Token salah, hilang, atau server unconfigured mengembalikan HTTP 401 Unauthorized sebelum pembacaan body atau efek samping database (terbukti pada unit test dan integration test).
+- **Proteksi Ukuran Body:** `readLimitedRequestBody` membatasi streaming byte (max 64 KB) dan membatalkan stream seketika (*early abort*) jika terakumulasi melebihi batas, menghasilkan HTTP 413 Payload Too Large bahkan tanpa header `Content-Length`.
+- **Lazy Factory & Bukti Rollback (D84):** Inisialisasi pool database dibungkus ke dalam factory lazy (`defaultPersistenceFactory`), membuktikan penolakan 401 tidak memanggil factory DB dan kegagalan inisialisasi menghasilkan 500 `DATABASE_UNAVAILABLE` yang aman. Pengujian integrasi menyuntikkan fault injection pada insert `processing_jobs` sebelum commit, dibuktikan melalui query di luar transaksi yang telah selesai bahwa tidak ada ingress yang committed (0 baris, message ID 70); setelah fault dilepas, retry dan duplicate menghasilkan tepat satu ingress dan satu job.
+- **Persistensi Atomik & Resolusi D82:** Migrasi `20260929100000_add_ingress_metadata.sql` memperluas `ingress_events` dengan kolom `message_type`, `has_media`, `is_forwarded`, `caption`, `sent_at`, dan `sender_info`. `HelpdeskPersistence.receive()` menyimpan metadata ini secara atomik bersama baris `processing_jobs` (`status = 'pending'`) di dalam transaksi `inHelpdeskTransaction`. `sent_at` terbukti berbeda dari `received_at`.
+- **Pesan Nonteks & Forward:** Foto tanpa caption menyimpan teks string kosong `""` (tanpa mengarang teks pelanggan), `has_media: true`, `caption: null`. Foto dengan caption menyimpan caption sebagai body dan kolom caption. Pesan forward mencatat `is_forwarded: true` tanpa mengubah identitas pengirim langsung.
+- **Idempotensi & Dedup Konkuren:** Unique constraint `(channel, account_id, chat_id, provider_message_id)` mencegah duplikasi. Pengujian 5 pemanggilan handler paralel menggunakan objek Request simulasi menghasilkan tepat 1 baris ingress dan 1 baris job; 1 request mendapat `duplicate: false` dan 4 mendapat `duplicate: true` dengan ID ingress yang sama tanpa menimpa data asli.
+- **Semantik ACK Telegram:** Update tak didukung (`edited_message`) dan penolakan tester mengembalikan HTTP 200 (`ignored`/`rejected`) tanpa mutasi DB untuk mencegah pengiriman berulang oleh Telegram. Kegagalan database mengembalikan HTTP 500 PERSISTENCE_FAILED untuk memicu retry Telegram.
+- **Non-interferensi Jalur ACK:** Jalur webhook tidak memanggil mock network provider, evaluasi triage, maupun pengiriman outbound (triage count = 0, intent count = 0).
+- **Hasil Pengujian Terarah:**
+  - `tests/application/telegram-inbound-service.test.ts`: 10/10 unit tests pass (exit code 0).
+  - `tests/integration/telegram-webhook.test.ts`: 11/11 PostgreSQL integration tests pass, termasuk tes induk (exit code 0).
+  - Regresi unit test proyek (`npm run test:unit`): 130/130 tests pass (exit code 0).
+  - Regresi persistence P1.4 (`npm run test:persistence:local`): 12/12 tests pass (exit code 0).
+  - Statis & Linter (`npm run lint`): 0 error (exit code 0).
+  - Build Next.js (`npm run build`): Keberhasilan build berasal dari sesi implementasi sebelumnya (exit code 0; route dinamis `ƒ /api/webhooks/telegram` terkompilasi); build setelah koreksi terakhir belum ditunjukkan dalam bukti eksekutor yang tersedia dan tidak dijalankan ulang pada sinkronisasi dokumentasi ini.
 
 **Catatan/Blocker**
 
-Persistence internal sudah ditulis pada P1.4.2, tetapi route webhook dan verifikasi protokol belum tersedia.
+Implementasi P2.2 selesai penuh (✅ Done). Seluruh pengujian diverifikasi pada PostgreSQL lokal Supabase dengan payload simulasi Telegram resmi. Pendaftaran webhook publik ke Telegram Bot API nyata belum dilakukan (di luar cakupan P2.2). Langkah persiapan registrasi tersedia di docs/P2_2_REVIEW.md. Tahap berikutnya adalah [P2.3](#task-p2-3) (Conversation 24 jam) dan [P2.4](#task-p2-4) (Orkestrasi inbound ke assessment SHADOW).
 
 </details>
 

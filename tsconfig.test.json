@@ -14,14 +14,22 @@
     "lib": [
       "ES2022",
       "DOM"
-    ]
+    ],
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./*"]
+    }
   },
   "include": [
     "tests/**/*.ts",
+    "lib/adapters/**/*.ts",
+    "lib/application/**/*.ts",
     "lib/domain/**/*.ts",
+    "lib/postgres/**/*.ts",
     "lib/providers/**/*.ts",
-    "lib/repositories/mock-network.ts",
-    "lib/supabase/database.types.ts"
+    "lib/repositories/**/*.ts",
+    "lib/supabase/database.types.ts",
+    "app/api/webhooks/telegram/**/*.ts"
   ],
   "exclude": [
     "node_modules",

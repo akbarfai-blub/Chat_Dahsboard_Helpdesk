@@ -1,0 +1,113 @@
+{
+  "timestamp": "2026-09-27T16:05:03.114Z",
+  "summary": {
+    "overallStatus": "PASS",
+    "exitCode": 0,
+    "total": 12,
+    "passed": 11,
+    "failed": 0,
+    "notRun": 1,
+    "mandatoryTotal": 11,
+    "mandatoryPassed": 11,
+    "mandatoryFailed": 0,
+    "mandatoryNotRun": 0,
+    "optionalNotRun": 1
+  },
+  "assertions": [
+    {
+      "id": "auth_setup",
+      "name": "Autentikasi sesi staf untuk pengujian dashboard",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": "Sesi aktif pada rute /dashboard",
+      "actual": "Sesi aktif pada rute /dashboard"
+    },
+    {
+      "id": "compact_sidebar_tooltip_hover",
+      "name": "Tooltip Sidebar Ringkas tampil utuh di luar area scroll saat hover mouse",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": "pass",
+      "actual": "pass"
+    },
+    {
+      "id": "compact_sidebar_tooltip_keyboard_tab",
+      "name": "Tooltip Sidebar Ringkas tampil utuh saat fokus keyboard via Tab native",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": "pass",
+      "actual": "pass"
+    },
+    {
+      "id": "compact_sidebar_no_horizontal_overflow",
+      "name": "Sidebar Ringkas bebas dari horizontal overflow",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": "pass",
+      "actual": "pass"
+    },
+    {
+      "id": "drawer_tab_cycle_last_to_first",
+      "name": "Tab dari elemen terakhir drawer berputar kembali ke elemen pertama via keyboard native",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": "pass",
+      "actual": "pass"
+    },
+    {
+      "id": "drawer_shift_tab_cycle_first_to_last",
+      "name": "Shift+Tab dari elemen pertama drawer berputar kembali ke elemen terakhir via keyboard native",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": "pass",
+      "actual": "pass"
+    },
+    {
+      "id": "drawer_escape_key_restores_focus",
+      "name": "Escape menutup drawer, mengembalikan fokus ke pemicu hamburger, dan memulihkan scroll body",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": "pass",
+      "actual": "pass"
+    },
+    {
+      "id": "drawer_resize_cleanup",
+      "name": "Resize dari drawer terbuka ke desktop (1280px) menutup drawer dan membersihkan scroll lock",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": "pass",
+      "actual": "pass"
+    },
+    {
+      "id": "narrow_viewport_control_heights",
+      "name": "Kontrol viewport sempit (<640px) memenuhi target sentuh 44px pada hamburger, tombol direktori, dan logout",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": "pass",
+      "actual": "pass"
+    },
+    {
+      "id": "desktop_control_heights",
+      "name": "Kontrol desktop pointer presisi memenuhi tinggi minimum default 40px",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": "pass",
+      "actual": "pass"
+    },
+    {
+      "id": "customer_directory_data_loading",
+      "name": "Tabel pelanggan memuat 12 data dummy normal, ukuran halaman 25, tanpa error alert",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": "pass",
+      "actual": "pass"
+    },
+    {
+      "id": "pointer_coarse_hardware_test",
+      "name": "Pengujian hardware pointer: coarse",
+      "isOptional": true,
+      "status": "NOT_RUN",
+      "reason": "Belum diuji pada konfigurasi pengujian ini"
+    }
+  ]
+}

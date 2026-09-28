@@ -39,16 +39,35 @@ export class HelpdeskPersistence {
       const store = new EpisodeStore(db);
       const identityId = await store.ensureIdentity(input.sender);
       const settings = await store.settings();
+
+      const meta = input.metadata;
+      const messageType = meta?.messageType ?? "text";
+      const hasMedia = Boolean(meta?.hasMedia);
+      const isForwarded = Boolean(meta?.isForwarded);
+      const caption = meta?.caption ?? null;
+      const sentAt = meta?.sentAt && !Number.isNaN(new Date(meta.sentAt).getTime())
+        ? new Date(meta.sentAt).toISOString()
+        : null;
+      const senderInfo = meta?.senderInfo ? JSON.stringify(meta.senderInfo) : "{}";
+
       const inserted = await db.query<{ id: string }>(
-        `insert into public.ingress_events(identity_id,channel,account_id,chat_id,provider_message_id,body,mode,settings_version,emergency_stop)
-         values ($1,$2,$3,$4,$5,$6,$7,$8,$9) on conflict(channel,account_id,chat_id,provider_message_id)
-         do nothing returning id`,
-        [identityId, input.sender.channel, input.sender.channelAccountId, input.chatId,
-          input.providerMessageId, input.text, settings.mode, settings.version, settings.emergency_stop]);
+        `insert into public.ingress_events(
+          identity_id, channel, account_id, chat_id, provider_message_id, body,
+          mode, settings_version, emergency_stop,
+          message_type, has_media, is_forwarded, caption, sent_at, sender_info
+        )
+        values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15::jsonb)
+        on conflict(channel, account_id, chat_id, provider_message_id)
+        do nothing returning id`,
+        [
+          identityId, input.sender.channel, input.sender.channelAccountId, input.chatId,
+          input.providerMessageId, input.text, settings.mode, settings.version, settings.emergency_stop,
+          messageType, hasMedia, isForwarded, caption, sentAt, senderInfo
+        ]);
       let ingressId = inserted.rows[0]?.id;
       if (!ingressId) {
         const existing = await db.query<{ id: string; identity_id: string }>(
-          `select id,identity_id from public.ingress_events
+          `select id, identity_id from public.ingress_events
            where channel=$1 and account_id=$2 and chat_id=$3 and provider_message_id=$4`,
           [input.sender.channel, input.sender.channelAccountId, input.chatId, input.providerMessageId]);
         if (existing.rows[0]?.identity_id !== identityId) throw new PersistenceError("ingress_identity_conflict");

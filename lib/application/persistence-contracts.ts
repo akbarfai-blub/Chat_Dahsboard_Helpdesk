@@ -2,11 +2,25 @@ import type { AssociationResult, EpisodeActionResult, SplitResult } from "../dom
 import type { SenderKey } from "../domain/sender-identity";
 import type { ManualIncidentSnapshot, TriageDecision, TriageNetworkEvidence } from "../domain/triage-contracts";
 
+export type InboundMessageMetadata = {
+  readonly messageType?: string;
+  readonly hasMedia?: boolean;
+  readonly isForwarded?: boolean;
+  readonly caption?: string | null;
+  readonly sentAt?: string | null; // ISO 8601 UTC
+  readonly senderInfo?: {
+    readonly firstName?: string;
+    readonly lastName?: string;
+    readonly username?: string;
+  } | null;
+};
+
 export type InboundReceipt = {
   sender: SenderKey;
   chatId: string;
   providerMessageId: string;
   text: string;
+  metadata?: InboundMessageMetadata;
 };
 export type ProcessingContext = {
   network?: TriageNetworkEvidence | null;

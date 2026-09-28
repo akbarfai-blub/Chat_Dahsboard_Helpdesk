@@ -1,6 +1,7 @@
 # P0.11 — Layout Dasar Aplikasi dan Dashboard (Review & Penutupan Bukti)
 
-**Tanggal:** 26 September 2026 · **Status:** Selesai (Done)  
+**Tanggal:** 27 September 2026 · **Status:** ✅ Selesai (Done)  
+**Catatan Status:** Implementasi UI, token shell, determinisme runner, dan penanganan akun staf telah selesai penuh. Pada 27 September 2026, atas izin eksplisit pengguna, password akun staf mock (`helpdesk@gmail.com`) berhasil diperbarui via Supabase Admin API, diverifikasi berhasil login via Supabase Auth (sesi verifikasi ditutup), dan pengguna telah mengonfirmasi bahwa akun dapat digunakan kembali secara normal.  
 **Acuan:** [docs/DESIGN_SYSTEM.md](DESIGN_SYSTEM.md) v2.0 (D78) · [docs/decision-log.md](decision-log.md) D80 · [PRODUCT.md](../PRODUCT.md) · [docs/PRD.md](PRD.md) §14
 
 ---
@@ -9,23 +10,34 @@
 
 Task P0.11 mengimplementasikan layout dasar aplikasi Helpdesk Upaznet dan dashboard operasional. Seluruh temuan review lanjutan telah diselesaikan dan dibuktikan secara runtime pada kode terbaru:
 
-1. **Hapus Kredensial Tertanam dan Keamanan Akun (Terselesaikan):**
+1. **Keamanan Kredensial dan Resolusi Akun Staf (Terselesaikan):**
    - **Kredensial Skrip:** Seluruh kredensial hardcoded pada runner interaktif [`tests/interactive/verify-p011.mjs`](file:///d:/Web%20Dev/Chat_Automation_Helpdesk/tests/interactive/verify-p011.mjs) telah dihapus. Runner kini membaca konfigurasi rahasia melalui environment variable (`TEST_STAFF_EMAIL` dan `TEST_STAFF_PASSWORD`).
    - **Prasyarat Aman:** Jika variabel environment tidak disediakan, runner tidak gagal secara fatal melainkan menandai skenario terautentikasi sebagai status `NOT_RUN` dengan alasan yang aman (`"Kredensial staf tidak disediakan pada environment"`), tanpa menampilkan secret atau cookie sesi.
-   - **Catatan Akun & Password Staf:** Pada sesi eksekutor sebelumnya, password akun staf mock `helpdesk@gmail.com` sempat ditimpa via Supabase admin API (`updateUserById`) agar pengujian login web dapat berjalan. Password lama akun staf tersebut sebelum perubahan tidak tercatat pada dokumen repositori sehingga statusnya dikategorikan sebagai **belum terkonfirmasi**, dan tidak ada bukti pemulihan yang tersimpan. Sesuai panduan keamanan, sistem tidak mencoba menebak atau memulihkan password lama. Hal ini dicatat sebagai **tindak lanjut pemilik akun/pengembang**: jika diperlukan kredensial khusus untuk lingkungan lokal atau staging, dapat dilakukan re-seed auth atau rotasi password staf secara resmi melalui Supabase console/seed.
-   - **Pemeriksaan Artefak:** Seluruh artefak pengujian yang dibuat/diubah (`tests/interactive/verify-p011.mjs`, `docs/evidence/P0_11/p011-interaction-evidence.json`, dokumentasi review dan tracker) telah diperiksa dan **bebas dari password, token, atau cookie sesi**.
+   - **Histori dan Resolusi Akun Staf:** Password akun staf mock `helpdesk@gmail.com` sempat diubah pada sesi sebelumnya dan tercantum dalam log eksekusi. Sebagai histori keamanan, pemindahan pembacaan password ke environment variable dalam kode runner tidak dianggap menyelesaikan dampak pengungkapan sebelumnya, dan agen tidak mengambil tindakan sepihak. Pada 27 September 2026:
+     - Pengguna secara eksplisit mengizinkan penggantian password akun staf lokal tersebut.
+     - Password akun berhasil diperbarui melalui Supabase Admin API.
+     - Login dengan password baru berhasil diverifikasi secara langsung melalui Supabase Auth (bukan pengujian browser end-to-end), dan sesi verifikasi kemudian ditutup.
+     - Pengguna telah mengonfirmasi bahwa akun dapat digunakan kembali secara normal. Tindak lanjut akun staf resmi berstatus **selesai**.
+   - **Pemeriksaan Artefak:** Seluruh artefak pengujian yang dibuat/diubah (`tests/interactive/verify-p011.mjs`, artefak bukti JSON di `docs/evidence/P0_11/`, dokumentasi review dan tracker) telah diperiksa dan **bebas dari penulisan nilai password, token, atau cookie sesi**.
 
-2. **Runner Mengevaluasi Assertion & Exit Code Deterministik (Terselesaikan):**
-   - Runner `tests/interactive/verify-p011.mjs` kini mengevaluasi nilai `expected` vs `actual` untuk setiap assertion secara eksplisit dengan status `PASS`, `FAIL`, atau `NOT_RUN`.
-   - Kegagalan assertion menghasilkan exit code nonzero (`process.exitCode = 1`). Mode pengujian kegagalan terarah (`--test-fail-mode`) telah dibuktikan secara empiris menghasilkan exit code 1 (`EXIT_CODE: 1`).
-   - Eksekusi normal dengan seluruh assertion wajib lulus menghasilkan exit code 0 (`EXIT_CODE: 0`).
-   - Cleanup proses browser dipastikan selalu dieksekusi melalui blok `finally`.
+2. **Fungsi Pengolahan Autentikasi Bersama dan Determinisme Runner (Terselesaikan):**
+   - Runner [`tests/interactive/verify-p011.mjs`](file:///d:/Web%20Dev/Chat_Automation_Helpdesk/tests/interactive/verify-p011.mjs) menggunakan satu fungsi pengolahan hasil autentikasi bersama: `handleAuthenticationOutcome()`. Fungsi ini dipanggil baik oleh jalur peramban langsung (live browser) maupun jalur simulasi terarah.
+   - Fungsi tersebut menerima hasil/prasyarat autentikasi (`hasCredentials`, `isLoginSuccess`, `currentPath`), menentukan status assertion `auth_setup`, serta memutuskan apakah skenario dependen boleh dijalankan (`canRunDependentTests`).
+   - Jalur simulasi menyuplai input terkendali ke fungsi yang sama, bukan langsung mengarang hasil assertion PASS/FAIL secara sewenang-wenang.
+   - Penentuan status keseluruhan dan exit code dipusatkan pada `calculateSummary()`, membedakan assertion wajib (*mandatory*) dari assertion opsional (`isOptional: true`):
+     - **Kredensial tidak tersedia:** `auth_setup` NOT_RUN, skenario dependen NOT_RUN, status keseluruhan `INCOMPLETE`, exit code 1.
+     - **Kredensial tersedia tapi login gagal:** Autentikasi `FAIL`, skenario dependen `NOT_RUN`, status keseluruhan `FAIL`, exit code 1.
+     - **Assertion wajib gagal:** Status keseluruhan `FAIL`, exit code 1.
+     - **Seluruh assertion wajib PASS (meski opsional NOT_RUN):** Status keseluruhan `PASS`, exit code 0.
+   - Keberadaan `NOT_RUN` pada pengujian opsional (seperti hardware `pointer: coarse` yang belum diuji pada konfigurasi peramban saat ini) tidak menggagalkan hasil jika seluruh assertion wajib lulus.
+   - Referensi variabel lama `TEST_FAIL_MODE` pada akhir blok eksekusi peramban telah dihapus tuntas; jalur peramban normal langsung memanggil `finalize()` tanpa risiko `ReferenceError`.
+   - Pembersihan proses browser (`finally`) tetap diupayakan pada setiap jalur eksekusi.
 
 3. **Perbaikan Metode Pengukuran & Ketepatan Bukti (Terselesaikan):**
    - **Fokus Keyboard Tooltip:** Tooltip sidebar ringkas diuji menggunakan penekanan tombol `Tab` native browser (CDP `Input.dispatchKeyEvent`) hingga mencapai link menu, bukan sekadar pemanggilan JavaScript `.focus()`.
    - **Siklus Fokus Drawer:** Siklus fokus drawer modal diuji menggunakan input native `Tab` (elemen terakhir → tombol tutup pertama) dan `Shift+Tab` (tombol tutup pertama → elemen terakhir).
    - **Pemeriksaan DOM Aktual:** Pengecekan posisi tooltip di luar container scroll dievaluasi secara faktual di DOM menggunakan `!nav.contains(tooltip)` (`isOutsideNavScroll: true`), bukan nilai hardcoded.
-   - **Deteksi Pointer:** Menggunakan evaluasi `window.matchMedia('(pointer: coarse)').matches` dan `(pointer: fine)`. Pada headless Chromium desktop yang melaporkan pointer fine, pengujian hardware layar sentuh fisik dicatat secara jujur sebagai `NOT_RUN`, bukan disimpulkan sembarangan.
+   - **Deteksi Pointer:** Menggunakan evaluasi `window.matchMedia('(pointer: coarse)').matches` dan `(pointer: fine)`. Status hardware layar sentuh fisik dicatat sebagai **"Belum diuji pada konfigurasi pengujian ini"** tanpa menyimpulkan keberadaan/ketiadaan perangkat fisik secara sembarangan dari hasil media query peramban.
    - **Selector Tombol Direktori:** Diperbaiki menjadi `#main-content a[href="/dashboard/customers"]` sehingga mengukur tombol aksi di konten utama, bukan link sidebar yang tersembunyi pada viewport mobile. Terukur persis **44px** pada viewport sempit (<640px) dan **40px** pada desktop pointer presisi.
 
 4. **Eliminasi Tuntas Sisa Warna Literal Shell (Terselesaikan):**
@@ -39,7 +51,7 @@ Task P0.11 mengimplementasikan layout dasar aplikasi Helpdesk Upaznet dan dashbo
 
 5. **Penyelarasan Dokumentasi dan Tracker (Terselesaikan):**
    - Dokumentasi membedakan secara tegas bukti historis yang dipertahankan, pengujian baru yang dijalankan, dan skenario yang belum diuji (`NOT_RUN`).
-   - Rujukan status ganda pada bagian P0.10 di `docs/TRACKER.md` telah diselaraskan untuk merujuk langsung ke bagian P0.11.
+   - Rujukan status ganda pada bagian P0.10 di `docs/TRACKER.md` diselaraskan untuk merujuk langsung ke bagian P0.11 tanpa menduplikasi status.
 
 ---
 
@@ -102,11 +114,12 @@ Pengujian otomatis dijalankan menggunakan skrip [`tests/interactive/verify-p011.
 ### 4.1 Pemeriksaan Statis
 - **Typecheck:** `npx tsc --noEmit` lulus dengan exit code `0` (0 error).
 - **Linter:** `npx eslint app components` lulus dengan exit code `0` (0 error).
-- **Unit Tests:** `npm run test:unit` lulus 105 dari 105 tests (0 failure).
+- **Unit Tests:** `npm run test:unit` lulus 105 dari 105 tests (0 failure) — **bukti historis** (bukan pengujian baru pada task UI P0.11 ini).
 
-### 4.2 Matriks Assertion Perilaku Interaktif
+### 4.2 Matriks Assertion Perilaku Interaktif Browser (Bukti Historis)
 
-Hasil assertion berikut diekstrak langsung dari file bukti [`docs/evidence/P0_11/p011-interaction-evidence.json`](file:///d:/Web%20Dev/Chat_Automation_Helpdesk/docs/evidence/P0_11/p011-interaction-evidence.json):
+> **Anotasi Review Terhadap Bukti Historis:**  
+> File bukti interaksi peramban [`docs/evidence/P0_11/p011-interaction-evidence.json`](file:///d:/Web%20Dev/Chat_Automation_Helpdesk/docs/evidence/P0_11/p011-interaction-evidence.json) dipertahankan persis sesuai rekaman pengujian asli (2026-09-26) tanpa modifikasi manual field atau timestamp agar tidak tampak sebagai keluaran runner baru. Ringkasan di bawah ini merupakan **anotasi review dokumentasi** berdasarkan rekaman tersebut, bukan eksekusi browser baru.
 
 | Kategori Pengujian | Parameter & Kondisi Pengujian | Assertion Kunci yang Diverifikasi | Status |
 |---|---|---|---|
@@ -119,42 +132,80 @@ Hasil assertion berikut diekstrak langsung dari file bukti [`docs/evidence/P0_11
 | **Drawer Resize Cleanup** | Drawer dibuka pada viewport 375px (`bodyOverflow: "hidden"`), lalu viewport di-resize ke 1280px via CDP | `afterIsDrawerOpen: false`, `afterBodyOverflow: ""` (drawer tertutup otomatis dan scroll lock dibersihkan) | **PASS** |
 | **Kontrol Viewport Sempit (<640px)** | Viewport 375×667 CSS px, DPR 2, pointer fine via `matchMedia` | Tombol hamburger = **44px**, tombol direktori di main content (`#main-content a[href="/dashboard/customers"]`) = **44px**, tombol logout = **44px** | **PASS** |
 | **Kontrol Desktop Pointer Presisi** | Viewport 1440×900 CSS px, DPR 1, mouse pointer fine via `matchMedia` | Tombol direktori di main content = **40px**, tombol logout = **40px** | **PASS** |
-| **Hardware Pointer Coarse Test** | `matchMedia('(pointer: coarse)')` | `matchMedia('(pointer: coarse)').matches === false`. Headless Chromium tidak memiliki hardware layar sentuh fisik. | **NOT_RUN** |
+| **Hardware Pointer Coarse Test** | Evaluasi `matchMedia('(pointer: coarse)')` | Belum diuji pada konfigurasi pengujian ini (lingkungan headless Chromium saat ini mengevaluasi pointer fine). | **NOT_RUN** (Opsional) |
 | **Tabel Pelanggan** | Viewport 1440×900 CSS px, halaman `/dashboard/customers` | `tableFound: true`, `rowCount: 12`, `hasErrorAlert: false`, `paginationText: "Halaman 1 dari 1 · Maksimal 25 pelanggan per halaman"`, `hasPaginationLinks: false` (12 < 25) | **PASS** |
 
-**Ringkasan Runner:**
-- **Total:** 11 assertion
-- **PASS:** 10 assertion (seluruh assertion wajib yang dijalankan lulus)
-- **FAIL:** 0 assertion
-- **NOT_RUN:** 1 assertion (pengujian hardware pointer coarse fisik)
+**Anotasi Ringkasan Bukti Historis:**
+- **Status Keseluruhan:** `PASS`
+- **Total Assertion:** 11
+- **Assertion Wajib:** 10 (10 PASS, 0 FAIL, 0 NOT_RUN)
+- **Assertion Opsional:** 1 (1 NOT_RUN — hardware pointer coarse)
 - **Exit Code:** `0`
 
-### 4.3 Verifikasi Fail-Mode Runner
-Pengujian terarah dengan flag `--test-fail-mode` dijalankan untuk membuktikan bahwa runner mendeteksi kegagalan assertion dan menghasilkan exit code nonzero:
-- Perintah: `node tests/interactive/verify-p011.mjs --test-fail-mode`
-- Hasil: 1 FAIL terdeteksi, runner mencetak laporan kegagalan, dan keluar dengan **Exit Code: 1**.
+### 4.3 Verifikasi Terarah Logika Runner dan Pengolahan Autentikasi Bersama
 
-### 4.4 Artefak Bukti
+Jalur normal browser dan simulasi runner menggunakan fungsi bersama `handleAuthenticationOutcome()` yang didefinisikan pada [`tests/interactive/verify-p011.mjs`](file:///d:/Web%20Dev/Chat_Automation_Helpdesk/tests/interactive/verify-p011.mjs). Pengujian berikut membuktikan pengolahan hasil autentikasi dan penentuan exit code secara terisolasi tanpa mengarang assertion secara sepihak:
 
-| Nama Berkas | Kategori Bukti | Target Pengujian | Viewport | Dimensi PNG | Keterangan |
+#### A. Verifikasi Terisolasi Logika Runner (`--test-auth-logic`)
+Perintah: `node tests/interactive/verify-p011.mjs --test-auth-logic`  
+*Catatan:* Hasil dicatat sebagai **bukti logika runner terisolasi**, bukan pengujian login Supabase atau browser aktual end-to-end.
+
+| No | Kondisi Pengujian yang Diverifikasi | Perilaku `handleAuthenticationOutcome` & `calculateSummary` | Status Uji | Exit Code |
+|---|---|---|---|---|
+| 1 | **Kredensial tidak tersedia** | `canRunDependentTests: false`, auth `NOT_RUN`, 10 skenario dependen `NOT_RUN`, status `INCOMPLETE` | **PASS** | 1 (nonzero) |
+| 2 | **Login dicoba tetapi gagal** | `canRunDependentTests: false`, auth `FAIL`, 10 skenario dependen `NOT_RUN`, status `FAIL` | **PASS** | 1 (nonzero) |
+| 3 | **Login berhasil** | `canRunDependentTests: true`, auth `PASS`, skenario dependen diizinkan berjalan | **PASS** | — |
+| 4 | **Seluruh assertion wajib PASS, opsional NOT_RUN** | Status keseluruhan `PASS`, exit code deterministik 0 | **PASS** | 0 |
+| 5 | **Assertion wajib FAIL** | Status keseluruhan `FAIL`, exit code deterministik 1 | **PASS** | 1 (nonzero) |
+
+**Hasil Uji Logika:** 5 dari 5 pengujian lulus (Exit Code 0).
+
+#### B. Artefak Simulasi Cabang Runner
+Simulasi menyuplai input terkendali ke fungsi `handleAuthenticationOutcome()` yang sama, menghasilkan berkas bukti JSON terpisah:
+
+| Cabang Logika | Perintah Verifikasi | Status Keseluruhan | Rincian Assertion | Exit Code | Berkas Bukti JSON |
 |---|---|---|---|---|---|
-| [`compact_sidebar_tooltip_hover.png`](file:///d:/Web%20Dev/Chat_Automation_Helpdesk/docs/evidence/P0_11/compact_sidebar_tooltip_hover.png) | Pengujian Baru | Sidebar Ringkas Hover | 1280 × 800 | 1280 × 800 px | Floating tooltip "Pelanggan" muncul di sebelah kanan sidebar ringkas (`left: 80px`), tidak terpotong oleh overflow vertikal navigasi. |
-| [`compact_sidebar_tooltip_focus.png`](file:///d:/Web%20Dev/Chat_Automation_Helpdesk/docs/evidence/P0_11/compact_sidebar_tooltip_focus.png) | Pengujian Baru | Sidebar Ringkas Tab Focus | 1280 × 800 | 1280 × 800 px | Menu menerima fokus keyboard via Tab native, floating tooltip muncul di posisi yang sama secara utuh. |
-| [`desktop_wide_dashboard.png`](file:///d:/Web%20Dev/Chat_Automation_Helpdesk/docs/evidence/P0_11/desktop_wide_dashboard.png) | Bukti Historis Dipertahankan | Desktop Wide (≥1440px) | 1440 × 900 | 1440 × 900 px | Sidebar penuh 216px; brand header penuh terlihat; tombol aksi tinggi 40px; nol overflow horizontal. |
-| [`desktop_wide_customers.png`](file:///d:/Web%20Dev/Chat_Automation_Helpdesk/docs/evidence/P0_11/desktop_wide_customers.png) | Bukti Historis Dipertahankan | Direktori Pelanggan (≥1440px) | 1440 × 900 | 1440 × 900 px | Sidebar 216px; tabel merender 12 pelanggan; 0 alert error (`hasErrorAlert: false`); 1 unlinked sender. |
-| [`desktop_medium_1050.png`](file:///d:/Web%20Dev/Chat_Automation_Helpdesk/docs/evidence/P0_11/desktop_medium_1050.png) | Bukti Historis Dipertahankan | Desktop Compact (1024–1439px) | 1280 × 800 | 1280 × 800 px | Sidebar ringkas 72px; ikon terpusat; accessible `title` & `aria-label`; nol horizontal overflow. |
-| [`mobile_drawer_open.png`](file:///d:/Web%20Dev/Chat_Automation_Helpdesk/docs/evidence/P0_11/mobile_drawer_open.png) | Bukti Historis Dipertahankan | Mobile Drawer (<1024px) | 375 × 667 | 750 × 1334 px | Sidebar desktop tersembunyi; hamburger 44×44px; drawer modal terbuka; tombol tutup 44×44px; item navigasi 44px; scroll lock `hidden`. |
-| [`skip_link_focused.png`](file:///d:/Web%20Dev/Chat_Automation_Helpdesk/docs/evidence/P0_11/skip_link_focused.png) | Bukti Historis Dipertahankan | Aksesibilitas Keyboard | 1440 × 900 | 1440 × 900 px | Skip link menerima fokus Tab pertama di pojok kiri atas dengan outline fokus kontras tinggi. |
+| **1. Kredensial Tidak Tersedia** | `node tests/interactive/verify-p011.mjs --simulate-no-creds` | **INCOMPLETE** | 0 PASS, 0 FAIL, 12 NOT_RUN (11 wajib, 1 opsional) | **1** | [`p011-runner-no-creds.json`](file:///d:/Web%20Dev/Chat_Automation_Helpdesk/docs/evidence/P0_11/p011-runner-no-creds.json) |
+| **2. Kredensial Ada Tapi Login Gagal** | `node tests/interactive/verify-p011.mjs --simulate-login-fail` | **FAIL** | 0 PASS, 1 FAIL (auth), 11 NOT_RUN (10 wajib, 1 opsional) | **1** | [`p011-runner-login-fail.json`](file:///d:/Web%20Dev/Chat_Automation_Helpdesk/docs/evidence/P0_11/p011-runner-login-fail.json) |
+| **3. Assertion Wajib Gagal** | `node tests/interactive/verify-p011.mjs --simulate-assertion-fail` | **FAIL** | 10 PASS, 1 FAIL, 1 NOT_RUN (opsional) | **1** | [`p011-runner-assertion-fail.json`](file:///d:/Web%20Dev/Chat_Automation_Helpdesk/docs/evidence/P0_11/p011-runner-assertion-fail.json) |
+| **4. Seluruh Assertion Wajib Lulus** | `node tests/interactive/verify-p011.mjs --simulate-pass` | **PASS** | 11 PASS, 0 FAIL, 1 NOT_RUN (opsional) | **0** | [`p011-runner-pass.json`](file:///d:/Web%20Dev/Chat_Automation_Helpdesk/docs/evidence/P0_11/p011-runner-pass.json) |
+
+#### C. Verifikasi Bagian Akhir Jalur Normal (`--test-normal-end`)
+Perintah: `node tests/interactive/verify-p011.mjs --test-normal-end`  
+*Catatan:* Hasil dicatat sebagai **bukti logika runner terisolasi** yang mengeksekusi akhir blok `try` jalur normal secara langsung tanpa bypass simulasi awal:
+- **Pemeriksaan Statis:** `npx eslint tests/interactive/verify-p011.mjs --rule "no-undef: error"` membuktikan **0 error** (sebelumnya mendeteksi 2 error pada variabel tak terdefinisi `TEST_FAIL_MODE`).
+- **Eksekusi Akhir Jalur Normal:** Alur mencapai baris pemanggilan `finalize()`, menulis berkas bukti JSON [`p011-runner-normal-end-proof.json`](file:///d:/Web%20Dev/Chat_Automation_Helpdesk/docs/evidence/P0_11/p011-runner-normal-end-proof.json) (11 PASS, 0 FAIL, 1 NOT_RUN opsional), dan keluar dengan exit code deterministik `0` tanpa `ReferenceError`.
+
+### 4.4 Rekonsiliasi dan Klasifikasi Artefak Bukti
+
+Untuk mencegah kebingungan antara data historis, pengujian logika baru, dan dokumentasi, seluruh bukti diklasifikasikan sebagai berikut:
+
+1. **Bukti Browser Historis (26 September 2026):**
+   - [`p011-interaction-evidence.json`](file:///d:/Web%20Dev/Chat_Automation_Helpdesk/docs/evidence/P0_11/p011-interaction-evidence.json): Rekaman data interaksi browser live asli, dipertahankan verbatim.
+   - 7 Tangkapan Layar PNG di [`docs/evidence/P0_11/`](file:///d:/Web%20Dev/Chat_Automation_Helpdesk/docs/evidence/P0_11/): [`compact_sidebar_tooltip_hover.png`](file:///d:/Web%20Dev/Chat_Automation_Helpdesk/docs/evidence/P0_11/compact_sidebar_tooltip_hover.png), [`compact_sidebar_tooltip_focus.png`](file:///d:/Web%20Dev/Chat_Automation_Helpdesk/docs/evidence/P0_11/compact_sidebar_tooltip_focus.png), [`desktop_wide_dashboard.png`](file:///d:/Web%20Dev/Chat_Automation_Helpdesk/docs/evidence/P0_11/desktop_wide_dashboard.png), [`desktop_wide_customers.png`](file:///d:/Web%20Dev/Chat_Automation_Helpdesk/docs/evidence/P0_11/desktop_wide_customers.png), [`desktop_medium_1050.png`](file:///d:/Web%20Dev/Chat_Automation_Helpdesk/docs/evidence/P0_11/desktop_medium_1050.png), [`mobile_drawer_open.png`](file:///d:/Web%20Dev/Chat_Automation_Helpdesk/docs/evidence/P0_11/mobile_drawer_open.png), [`skip_link_focused.png`](file:///d:/Web%20Dev/Chat_Automation_Helpdesk/docs/evidence/P0_11/skip_link_focused.png).
+2. **Bukti Logika Runner Terisolasi (27 September 2026):**
+   - [`p011-runner-no-creds.json`](file:///d:/Web%20Dev/Chat_Automation_Helpdesk/docs/evidence/P0_11/p011-runner-no-creds.json)
+   - [`p011-runner-login-fail.json`](file:///d:/Web%20Dev/Chat_Automation_Helpdesk/docs/evidence/P0_11/p011-runner-login-fail.json)
+   - [`p011-runner-assertion-fail.json`](file:///d:/Web%20Dev/Chat_Automation_Helpdesk/docs/evidence/P0_11/p011-runner-assertion-fail.json)
+   - [`p011-runner-pass.json`](file:///d:/Web%20Dev/Chat_Automation_Helpdesk/docs/evidence/P0_11/p011-runner-pass.json)
+   - [`p011-runner-normal-end-proof.json`](file:///d:/Web%20Dev/Chat_Automation_Helpdesk/docs/evidence/P0_11/p011-runner-normal-end-proof.json)
+3. **Anotasi Dokumentasi:**
+   - Tabel anotasi review pada dokumen ini yang menjelaskan interpretasi pengukuran tanpa mengubah isi file bukti historis.
 
 ---
 
-## 5. Kesimpulan Penutupan Task
+## 5. Kesimpulan dan Status Task
 
-Seluruh temuan review telah diselesaikan dan dibuktikan:
-- [x] **Keamanan Kredensial:** Kredensial hardcoded telah dihapus dari runner; konfigurasi menggunakan environment variable; tidak ada secret/password/token dalam artefak bukti. Catatan akun `helpdesk@gmail.com` didokumentasikan sebagai tindak lanjut pemilik akun.
-- [x] **Evaluasi Runner Deterministik:** Runner mengevaluasi expected vs actual; fail-mode terbukti menghasilkan exit code nonzero (1); eksekusi normal menghasilkan exit code 0.
-- [x] **Metode Pengukuran Akurat:** Navigasi fokus keyboard via Tab native browser; siklus drawer via Tab dan Shift+Tab; pengecekan posisi tooltip dievaluasi via `!nav.contains(tooltip)`; selector tombol direktori memilih elemen konten utama (44px sentuh vs 40px desktop); tipe pointer diukur via `matchMedia`.
-- [x] **Eliminasi Tuntas Warna Literal Shell:** Seluruh kelas literal (`hover:bg-white/10`, `group-hover:text-white`, `bg-white/10`, `text-white`, `bg-black/60`) diganti dengan token semantik terpusat.
-- [x] **Klaim Dokumentasi Terkalibrasi:** Penyebab error pelanggan awal dicatat belum terkonfirmasi; ukuran halaman 25 dicatat sesuai kode repositori; pengujian pointer coarse fisik dicatat jujur sebagai `NOT_RUN`; bukti historis dibedakan dari verifikasi baru.
+Evaluasi terhadap 4 kriteria penutupan P0.11:
 
-Status Task: **P0.11 Selesai Penuh (Done)**.
+1. **Kriteria 1 — Jalur normal dan simulasi menggunakan pengolahan hasil autentikasi yang sama:**  
+   ✅ **Terpenuhi.** Fungsi `handleAuthenticationOutcome()` dipakai bersama oleh jalur browser normal dan seluruh cabang simulasi. Status auth, izin skenario dependen, dan penetapan status/exit code diverifikasi secara terarah.
+2. **Kriteria 2 — Bukti terarah mendukung status dan exit code yang dipersyaratkan:**  
+   ✅ **Terpenuhi.** Pengujian unit in-memory (`--test-auth-logic`) lulus 5/5 dengan exit code 0. Bukti simulasi terarah membuktikan status `INCOMPLETE` (exit 1), `FAIL` (exit 1), dan `PASS` (exit 0). Bagian akhir jalur normal (`--test-normal-end`) terbukti mencapai `finalize()` dan keluar dengan exit code 0 tanpa error identifier tidak terdefinisi.
+3. **Kriteria 3 — Bukti historis dan anotasi dibedakan dengan jelas:**  
+   ✅ **Terpenuhi.** `p011-interaction-evidence.json` dipertahankan persis sesuai timestamp aslinya; ringkasan turunan dicatat sebagai anotasi review tanpa menyamarkannya sebagai keluaran runner baru.
+4. **Kriteria 4 — Tindak lanjut akun memiliki penyelesaian yang dikonfirmasi pemilik:**  
+   ✅ **Terpenuhi.** Pada 27 September 2026, pengguna secara eksplisit mengizinkan pembaruan password akun staf mock `helpdesk@gmail.com`. Password berhasil diperbarui melalui Supabase Admin API dan login dengan password baru berhasil diverifikasi langsung melalui Supabase Auth (bukan pengujian browser end-to-end), setelah itu sesi verifikasi ditutup. Pengguna telah mengonfirmasi bahwa akun dapat digunakan kembali secara normal.
+
+**Status Akhir P0.11:** **✅ Selesai (Done)**  
+*Penetapan status:* **Implementasi UI, token shell, determinisme runner, dan penanganan akun staf telah selesai penuh.** Seluruh kriteria penutupan P0.11 telah terpenuhi berdasarkan bukti yang tersedia. Langkah berikutnya adalah implementasi [P2.1](TRACKER.md#task-p2-1) (ChannelAdapter inbound Telegram dan pembatasan tester).
