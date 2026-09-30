@@ -3,7 +3,13 @@ import type { EpisodeSnapshot, EpisodeActionResult } from "../domain/episode-con
 import type { IdentityCandidate, SenderKey } from "../domain/sender-identity";
 import type { AutomationMode, TriageDecision } from "../domain/triage-contracts";
 import type { ClaimTarget } from "../domain/reply-claim";
-import { PersistenceError, type ProcessingResult } from "../application/persistence-contracts";
+import { evaluateConversationGrouping, type ConversationCandidate } from "../domain/conversation";
+import {
+  PersistenceError,
+  type ProcessingResult,
+  type ConversationSnapshot,
+  type ConversationMessageItem,
+} from "../application/persistence-contracts";
 
 export type Settings = { mode: AutomationMode; emergency_stop: boolean; version: number };
 export type ReceiptRow = {
@@ -207,5 +213,296 @@ export class EpisodeStore {
     await this.db.query(
       "insert into public.staff_commands(staff_id,request_id,fingerprint,result) values ($1,$2,$3,$4::jsonb)",
       [staffId, requestId, fingerprint, JSON.stringify(result)]);
+  }
+
+  async ensureConversationForIngress(receipt: ReceiptRow): Promise<{ conversationId: string; isNew: boolean }> {
+    // 1. Check if the message is already associated with a conversation in public.messages
+    const existingMsg = await this.db.query<{ conversation_id: string | null }>(
+      "select conversation_id from public.messages where id = $1",
+      [receipt.id]
+    );
+    if (existingMsg.rows[0]?.conversation_id) {
+      return { conversationId: existingMsg.rows[0].conversation_id, isNew: false };
+    }
+
+    // 2. Query existing conversations for this specific (channel, account_id, chat_id, identity_id) tuple
+    const conversationsResult = await this.db.query<{
+      id: string;
+      started_at: Date;
+      last_activity_at: Date;
+      status: "active" | "closed";
+    }>(
+      `select id, started_at, last_activity_at, status
+       from public.conversations
+       where channel = $1 and account_id = $2 and chat_id = $3 and identity_id = $4
+       order by started_at asc`,
+      [receipt.channel, receipt.account_id, receipt.chat_id, receipt.identity_id]
+    );
+
+    const candidates: ConversationCandidate[] = conversationsResult.rows.map((r) => ({
+      id: r.id,
+      startedAt: r.started_at.toISOString(),
+      lastActivityAt: r.last_activity_at.toISOString(),
+      status: r.status,
+    }));
+
+    const messageReceivedAtIso = receipt.received_at.toISOString();
+    const decision = evaluateConversationGrouping({
+      messageReceivedAt: messageReceivedAtIso,
+      existingConversations: candidates,
+    });
+
+    if (decision.action === "create") {
+      const status = decision.shouldBeActive ? "active" : "closed";
+      if (decision.shouldBeActive) {
+        // Close any previous active conversation for this scope
+        await this.db.query(
+          `update public.conversations
+           set status = 'closed', updated_at = now()
+           where channel = $1 and account_id = $2 and chat_id = $3 and identity_id = $4 and status = 'active'`,
+          [receipt.channel, receipt.account_id, receipt.chat_id, receipt.identity_id],
+        );
+      }
+
+      const inserted = await this.db.query<{ id: string }>(
+        `insert into public.conversations (
+           identity_id, channel, account_id, chat_id, status, started_at, last_activity_at
+         )
+         values ($1, $2, $3, $4, $5, $6, $7)
+         returning id`,
+        [
+          receipt.identity_id,
+          receipt.channel,
+          receipt.account_id,
+          receipt.chat_id,
+          status,
+          decision.startedAt,
+          decision.lastActivityAt,
+        ]
+      );
+      return { conversationId: inserted.rows[0].id, isNew: true };
+    }
+
+    if (decision.action === "join") {
+      const status = decision.shouldBeActive ? "active" : "closed";
+      if (decision.shouldBeActive) {
+        // Ensure any other conversation in this scope is closed
+        await this.db.query(
+          `update public.conversations
+           set status = 'closed', updated_at = now()
+           where channel = $1 and account_id = $2 and chat_id = $3 and identity_id = $4 and id != $5 and status = 'active'`,
+          [receipt.channel, receipt.account_id, receipt.chat_id, receipt.identity_id, decision.conversationId],
+        );
+      }
+
+      await this.db.query(
+        `update public.conversations
+         set started_at = coalesce($2, started_at),
+             last_activity_at = coalesce($3, last_activity_at),
+             status = $4,
+             updated_at = now()
+         where id = $1`,
+        [
+          decision.conversationId,
+          decision.updatedStartedAt ?? null,
+          decision.updatedLastActivityAt ?? null,
+          status,
+        ]
+      );
+      return { conversationId: decision.conversationId, isNew: false };
+    }
+
+    // decision.action === "merge"
+    const survivingId = decision.survivingConversationId;
+    const absorbedIds = [...decision.absorbedConversationIds];
+    const status = decision.shouldBeActive ? "active" : "closed";
+
+    // 1. Re-parent messages in public.messages from absorbed conversations to surviving conversation
+    await this.db.query(
+      `update public.messages
+       set conversation_id = $1
+       where conversation_id = any($2::uuid[])`,
+      [survivingId, absorbedIds],
+    );
+
+    // 2. Update cached processing_result in public.triage_assessments for all absorbed messages
+    await this.db.query(
+      `update public.triage_assessments
+       set processing_result = jsonb_set(processing_result, '{conversationId}', to_jsonb($1::text))
+       where processing_result->>'conversationId' = any($2::text[])`,
+      [survivingId, absorbedIds],
+    );
+
+    // 3. Update surviving conversation boundaries and status
+    if (decision.shouldBeActive) {
+      await this.db.query(
+        `update public.conversations
+         set status = 'closed', updated_at = now()
+         where channel = $1 and account_id = $2 and chat_id = $3 and identity_id = $4 and id != $5 and status = 'active'`,
+        [receipt.channel, receipt.account_id, receipt.chat_id, receipt.identity_id, survivingId],
+      );
+    }
+
+    await this.db.query(
+      `update public.conversations
+       set started_at = $2,
+           last_activity_at = $3,
+           status = $4,
+           updated_at = now()
+       where id = $1`,
+      [survivingId, decision.startedAt, decision.lastActivityAt, status],
+    );
+
+    // 4. Delete absorbed conversations
+    await this.db.query(
+      `delete from public.conversations
+       where id = any($1::uuid[])`,
+      [absorbedIds],
+    );
+
+    return { conversationId: survivingId, isNew: false };
+  }
+
+  async getConversation(conversationId: string): Promise<ConversationSnapshot | null> {
+    const result = await this.db.query<{
+      id: string;
+      identity_id: string;
+      channel: string;
+      account_id: string;
+      chat_id: string;
+      status: "active" | "closed";
+      started_at: Date;
+      last_activity_at: Date;
+      created_at: Date;
+      updated_at: Date;
+    }>("select * from public.conversations where id = $1", [conversationId]);
+
+    const row = result.rows[0];
+    if (!row) return null;
+    return {
+      id: row.id,
+      identityId: row.identity_id,
+      channel: row.channel,
+      accountId: row.account_id,
+      chatId: row.chat_id,
+      status: row.status,
+      startedAt: row.started_at.toISOString(),
+      lastActivityAt: row.last_activity_at.toISOString(),
+      createdAt: row.created_at.toISOString(),
+      updatedAt: row.updated_at.toISOString(),
+    };
+  }
+
+  async getConversationHistory(conversationId: string): Promise<ConversationMessageItem[]> {
+    const result = await this.db.query<{
+      message_id: string;
+      conversation_id: string;
+      identity_id: string;
+      channel: string;
+      account_id: string;
+      chat_id: string;
+      provider_message_id: string;
+      body: string;
+      received_at: Date;
+      sent_at: Date | null;
+      message_type: string;
+      has_media: boolean;
+      is_forwarded: boolean;
+      caption: string | null;
+      sender_info: Record<string, unknown>;
+      complaint_id: string | null;
+      classification: unknown;
+      review_reason: string | null;
+      created_at: Date;
+    }>(
+      `select
+         m.id as message_id,
+         m.conversation_id,
+         m.identity_id,
+         i.channel,
+         i.account_id,
+         i.chat_id,
+         i.provider_message_id,
+         i.body,
+         i.received_at,
+         i.sent_at,
+         coalesce(i.message_type, 'text') as message_type,
+         coalesce(i.has_media, false) as has_media,
+         coalesce(i.is_forwarded, false) as is_forwarded,
+         i.caption,
+         coalesce(i.sender_info, '{}'::jsonb) as sender_info,
+         m.complaint_id,
+         m.classification,
+         m.review_reason,
+         m.created_at
+       from public.messages m
+       join public.ingress_events i on i.id = m.id
+       where m.conversation_id = $1
+       order by i.received_at asc, i.id asc`,
+      [conversationId]
+    );
+
+    return result.rows.map((row) => ({
+      messageId: row.message_id,
+      conversationId: row.conversation_id,
+      identityId: row.identity_id,
+      channel: row.channel,
+      accountId: row.account_id,
+      chatId: row.chat_id,
+      providerMessageId: row.provider_message_id,
+      body: row.body,
+      receivedAt: row.received_at.toISOString(),
+      sentAt: row.sent_at ? row.sent_at.toISOString() : null,
+      messageType: row.message_type,
+      hasMedia: row.has_media,
+      isForwarded: row.is_forwarded,
+      caption: row.caption,
+      senderInfo: row.sender_info ?? {},
+      complaintId: row.complaint_id,
+      classification: row.classification,
+      reviewReason: row.review_reason,
+      createdAt: row.created_at.toISOString(),
+    }));
+  }
+
+  async listConversationsForChat(
+    channel: string,
+    accountId: string,
+    chatId: string,
+    identityId?: string
+  ): Promise<ConversationSnapshot[]> {
+    const query = identityId
+      ? `select * from public.conversations
+         where channel = $1 and account_id = $2 and chat_id = $3 and identity_id = $4
+         order by started_at asc`
+      : `select * from public.conversations
+         where channel = $1 and account_id = $2 and chat_id = $3
+         order by started_at asc`;
+    const params = identityId ? [channel, accountId, chatId, identityId] : [channel, accountId, chatId];
+    const result = await this.db.query<{
+      id: string;
+      identity_id: string;
+      channel: string;
+      account_id: string;
+      chat_id: string;
+      status: "active" | "closed";
+      started_at: Date;
+      last_activity_at: Date;
+      created_at: Date;
+      updated_at: Date;
+    }>(query, params);
+
+    return result.rows.map((row) => ({
+      id: row.id,
+      identityId: row.identity_id,
+      channel: row.channel,
+      accountId: row.account_id,
+      chatId: row.chat_id,
+      status: row.status,
+      startedAt: row.started_at.toISOString(),
+      lastActivityAt: row.last_activity_at.toISOString(),
+      createdAt: row.created_at.toISOString(),
+      updatedAt: row.updated_at.toISOString(),
+    }));
   }
 }

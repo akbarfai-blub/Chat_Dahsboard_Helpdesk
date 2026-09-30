@@ -14,6 +14,7 @@ import { EpisodeStore } from "../repositories/episode-store";
 import {
   PersistenceError, type InboundReceipt, type ProcessingContext, type ProcessingResult,
   type StaffEpisodeAction, type StaffMutationResult,
+  type ConversationSnapshot, type ConversationMessageItem,
 } from "./persistence-contracts";
 
 export type StaffResult = {
@@ -87,6 +88,8 @@ export class HelpdeskPersistence {
       if (previous) return previous;
       const job = await db.query("select 1 from public.processing_jobs where ingress_id=$1 and status='pending' for update", [ingressId]);
       if (job.rowCount !== 1) throw new PersistenceError("pending_job_not_found");
+      const conversationInfo = await store.ensureConversationForIngress(receipt);
+      const conversationId = conversationInfo.conversationId;
       const now = new Date().toISOString();
       const candidate = await store.identity(receipt.identity_id);
       const identity = resolveSenderIdentity(candidate, [candidate], now);
@@ -105,8 +108,8 @@ export class HelpdeskPersistence {
         triageDecision: decision, targetEpisodeId: context.targetEpisodeId,
       };
       const association = associateMessageToEpisode(associationInput);
-      await db.query("insert into public.messages(id,identity_id,classification,review_reason) values ($1,$2,$3::jsonb,$4)",
-        [ingressId, receipt.identity_id, JSON.stringify(classification),
+      await db.query("insert into public.messages(id,identity_id,conversation_id,classification,review_reason) values ($1,$2,$3,$4::jsonb,$5)",
+        [ingressId, receipt.identity_id, conversationId, JSON.stringify(classification),
           association.outcome === "review" ? association.reason : null]);
       let episode: EpisodeSnapshot | null = null;
       if (association.outcome === "create_new" || association.outcome === "create_after_closed") {
@@ -148,7 +151,7 @@ export class HelpdeskPersistence {
         }
       }
       const result: ProcessingResult = {
-        messageId: ingressId, episodeId: episode?.id ?? null, association, decision, claim, dispatchAuthorized: false,
+        messageId: ingressId, conversationId, episodeId: episode?.id ?? null, association, decision, claim, dispatchAuthorized: false,
       };
       await db.query(
         "insert into public.triage_assessments(message_id,decision,processing_result) values ($1,$2::jsonb,$3::jsonb)",
@@ -230,6 +233,22 @@ export class HelpdeskPersistence {
         ...(createdEpisodeId ? { createdEpisodeId } : {}), ...(manualIntentId ? { manualIntentId } : {}) };
       await store.saveCommand(staffId, input.requestId, hash, saved);
       return saved;
+    });
+  }
+
+  async getConversation(conversationId: string): Promise<ConversationSnapshot | null> {
+    requireId(conversationId);
+    return inHelpdeskTransaction(this.pool, async db => {
+      const store = new EpisodeStore(db);
+      return store.getConversation(conversationId);
+    });
+  }
+
+  async getConversationHistory(conversationId: string): Promise<ConversationMessageItem[]> {
+    requireId(conversationId);
+    return inHelpdeskTransaction(this.pool, async db => {
+      const store = new EpisodeStore(db);
+      return store.getConversationHistory(conversationId);
     });
   }
 }

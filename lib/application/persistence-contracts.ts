@@ -27,8 +27,44 @@ export type ProcessingContext = {
   manualIncidents?: readonly ManualIncidentSnapshot[];
   targetEpisodeId?: string;
 };
+export type ConversationSnapshot = {
+  readonly id: string;
+  readonly identityId: string;
+  readonly channel: string;
+  readonly accountId: string;
+  readonly chatId: string;
+  readonly status: "active" | "closed";
+  readonly startedAt: string;
+  readonly lastActivityAt: string;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+};
+
+export type ConversationMessageItem = {
+  readonly messageId: string;
+  readonly conversationId: string;
+  readonly identityId: string;
+  readonly channel: string;
+  readonly accountId: string;
+  readonly chatId: string;
+  readonly providerMessageId: string;
+  readonly body: string;
+  readonly receivedAt: string;
+  readonly sentAt: string | null;
+  readonly messageType: string;
+  readonly hasMedia: boolean;
+  readonly isForwarded: boolean;
+  readonly caption: string | null;
+  readonly senderInfo: Record<string, unknown>;
+  readonly complaintId: string | null;
+  readonly classification: unknown;
+  readonly reviewReason: string | null;
+  readonly createdAt: string;
+};
+
 export type ProcessingResult = {
   messageId: string;
+  conversationId?: string;
   episodeId: string | null;
   association: AssociationResult;
   decision: TriageDecision;

@@ -244,3 +244,28 @@ Ketika pengguna siap menghubungkan bot Telegram riil ke lingkungan server yang m
    curl "https://api.telegram.org/bot<BOT_TOKEN_ANDA>/getWebhookInfo"
    ```
 *(Catatan: Jangan pernah membagikan atau mencatat `<BOT_TOKEN_ANDA>` atau `<SECRET_TOKEN_ANDA>` ke chat, log publik, atau commit git).*
+
+---
+
+## 9. Catatan Verifikasi Webhook Telegram Nyata (Sesi Pemasangan Webhook)
+
+Pada sesi pemasangan webhook sebelumnya, integrasi webhook Telegram telah diverifikasi menggunakan bot riil:
+
+- **Identitas Bot:** `@upaznet_helpdesk_proto_bot`
+- **Pesan Uji:** *"Tes webhook: internet rumah mati, lampu LOS merah."*
+- **Provider Message ID:** `2`
+- **Ingress ID:** `9682eff5-63cd-442a-820c-ae5e7313e4f5`
+- **Waktu Diterima:** `2026-09-29T16:38:48.175Z` / 23:38:48 WIB
+- **Penyimpanan Database:** Tersimpan tepat 1 baris `ingress_events` dan 1 baris `processing_jobs` berstatus `pending`.
+- **Mode & Status Otomasi:** `SHADOW`; assessment count 0 dan outbound intent count 0 (non-interferensi jalur ACK terbukti).
+- **Pesan Awal `/start`:** Tersimpan sebagai baris terpisah dengan provider message ID `1`, juga memiliki 1 processing job berstatus `pending`.
+- **Pemeriksaan Webhook Telegram:** Endpoint `getWebhookInfo` menunjukkan `pending_update_count: 0` dan tidak terdapat `last_error_date`.
+- **Alur yang Terbukti:** `Telegram Server` → `Quick Tunnel HTTPS` → `Perantara Khusus Webhook` → `Aplikasi Lokal` → `PostgreSQL Lokal`.
+- **Kompilasi & Uji Lokal:** Build terbaru dan pengujian HTTP lokal (status accepted & duplicate) telah berhasil pada sesi pemasangan webhook tersebut.
+
+*Batas Bukti Nyata:*
+- Bukti ini membuktikan bahwa pipeline penerimaan webhook dari Telegram Bot API resmi hingga persistensi PostgreSQL lokal telah berfungsi secara nyata.
+- Bukti ini terpisah dari pengujian duplikat yang menggunakan objek Request simulasi lokal.
+- Pemrosesan job, assessment triage, dan worker background belum dieksekusi pada pesan ini (job berstatus `pending`), yang menjadi cakupan P2.4 dan P2.5.
+- Bukti ini adalah verifikasi prototype pada sesi pemasangan terarah, bukan bukti SLA produksi atau layanan always-on.
+- Tidak ada token bot, secret webhook, maupun connection string database yang dicatat dalam dokumen ini.

@@ -13,7 +13,8 @@
     "test:identity:local": "tsc -p tsconfig.test.json && node --conditions=react-server --test .test-build/tests/integration/identity.test.js",
     "test:triage:local": "tsc -p tsconfig.test.json && node --conditions=react-server --test .test-build/tests/integration/triage.test.js",
     "test:persistence:local": "tsc -p tsconfig.test.json && node --conditions=react-server --test .test-build/tests/integration/persistence.test.js",
-    "test:telegram:local": "tsc -p tsconfig.test.json && node --conditions=react-server --test .test-build/tests/integration/telegram-webhook.test.js"
+    "test:telegram:local": "tsc -p tsconfig.test.json && node --conditions=react-server --test .test-build/tests/integration/telegram-webhook.test.js",
+    "test:conversation:local": "tsc -p tsconfig.test.json && node --conditions=react-server --test .test-build/tests/integration/conversation.test.js"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",

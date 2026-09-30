@@ -565,7 +565,7 @@ Hasil tersedia melalui API; panel evidence dashboard mengikuti P2.7.
 | -------------------- | ----------------------------------------------------- | -------------- | ---------------------------------- | ------------------- |
 | [P2.1](#task-p2-1)   | ChannelAdapter inbound Telegram dan pembatasan tester | ✅ Done        | P1.4.2                             | D50, D67, D68, D81, D82 |
 | [P2.2](#task-p2-2)   | Webhook Telegram dengan secret dan ACK persisten      | ✅ Done        | P2.1, P1.4.2                       | D68, D77, D82, D83, D84 |
-| [P2.3](#task-p2-3)   | Conversation 24 jam dan pengaitan riwayat pesan       | ⬜ Not Started | P1.4.2                             | D65, D69            |
+| [P2.3](#task-p2-3)   | Conversation 24 jam dan pengaitan riwayat pesan       | ✅ Done        | P1.4.2                             | D65, D69, D85, D86  |
 | [P2.4](#task-p2-4)   | Orkestrasi inbound ke assessment SHADOW               | 🟡 In Progress | P2.2, P2.3, P1.4.2, P1.5.2         | D65, D67, D68, D77  |
 | [P2.5](#task-p2-5)   | Worker pemrosesan job dengan lease dan attempt        | ⬜ Not Started | P2.4                               | D68                 |
 | [P2.6](#task-p2-6)   | Inbox/antrean sebagai landing dashboard               | ⬜ Not Started | P0.11, P0.6, P2.3, P2.4            | D65, D69, D71       |
@@ -631,6 +631,7 @@ Secret diperiksa sebelum efek samping (fail-closed jika missing/invalid/unconfig
   - Regresi persistence P1.4 (`npm run test:persistence:local`): 12/12 tests pass (exit code 0).
   - Statis & Linter (`npm run lint`): 0 error (exit code 0).
   - Build Next.js (`npm run build`): Keberhasilan build berasal dari sesi implementasi sebelumnya (exit code 0; route dinamis `ƒ /api/webhooks/telegram` terkompilasi); build setelah koreksi terakhir belum ditunjukkan dalam bukti eksekutor yang tersedia dan tidak dijalankan ulang pada sinkronisasi dokumentasi ini.
+- **Verifikasi Webhook Telegram Nyata (Sesi Pemasangan):** Pipa penerimaan webhook nyata telah terbukti melalui alur Telegram (@upaznet_helpdesk_proto_bot) → Quick Tunnel HTTPS → perantara webhook → aplikasi lokal → PostgreSQL: pesan provider message ID 2 (Ingress ID `9682eff5-63cd-442a-820c-ae5e7313e4f5`) dan pesan /start (provider message ID 1) tersimpan dengan job pending di mode SHADOW; getWebhookInfo pending_update_count 0 tanpa error. Terpisah dari pengujian simulasi lokal, pemrosesan worker/assessment (P2.4/P2.5), dan bukan bukti SLA produksi. Detail: docs/P2_2_REVIEW.md §9.
 
 **Catatan/Blocker**
 
@@ -645,15 +646,38 @@ Implementasi P2.2 selesai penuh (✅ Done). Seluruh pengujian diverifikasi pada 
 
 **Acceptance Criteria**
 
-Conversation dikelompokkan berdasarkan inactivity 24 jam; pesan menyimpan identitas channel dan waktu penerimaan; pergantian conversation tidak mereset episode/debounce; pesan non-komplain tetap terlihat.
+Conversation dikelompokkan berdasarkan inactivity sliding window 24 jam secara independen dari urutan eksekusi worker; pesan penghubung yang tiba terlambat merekonsiliasi (merge) conversation tanpa meninggalkan referensi usang; pesan historis tidak merebut status aktif atau menutup conversation yang lebih baru; pesan menyimpan identitas channel dan waktu penerimaan server tepercaya (`received_at`); pergantian conversation tidak mereset episode maupun debounce serta mempertahankan klaim dan intent yang sudah ada; pesan non-komplain, `/start`, dan media tanpa teks tetap tersimpan dan dapat diambil sebagai riwayat tanpa mengarang teks pelanggan; out-of-order arrival ditangani secara deterministik; isolasi ketat tuple `(channel, account_id, chat_id, identity_id)`; non-interferensi jalur webhook ACK; pembatasan akses riwayat pada jalur internal aplikasi tanpa hak tulis dari browser; rollback terarah terbukti bersih tanpa mutasi parsial; konkurensi paralel bebas asosiasi ganda; dan migration schema terdaftar serta teruji berurutan secara aman.
 
 **Bukti/Verifikasi**
 
-—
+`lib/domain/conversation.ts`, `lib/application/persistence-contracts.ts`, `lib/repositories/episode-store.ts`, `lib/application/helpdesk-persistence.ts`, `supabase/migrations/20260929200000_create_conversation_persistence.sql`, `supabase/migrations/20260929200001_adjust_conversation_foreign_keys.sql`, `tests/domain/conversation.test.ts`, `tests/integration/conversation.test.ts`, `docs/P2_3_REVIEW.md`, dan decision log D85, D86:
+- **Pengelompokan Worker-Order-Independent & Permutasi 0/20/40:** Pengelompokan akhir ditentukan murni oleh urutan `received_at` dan jeda inaktivitas 24 jam (< 24 jam menyambung, >= 24 jam memisahkan). Tiga permutasi urutan pemrosesan untuk dataset yang sama (0→20→40, 0→40→20 [bridging/merge], dan 40→20→0 [reverse arrival]) terbukti menghasilkan keanggotaan kelompok, rentang waktu (`startedAt`: 0h, `lastActivityAt`: 40h), status (`active`), dan riwayat 3 pesan yang identik. Pemanggilan ulang `process()` membuktikan idempotensi retry tanpa menduplikasi data atau meninggalkan conversation ID usang.
+- **Rekonsiliasi Bridging & Konsistensi Referensi:** Saat pesan penghubung tiba terlambat, domain menghasilkan aksi `merge`. Di database, pesan pada `public.messages` direparent ke surviving conversation ID, nilai `processing_result->>'conversationId'` pada `public.triage_assessments` diperbarui via `jsonb_set` ke surviving ID, dan conversation yang terserap dihapus bersih tanpa melanggar FK.
+- **Status Aktif Objektif & Preservasi Kelompok Baru:** Hanya conversation dengan `max(lastActivityAt)` dalam scope yang berstatus `active`. Pesan historis (0h atau 10h) yang tiba setelah conversation baru (40h atau 50h) dibuat/diperbarui dengan status `closed` dan tidak merebut status aktif kelompok yang lebih baru.
+- **Penyelarasan Scope Identitas:** Scope conversation ditegakkan secara konsisten pada tuple `(channel, account_id, chat_id, identity_id)`. Pesan dari identitas pengirim berbeda pada grup/chat yang sama terisolasi secara mandiri dalam conversation masing-masing dan tidak saling menutup status aktif.
+- **Preservasi Klaim & Debounce Lintas Transisi:** Transisi ke conversation baru setelah jeda > 24 jam terbukti tidak menduplikasi episode aktif dan tidak mereset debounce. Pengujian menggunakan fixture klaim dan intent sintetis yang disiapkan di database saat mode SHADOW, membuktikan bahwa kode transisi tidak memicu reservasi ganda (jumlah baris pada `public.reply_claims` dan `public.outbound_intents` tetap tepat 1 baris). Bukti ini tidak menunjukkan pengiriman balasan Telegram nyata karena mode SHADOW tidak mengizinkan dispatch.
+- **Bukti Rollback Terarah & Snapshot Merge:** Fault injection ditargetkan presisi pada `INSERT INTO public.triage_assessments` setelah manipulasi conversation dan pesan dieksekusi, dibuktikan via marker `reachedInsertTriageAssessment`. Pemeriksaan di luar transaksi membuktikan 0 pesan, 0 conversation parsial, job tetap `pending`, retry berhasil idempoten. Pada skenario rollback merge: snapshot seluruh 5 field kedua conversation (`id`, `started_at`, `last_activity_at`, `status`, `updated_at`), asosiasi pesan, dan `processing_result` assessment terbukti tetap identik; pesan penghubung 20h tidak tersimpan; job tetap pending; serta pemrosesan ulang pasca fault dilepas berhasil menggabungkan kelompok secara utuh dan idempoten.
+- **Konkurensi Paralel:** Pemanggilan `process()` secara paralel untuk pesan yang sama menghasilkan tepat 1 asosiasi pesan. Pemanggilan paralel untuk pesan berbeda dalam satu sesi percakapan berhasil menggabungkan kedua pesan ke dalam conversation tunggal yang sama tanpa asosiasi ganda atau pemecahan kelompok yang keliru.
+- **Rekonsiliasi Migration & Pembuktian Skema Terisolasi:**
+  - Migration awal `20260929200000_create_conversation_persistence.sql` dipulihkan ke versi penerapan awal yang bersih (default PostgreSQL NO ACTION untuk FK `identity_id` dan `conversation_id`, index `conversations_scope_activity`, `conversations_identity`, dan `messages_conversation`).
+  - Penyesuaian FK (`ON DELETE CASCADE` pada identity, `ON DELETE SET NULL` pada message) serta composite index `conversations_scope_identity_activity` diresmikan via migration lanjutan `20260929200001_adjust_conversation_foreign_keys.sql`. Keduanya terdaftar resmi pada `supabase_migrations.schema_migrations`.
+  - Uji kelayakan sintaks rangkaian awal diverifikasi pada tabel tiruan schema sementara.
+  - Kesetaraan skema komprehensif dibuktikan via `scripts/verify-p23-schema-migration.mjs` dengan menerapkan seluruh 6 migration repository pada database pengujian terisolasi bernama dinamis (misal: `p23_verify_...`). Sebanyak 14 tes stub/spy dilaporkan lulus dan menguji validasi serta lifecycle database, termasuk error saat cleanup gagal. Assertion tes tersebut memeriksa error/rejection fungsi runVerification(); tidak menjalankan proses CLI untuk mengukur exit code. Setelah database sementara berhasil dibuat, skrip mencoba cleanup melalui finally setelah mencoba menutup pool sementara. Kegagalan penghapusan dilaporkan sebagai error beserta nama database yang tertinggal; perilaku exit code nonzero diketahui dari pemeriksaan handler CLI yang memanggil process.exit(1). Cleanup tidak dijamin selesai jika proses dihentikan paksa atau mesin mati. Verifikasi schema lokal nyata dilaporkan berhasil membandingkan sembilan kategori objek, menyelesaikan cleanup, dan berakhir dengan exit code 0.
+- **Hasil Pengujian Terarah (Berdasarkan Eksekusi Aktual):**
+  - Unit test keamanan skrip (`node --test tests/scripts/verify-p23-schema-migration.test.mjs`): 14 passed (exit code 0).
+  - Verifikasi skema terisolasi nyata (`node scripts/verify-p23-schema-migration.mjs`): 9 kategori identik (exit code 0).
+  - `tests/domain/conversation.test.ts`: 15 subtest + 1 parent test (16 passed, exit code 0).
+  - `tests/integration/conversation.test.ts`: 17 subtest + 1 parent test (18 passed, exit code 0).
+  - `tests/integration/telegram-webhook.test.ts`: 10 subtest + 1 parent test (11 passed, exit code 0).
+  - `tests/integration/persistence.test.ts`: 11 subtest + 1 parent test (12 passed, exit code 0).
+  - Suite unit test proyek (`npm run test:unit`): 146 passed (exit code 0).
+  - Statis & Linter (`npm run lint`): 0 error (exit code 0).
+  - Typecheck (`npx tsc -p tsconfig.test.json`): 0 error (exit code 0).
+- **Integritas Pesan Nyata:** Dua pesan webhook Telegram nyata milik pengguna (provider message ID 1 `/start` dan provider message ID 2) terverifikasi tetap utuh dan pending di database.
 
 **Catatan/Blocker**
 
-Tabel/kontrak conversation dan pengaitannya ke messages belum tersedia; persistence pesan P1.4 belum menutup scope ini.
+Implementasi dan koreksi P2.3 selesai penuh (✅ Done). Data percakapan persisten dan dapat diambil melalui fungsi internal aplikasi/staf. UI inbox dashboard merupakan scope [P2.6](#task-p2-6); worker proses asinkron merupakan scope [P2.5](#task-p2-5). Pipeline siap dilanjutkan ke [P2.4](#task-p2-4) (Orkestrasi inbound ke assessment SHADOW).
 
 </details>
 

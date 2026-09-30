@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
-import { Pool } from "pg";
+import { Pool, type PoolClient } from "pg";
 import { HelpdeskPersistence } from "../../lib/application/helpdesk-persistence";
 import { handleTelegramWebhook } from "../../lib/application/telegram-inbound-service";
 import type { TelegramUpdate } from "../../lib/adapters/telegram/telegram-types";
@@ -454,19 +454,27 @@ test("P2.2 Telegram webhook endpoint and persistent ACK integration", async (t) 
       const faultInjectingPool = {
         async connect() {
           const client = await pool.connect();
-          const originalQuery = client.query.bind(client);
-          // @ts-expect-error wrapping client query for targeted test fault injection
-          client.query = async function (
-            queryTextOrConfig: string | { text: string },
-            values?: unknown[],
+          const realQuery = client.query;
+          const clientProxy = Object.create(client) as PoolClient;
+          // @ts-expect-error proxying query for targeted fault injection
+          clientProxy.query = function (
+            queryTextOrConfig: unknown,
+            values?: unknown,
+            callback?: unknown,
           ) {
-            const q = typeof queryTextOrConfig === "string" ? queryTextOrConfig : queryTextOrConfig?.text ?? "";
+            const q = typeof queryTextOrConfig === "string"
+              ? queryTextOrConfig
+              : (queryTextOrConfig as { text?: string })?.text ?? "";
             if (failProcessingJob && q.includes("processing_jobs")) {
               throw new Error("Simulated database failure during processing_jobs insert");
             }
-            return (originalQuery as (...args: unknown[]) => unknown)(queryTextOrConfig, values);
+            // @ts-expect-error delegating with exact arguments
+            return realQuery.call(client, queryTextOrConfig, values, callback);
           };
-          return client;
+          clientProxy.release = function (destroy?: boolean) {
+            return client.release(destroy);
+          };
+          return clientProxy;
         },
         query(...args: unknown[]) {
           return (pool.query as (...a: unknown[]) => unknown)(...args);
