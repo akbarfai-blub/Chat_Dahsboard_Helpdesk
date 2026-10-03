@@ -8,6 +8,7 @@ import type { EpisodeSnapshot, StaffCommand } from "../domain/episode-contracts"
 import { classifyMessage } from "../domain/message-classification";
 import { isValidSenderKey, resolveSenderIdentity } from "../domain/sender-identity";
 import { decideTriage } from "../domain/triage-decision";
+import type { ManualIncidentSnapshot } from "../domain/triage-contracts";
 import { evidenceTargets, planReplyClaim, restrictiveMode } from "../domain/reply-claim";
 import { inHelpdeskTransaction } from "../postgres/transaction";
 import { EpisodeStore } from "../repositories/episode-store";
@@ -86,8 +87,46 @@ export class HelpdeskPersistence {
       const receipt = await store.receipt(ingressId);
       const previous = await store.processed(ingressId);
       if (previous) return previous;
-      const job = await db.query("select 1 from public.processing_jobs where ingress_id=$1 and status='pending' for update", [ingressId]);
-      if (job.rowCount !== 1) throw new PersistenceError("pending_job_not_found");
+      const jobRes = await db.query<{
+        status: string;
+        lease_token: string | null;
+        lease_expires_at: string | null;
+      }>(
+        "select status, lease_token, lease_expires_at from public.processing_jobs where ingress_id=$1 for update",
+        [ingressId]
+      );
+      if (jobRes.rowCount !== 1) throw new PersistenceError("pending_job_not_found");
+      const jobRow = jobRes.rows[0];
+
+      const nowTime = Date.now();
+      const leaseActive =
+        jobRow.lease_expires_at != null &&
+        new Date(jobRow.lease_expires_at).getTime() > nowTime;
+
+      if (context.leaseToken) {
+        if (
+          jobRow.status !== "in_progress" ||
+          jobRow.lease_token !== context.leaseToken ||
+          !leaseActive
+        ) {
+          throw new PersistenceError("lease_lost");
+        }
+      } else {
+        if (jobRow.status === "in_progress") {
+          if (leaseActive) {
+            throw new PersistenceError("job_leased_by_other_worker");
+          }
+          throw new PersistenceError("job_lease_expired");
+        }
+        if (jobRow.status === "done") {
+          const prev = await store.processed(ingressId);
+          if (prev) return prev;
+          throw new PersistenceError("job_already_done");
+        }
+        if (jobRow.status === "failed") {
+          throw new PersistenceError("job_already_failed");
+        }
+      }
       const conversationInfo = await store.ensureConversationForIngress(receipt);
       const conversationId = conversationInfo.conversationId;
       const now = new Date().toISOString();
@@ -95,9 +134,38 @@ export class HelpdeskPersistence {
       const identity = resolveSenderIdentity(candidate, [candidate], now);
       const classification = classifyMessage(receipt.body);
       const settings = await store.settings();
+
+      // Ensure network evidence belongs to the latest resolved service and customer of this identity
+      let effectiveNetwork = context.network ?? null;
+      if (effectiveNetwork) {
+        if (
+          identity.outcome !== "resolved" ||
+          identity.serviceId !== effectiveNetwork.serviceId ||
+          identity.customerId !== effectiveNetwork.customerId
+        ) {
+          effectiveNetwork = null;
+        }
+      }
+
+      // Re-validate manual incidents from database inside the final transaction
+      // All ACTIVE manual incidents currently in the database are the authoritative source.
+      // Context snapshots are never used to revive missing, deleted, or resolved incidents.
+      const dbIncidentsResult = await db.query<{
+        id: string; type: string; status: string; odp_ids: string[]; odc_ids: string[]; version: number;
+      }>("select id, type, status, odp_ids, odc_ids, version from public.incidents where status = 'ACTIVE' for share");
+
+      const effectiveIncidents: ManualIncidentSnapshot[] = dbIncidentsResult.rows.map(inc => ({
+        id: inc.id,
+        type: inc.type as "GENERAL" | "AREA_SPECIFIC",
+        status: "ACTIVE" as const,
+        odpIds: inc.odp_ids ?? [],
+        odcIds: inc.odc_ids ?? [],
+        version: inc.version,
+      }));
+
       const decision = decideTriage({
-        evaluatedAt: now, classification, identity, network: context.network ?? null,
-        manualIncidents: context.manualIncidents,
+        evaluatedAt: now, classification, identity, network: effectiveNetwork,
+        manualIncidents: effectiveIncidents,
         mode: restrictiveMode(receipt.mode, settings.mode),
         emergencyStop: receipt.emergency_stop || settings.emergency_stop,
       });
@@ -152,13 +220,37 @@ export class HelpdeskPersistence {
       }
       const result: ProcessingResult = {
         messageId: ingressId, conversationId, episodeId: episode?.id ?? null, association, decision, claim, dispatchAuthorized: false,
+        providerQuality: context.providerQuality ?? null,
       };
       await db.query(
         "insert into public.triage_assessments(message_id,decision,processing_result) values ($1,$2::jsonb,$3::jsonb)",
         [ingressId, JSON.stringify(decision), JSON.stringify(result)]);
       await store.audit(episode?.id ?? null, "inbound_processed",
         { association: association.reason, claim, mode: decision.automation.mode }, null, ingressId);
-      await db.query("update public.processing_jobs set status='done',completed_at=now() where ingress_id=$1", [ingressId]);
+      if (context.leaseToken) {
+        const updateJob = await db.query(
+          `update public.processing_jobs
+           set status='done', completed_at=now(), lease_token=null, lease_expires_at=null
+           where ingress_id=$1 and lease_token=$2 and status='in_progress'`,
+          [ingressId, context.leaseToken]
+        );
+        if (updateJob.rowCount !== 1) {
+          throw new PersistenceError("lease_lost");
+        }
+        await db.query(
+          `update public.processing_job_attempts
+           set outcome='success', completed_at=now()
+           where ingress_id=$1 and lease_token=$2 and outcome='in_progress'`,
+          [ingressId, context.leaseToken]
+        );
+      } else {
+        await db.query(
+          `update public.processing_jobs
+           set status='done', completed_at=now(), lease_token=null, lease_expires_at=null
+           where ingress_id=$1`,
+          [ingressId]
+        );
+      }
       return result;
     });
   }

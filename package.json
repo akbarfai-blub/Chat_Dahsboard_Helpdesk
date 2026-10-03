@@ -14,7 +14,9 @@
     "test:triage:local": "tsc -p tsconfig.test.json && node --conditions=react-server --test .test-build/tests/integration/triage.test.js",
     "test:persistence:local": "tsc -p tsconfig.test.json && node --conditions=react-server --test .test-build/tests/integration/persistence.test.js",
     "test:telegram:local": "tsc -p tsconfig.test.json && node --conditions=react-server --test .test-build/tests/integration/telegram-webhook.test.js",
-    "test:conversation:local": "tsc -p tsconfig.test.json && node --conditions=react-server --test .test-build/tests/integration/conversation.test.js"
+    "test:conversation:local": "tsc -p tsconfig.test.json && node --conditions=react-server --test .test-build/tests/integration/conversation.test.js",
+    "test:orchestration:local": "tsc -p tsconfig.test.json && node --conditions=react-server --test .test-build/tests/integration/orchestration.test.js",
+    "test:worker:local": "tsc -p tsconfig.test.json && node --conditions=react-server --env-file=.env.test --test .test-build/tests/integration/job-worker.test.js"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",

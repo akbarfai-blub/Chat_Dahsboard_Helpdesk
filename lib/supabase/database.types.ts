@@ -1,4 +1,4 @@
-﻿export type Json =
+export type Json =
   | string
   | number
   | boolean
@@ -396,6 +396,97 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "customers"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      processing_jobs: {
+        Row: {
+          ingress_id: string
+          status: string
+          created_at: string
+          completed_at: string | null
+          lease_token: string | null
+          lease_expires_at: string | null
+          attempt_count: number
+          max_attempts: number
+          next_attempt_at: string
+          last_error: string | null
+        }
+        Insert: {
+          ingress_id: string
+          status?: string
+          created_at?: string
+          completed_at?: string | null
+          lease_token?: string | null
+          lease_expires_at?: string | null
+          attempt_count?: number
+          max_attempts?: number
+          next_attempt_at?: string
+          last_error?: string | null
+        }
+        Update: {
+          ingress_id?: string
+          status?: string
+          created_at?: string
+          completed_at?: string | null
+          lease_token?: string | null
+          lease_expires_at?: string | null
+          attempt_count?: number
+          max_attempts?: number
+          next_attempt_at?: string
+          last_error?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "processing_jobs_ingress_id_fkey"
+            columns: ["ingress_id"]
+            isOneToOne: true
+            referencedRelation: "ingress_events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      processing_job_attempts: {
+        Row: {
+          id: string
+          ingress_id: string
+          attempt_number: number
+          lease_token: string
+          started_at: string
+          completed_at: string | null
+          outcome: string
+          error_message: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          ingress_id: string
+          attempt_number: number
+          lease_token: string
+          started_at?: string
+          completed_at?: string | null
+          outcome: string
+          error_message?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          ingress_id?: string
+          attempt_number?: number
+          lease_token?: string
+          started_at?: string
+          completed_at?: string | null
+          outcome?: string
+          error_message?: string | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "processing_job_attempts_ingress_id_fkey"
+            columns: ["ingress_id"]
+            isOneToOne: false
+            referencedRelation: "processing_jobs"
+            referencedColumns: ["ingress_id"]
           },
         ]
       }

@@ -16,6 +16,7 @@ export interface TelegramInboundConfig {
   readonly botAccountId: string;
   readonly testerAllowlist: readonly string[] | ReadonlySet<string>;
   readonly maxPayloadBytes?: number;
+  readonly onAccepted?: (info: { ingressId: string; duplicate: boolean }) => void | Promise<void>;
 }
 
 export type TelegramInboundServiceResult =
@@ -307,6 +308,17 @@ export async function handleTelegramWebhook(
     }
 
     // Accepted: ingress, metadata, and processing job committed before responding
+    if (configOverrides.onAccepted) {
+      try {
+        configOverrides.onAccepted({
+          ingressId: result.ingressId,
+          duplicate: result.duplicate,
+        });
+      } catch (err) {
+        console.error("Error in onAccepted callback:", err);
+      }
+    }
+
     return success({
       status: "accepted",
       ingressId: result.ingressId,

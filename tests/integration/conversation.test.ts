@@ -608,15 +608,16 @@ test("P2.3 24-hour conversation grouping, history association and episode decoup
       if (!intentId) {
         // If unreserved (e.g. in SHADOW), insert a synthetic message to anchor the intent & claim
         const syntheticIngressId = randomUUID();
+        const identRow = (await pool.query<{ identity_id: string }>("select identity_id from public.ingress_events where id=$1", [ing1.ingressId])).rows[0];
         await pool.query(
-          `insert into public.ingress_events(id, channel, account_id, chat_id, provider_message_id, body)
-           values ($1, 'telegram', $2, $3, 'claim-anchor', 'claim anchor')`,
-          [syntheticIngressId, botAccountId, epChatId],
+          `insert into public.ingress_events(id, identity_id, channel, account_id, chat_id, provider_message_id, body, mode, settings_version, emergency_stop)
+           values ($1, $2, 'telegram', $3, $4, 'claim-anchor', 'claim anchor', 'FULL', 1, false)`,
+          [syntheticIngressId, identRow.identity_id, botAccountId, epChatId],
         );
         await pool.query(
-          `insert into public.messages(id, identity_id, conversation_id, complaint_id)
-           values ($1, (select identity_id from public.ingress_events where id=$2), $3, $4)`,
-          [syntheticIngressId, ing1.ingressId, res1.conversationId, firstEpisodeId],
+          `insert into public.messages(id, identity_id, conversation_id, complaint_id, classification)
+           values ($1, $2, $3, $4, '{}'::jsonb)`,
+          [syntheticIngressId, identRow.identity_id, res1.conversationId, firstEpisodeId],
         );
         const intentRow = (
           await pool.query<{ id: string }>(
@@ -628,8 +629,8 @@ test("P2.3 24-hour conversation grouping, history association and episode decoup
         intentId = intentRow.id;
         await pool.query(
           `insert into public.reply_claims(owner_id, scope_kind, scope_id, complaint_id, outbound_intent_id)
-           values ($1, 'episode', $2, $2, $3)`,
-          [ownerRow.id, firstEpisodeId, intentId],
+           values ($1, 'episode', $2, $3, $4)`,
+          [ownerRow.id, firstEpisodeId, firstEpisodeId, intentId],
         );
       }
 

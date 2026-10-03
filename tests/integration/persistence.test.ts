@@ -2,16 +2,35 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { Pool } from "pg";
+import { createClient } from "@supabase/supabase-js";
+import {
+  checkTestEnvAvailable,
+  requireIsolatedDatabase,
+  combineErrors,
+} from "../utils/test-guard";
 import { HelpdeskPersistence } from "../../lib/application/helpdesk-persistence";
 import { linkVerifiedIdentity } from "../../lib/application/link-identity";
 import { inHelpdeskTransaction } from "../../lib/postgres/transaction";
 import type { InboundReceipt } from "../../lib/application/persistence-contracts";
+import type { Database } from "../../lib/supabase/database.types";
 
 test("P1.4 local PostgreSQL transactions, constraints and concurrency", async t => {
-  const url = process.env.HELPDESK_TEST_DATABASE_URL;
-  assert.ok(url, "Set HELPDESK_TEST_DATABASE_URL to the migrated local Supabase database");
-  assert.ok(["localhost", "127.0.0.1", "[::1]"].includes(new URL(url).hostname), "Local database only");
-  const pool = new Pool({ connectionString: url, max: 8 });
+  const envCheck = checkTestEnvAvailable(process.env);
+  if (!envCheck.available) {
+    t.skip(`Skipping integration test: ${envCheck.reason}`);
+    return;
+  }
+
+  const config = envCheck.config!;
+  let guardPassed = false;
+  const cleanupErrors: Error[] = [];
+  let primaryError: Error | undefined;
+
+  const runIncidentIds = new Set<string>();
+  const baselineIncidentId = randomUUID();
+
+  const pool = new Pool({ connectionString: config.databaseUrl, max: 8 });
+  const supabase = createClient<Database>(config.apiUrl, config.serviceRoleKey);
   const service = new HelpdeskPersistence(pool);
   const tag = "p14-" + randomUUID(), staffId = randomUUID();
   const accounts = [tag, tag + "-second"];
@@ -19,18 +38,18 @@ test("P1.4 local PostgreSQL transactions, constraints and concurrency", async t 
   let original: { mode: string; emergency_stop: boolean; version: number } | undefined;
 
   async function mode(value: string, stopped = false) {
-    await pool.query("update public.automation_settings set mode=$1,emergency_stop=$2,version=version+1 where singleton", [value, stopped]);
+    await pool!.query("update public.automation_settings set mode=$1,emergency_stop=$2,version=version+1 where singleton", [value, stopped]);
   }
   async function customer() {
     const customerId = randomUUID(), serviceId = randomUUID();
     customers.push(customerId); services.push(serviceId);
-    await pool.query("insert into public.customers(id,customer_code,display_name) values ($1,$2,'P1.4 fixture')", [customerId, tag + customerId]);
-    await pool.query("insert into public.services(id,customer_id,service_code) values ($1,$2,$3)", [serviceId, customerId, tag + serviceId]);
+    await pool!.query("insert into public.customers(id,customer_code,display_name) values ($1,$2,'P1.4 fixture')", [customerId, tag + customerId]);
+    await pool!.query("insert into public.services(id,customer_id,service_code) values ($1,$2,$3)", [serviceId, customerId, tag + serviceId]);
     return { customerId, serviceId };
   }
   async function known(sender: string, customerId: string) {
     const id = randomUUID();
-    await pool.query(
+    await pool!.query(
       `insert into public.channel_identities(id,channel,channel_account_id,sender_external_id,customer_id,verification_status,verified_at)
        values ($1,'telegram',$2,$3,$4,'verified',now())`, [id, tag, sender, customerId]);
     return id;
@@ -43,19 +62,62 @@ test("P1.4 local PostgreSQL transactions, constraints and concurrency", async t 
     return service.receive(receipt(sender, text));
   }
   async function version(id: string): Promise<number> {
-    return (await pool.query<{ version: number }>("select version from public.complaints where id=$1", [id])).rows[0].version;
+    return (await pool!.query<{ version: number }>("select version from public.complaints where id=$1", [id])).rows[0].version;
   }
-  function incident(id: string) {
-    return { manualIncidents: [{ id, version: 1, status: "ACTIVE" as const,
-      type: "GENERAL" as const, odpIds: [], odcIds: [] }] };
+
+  async function ensureNoExternalActiveIncident() {
+    const activeRows = await pool!.query<{ id: string }>(
+      "select id from public.incidents where status = 'ACTIVE'"
+    );
+    for (const row of activeRows.rows) {
+      if (!runIncidentIds.has(row.id)) {
+        throw new Error(
+          `FAIL-CLOSED: Active incident (${row.id}) exists outside of this test run's fixtures. Aborting to protect external data.`
+        );
+      }
+    }
+  }
+
+  async function createActiveIncident(id = randomUUID(), type: "GENERAL" | "AREA_SPECIFIC" = "GENERAL", odpIds: string[] = [], odcIds: string[] = []) {
+    // Record UUID first so even partial setup failure is tracked for cleanup
+    runIncidentIds.add(id);
+
+    // Abort if an active incident outside this run's fixtures exists
+    await ensureNoExternalActiveIncident();
+
+    // Remove only active incidents created by this test run
+    if (runIncidentIds.size > 0) {
+      await pool!.query(
+        "delete from public.incidents where id = any($1::uuid[]) and status = 'ACTIVE'",
+        [Array.from(runIncidentIds)]
+      );
+    }
+
+    await pool!.query(
+      `insert into public.incidents(id, type, status, odp_ids, odc_ids, version)
+       values ($1, $2, 'ACTIVE', $3, $4, 1)`,
+      [id, type, odpIds, odcIds]
+    );
+    return id;
   }
 
   try {
+    // 1. Verify isolated test environment marker via both PostgreSQL and Supabase API
+    await requireIsolatedDatabase(pool, supabase, config);
+    guardPassed = true;
+
+    // Create a non-ACTIVE baseline comparison incident to verify preservation across cleanup
+    await pool.query(
+      `insert into public.incidents(id, type, status, odp_ids, odc_ids, version)
+       values ($1, 'GENERAL', 'RESOLVED', '{}', '{}', 1)`,
+      [baselineIncidentId]
+    );
+
     original = (await pool.query("select mode,emergency_stop,version from public.automation_settings where singleton")).rows[0];
     assert.ok(original, "Apply the P1.4 migration first");
     await pool.query(
       `insert into auth.users(id,instance_id,aud,role,email,encrypted_password,created_at,updated_at)
-       values ($1,'00000000-0000-0000-0000-000000000000','authenticated','authenticated',$2,'',now(),now())`,
+       values ($1,'00000000-0000-4000-8000-000000000000','authenticated','authenticated',$2,'',now(),now())`,
       [staffId, tag + "@example.test"]);
     await mode("FULL");
 
@@ -90,14 +152,15 @@ test("P1.4 local PostgreSQL transactions, constraints and concurrency", async t 
 
     await t.test("event conflict rolls back episode claim and intent but keeps message, assessment and job completion", async () => {
       const c = await customer(); await known("event-conflict", c.customerId);
-      const context = incident(tag + "-outage");
-      const first = await service.process((await inbound("event-conflict")).ingressId, context);
+      const incId = randomUUID();
+      await createActiveIncident(incId);
+      const first = await service.process((await inbound("event-conflict")).ingressId);
       assert.ok(first.episodeId);
       await service.staffAction(staffId, { requestId: randomUUID(), episodeId: first.episodeId,
         expectedVersion: await version(first.episodeId), action: "resolve", note: "Pulih" });
       await service.staffAction(staffId, { requestId: randomUUID(), episodeId: first.episodeId,
         expectedVersion: await version(first.episodeId), action: "close" });
-      const next = await service.process((await inbound("event-conflict")).ingressId, context);
+      const next = await service.process((await inbound("event-conflict")).ingressId);
       assert.notEqual(next.episodeId, first.episodeId);
       assert.equal(next.claim.reason, "claim_conflict");
       assert.equal((await pool.query("select 1 from public.reply_claims where scope_kind='episode' and scope_id=$1", [next.episodeId])).rowCount, 0);
@@ -106,15 +169,26 @@ test("P1.4 local PostgreSQL transactions, constraints and concurrency", async t 
     });
 
     await t.test("later event evidence adds a guard after GENERIC without a second reservation", async () => {
+      await ensureNoExternalActiveIncident();
+      if (runIncidentIds.size > 0) {
+        await pool!.query(
+          "delete from public.incidents where id = any($1::uuid[]) and status = 'ACTIVE'",
+          [Array.from(runIncidentIds)]
+        );
+      }
       const first = await service.process((await inbound("late-evidence")).ingressId);
-      const next = await service.process((await inbound("late-evidence")).ingressId, incident(tag + "-late"));
+      const lateIncId = randomUUID();
+      await createActiveIncident(lateIncId);
+      const next = await service.process((await inbound("late-evidence")).ingressId);
       assert.equal(next.episodeId, first.episodeId);
       assert.equal(next.claim.reason, "follow_up");
       assert.equal((await pool.query("select 1 from public.outbound_intents where complaint_id=$1", [first.episodeId])).rowCount, 1);
-      assert.equal((await pool.query("select 1 from public.reply_claims where scope_kind='incident' and scope_id=$1", [tag + "-late"])).rowCount, 1);
+      assert.equal((await pool.query("select 1 from public.reply_claims where scope_kind='incident' and scope_id=$1", [lateIncId])).rowCount, 1);
       await mode("SHADOW");
-      await service.process((await inbound("late-evidence")).ingressId, incident(tag + "-shadow-evidence"));
-      assert.equal((await pool.query("select 1 from public.reply_claims where scope_id=$1", [tag + "-shadow-evidence"])).rowCount, 0);
+      const shadowIncId = randomUUID();
+      await createActiveIncident(shadowIncId);
+      await service.process((await inbound("late-evidence")).ingressId);
+      assert.equal((await pool.query("select 1 from public.reply_claims where scope_id=$1", [shadowIncId])).rowCount, 0);
       await mode("FULL");
     });
 
@@ -187,9 +261,11 @@ test("P1.4 local PostgreSQL transactions, constraints and concurrency", async t 
     });
 
     await t.test("identity linking unions guards, keeps history, suppresses episodes and reports in-flight work", async () => {
-      const source = await service.process((await inbound("link-source")).ingressId, incident(tag + "-link"));
+      const linkIncId = randomUUID();
+      await createActiveIncident(linkIncId);
+      const source = await service.process((await inbound("link-source")).ingressId);
       const c = await customer(); await known("link-target", c.customerId);
-      const target = await service.process((await inbound("link-target")).ingressId, incident(tag + "-link"));
+      const target = await service.process((await inbound("link-target")).ingressId);
       assert.ok(source.episodeId); assert.ok(target.episodeId); assert.ok(source.claim.intentId);
       const sourceIdentity = (await pool.query("select identity_id from public.ingress_events where id=$1", [source.messageId])).rows[0].identity_id;
       await pool.query("update public.outbound_intents set status='in_flight' where id=$1", [source.claim.intentId]);
@@ -246,36 +322,79 @@ test("P1.4 local PostgreSQL transactions, constraints and concurrency", async t 
         }
       }
     });
+  } catch (err) {
+    primaryError = err as Error;
   } finally {
-    // Remove only this run's UUID/account-scoped fixtures, never reset the database.
-    try {
-      await inHelpdeskTransaction(pool, async db => {
-        const identities = (await db.query<{ id: string }>(
-          "select id from public.channel_identities where channel_account_id=any($1::text[])", [accounts])).rows.map(r => r.id);
-        const episodes = (await db.query<{ id: string }>(
-          "select id from public.complaints where identity_id=any($1::uuid[]) or service_id=any($2::uuid[])", [identities, services])).rows.map(r => r.id);
-        const owners = (await db.query<{ id: string }>(
-          "select id from public.reply_owners where identity_id=any($1::uuid[]) or customer_id=any($2::uuid[])", [identities, customers])).rows.map(r => r.id);
-        const messages = (await db.query<{ id: string }>(
-          "select id from public.ingress_events where identity_id=any($1::uuid[])", [identities])).rows.map(r => r.id);
-        await db.query("delete from public.staff_commands where staff_id=$1", [staffId]);
-        await db.query("delete from public.complaint_audit_log where complaint_id=any($1::uuid[]) or message_id=any($2::uuid[]) or staff_id=$3", [episodes, messages, staffId]);
-        await db.query("delete from public.reply_claims where owner_id=any($1::uuid[])", [owners]);
-        await db.query("delete from public.outbound_intents where complaint_id=any($1::uuid[])", [episodes]);
-        await db.query("delete from public.complaint_evidence_links where complaint_id=any($1::uuid[])", [episodes]);
-        await db.query("delete from public.triage_assessments where message_id=any($1::uuid[])", [messages]);
-        await db.query("delete from public.messages where id=any($1::uuid[])", [messages]);
-        await db.query("delete from public.processing_jobs where ingress_id=any($1::uuid[])", [messages]);
-        await db.query("delete from public.ingress_events where id=any($1::uuid[])", [messages]);
-        await db.query("delete from public.complaints where id=any($1::uuid[])", [episodes]);
-        await db.query("delete from public.reply_owners where id=any($1::uuid[])", [owners]);
-        await db.query("delete from public.channel_identities where id=any($1::uuid[])", [identities]);
-        await db.query("delete from public.services where id=any($1::uuid[])", [services]);
-        await db.query("delete from public.customers where id=any($1::uuid[])", [customers]);
-        await db.query("delete from auth.users where id=$1", [staffId]);
-        if (original) await db.query("update public.automation_settings set mode=$1,emergency_stop=$2,version=$3 where singleton",
-          [original.mode, original.emergency_stop, original.version]);
-      });
-    } finally { await pool.end(); }
+    // Only perform database mutation cleanup if guard verification passed
+    if (guardPassed && pool) {
+      try {
+        await inHelpdeskTransaction(pool, async db => {
+          const identities = (await db.query<{ id: string }>(
+            "select id from public.channel_identities where channel_account_id=any($1::text[])", [accounts])).rows.map(r => r.id);
+          const episodes = (await db.query<{ id: string }>(
+            "select id from public.complaints where identity_id=any($1::uuid[]) or service_id=any($2::uuid[])", [identities, services])).rows.map(r => r.id);
+          const owners = (await db.query<{ id: string }>(
+            "select id from public.reply_owners where identity_id=any($1::uuid[]) or customer_id=any($2::uuid[])", [identities, customers])).rows.map(r => r.id);
+          const messages = (await db.query<{ id: string }>(
+            "select id from public.ingress_events where identity_id=any($1::uuid[])", [identities])).rows.map(r => r.id);
+          await db.query("delete from public.staff_commands where staff_id=$1", [staffId]);
+
+          // Scoped incident cleanup: only delete incidents belonging to this test run
+          if (runIncidentIds.size > 0) {
+            await db.query("delete from public.incidents where id = any($1::uuid[])", [Array.from(runIncidentIds)]);
+          }
+
+          // Prove cleanup deleted this run's incident fixtures and preserved the non-ACTIVE comparison incident
+          if (runIncidentIds.size > 0) {
+            const remainingFixtures = await db.query(
+              "select id from public.incidents where id = any($1::uuid[])",
+              [Array.from(runIncidentIds)]
+            );
+            assert.equal(remainingFixtures.rowCount, 0, "All run incident fixtures must be deleted by cleanup");
+          }
+
+          const preservedBaseline = await db.query(
+            "select id from public.incidents where id = $1",
+            [baselineIncidentId]
+          );
+          assert.equal(preservedBaseline.rowCount, 1, "Non-ACTIVE baseline comparison incident must be preserved by cleanup");
+
+          // Remove the baseline comparison incident separately by its UUID after preservation check
+          await db.query("delete from public.incidents where id = $1", [baselineIncidentId]);
+
+          await db.query("delete from public.complaint_audit_log where complaint_id=any($1::uuid[]) or message_id=any($2::uuid[]) or staff_id=$3", [episodes, messages, staffId]);
+          await db.query("delete from public.reply_claims where owner_id=any($1::uuid[])", [owners]);
+          await db.query("delete from public.outbound_intents where complaint_id=any($1::uuid[])", [episodes]);
+          await db.query("delete from public.complaint_evidence_links where complaint_id=any($1::uuid[])", [episodes]);
+          await db.query("delete from public.triage_assessments where message_id=any($1::uuid[])", [messages]);
+          await db.query("delete from public.messages where id=any($1::uuid[])", [messages]);
+          await db.query("delete from public.processing_jobs where ingress_id=any($1::uuid[])", [messages]);
+          await db.query("delete from public.ingress_events where id=any($1::uuid[])", [messages]);
+          await db.query("delete from public.complaints where id=any($1::uuid[])", [episodes]);
+          await db.query("delete from public.reply_owners where id=any($1::uuid[])", [owners]);
+          await db.query("delete from public.channel_identities where id=any($1::uuid[])", [identities]);
+          await db.query("delete from public.services where id=any($1::uuid[])", [services]);
+          await db.query("delete from public.customers where id=any($1::uuid[])", [customers]);
+          await db.query("delete from auth.users where id=$1", [staffId]);
+          if (original) await db.query("update public.automation_settings set mode=$1,emergency_stop=$2,version=$3 where singleton",
+            [original.mode, original.emergency_stop, original.version]);
+        });
+      } catch (cleanupErr) {
+        cleanupErrors.push(cleanupErr as Error);
+      }
+    }
+
+    if (pool) {
+      try {
+        await pool.end();
+      } catch (poolErr) {
+        cleanupErrors.push(poolErr as Error);
+      }
+    }
+
+    const combined = combineErrors(primaryError, cleanupErrors);
+    if (combined) {
+      throw combined;
+    }
   }
 });

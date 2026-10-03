@@ -26,6 +26,8 @@ export type ProcessingContext = {
   network?: TriageNetworkEvidence | null;
   manualIncidents?: readonly ManualIncidentSnapshot[];
   targetEpisodeId?: string;
+  providerQuality?: Record<string, unknown> | null;
+  leaseToken?: string;
 };
 export type ConversationSnapshot = {
   readonly id: string;
@@ -70,6 +72,7 @@ export type ProcessingResult = {
   decision: TriageDecision;
   claim: { outcome: "reserved" | "skipped"; reason: string; intentId: string | null };
   dispatchAuthorized: false;
+  providerQuality?: Record<string, unknown> | null;
 };
 export type StaffEpisodeAction = {
   requestId: string;

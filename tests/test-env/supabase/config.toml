@@ -1,0 +1,59 @@
+project_id = "Chat_Automation_Helpdesk_Test"
+
+[api]
+enabled = true
+port = 54331
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[api.tls]
+enabled = false
+
+[db]
+port = 54332
+shadow_port = 54330
+health_timeout = "2m"
+major_version = 17
+
+[db.pooler]
+enabled = false
+port = 54339
+
+[db.migrations]
+enabled = true
+schema_paths = []
+
+[db.seed]
+enabled = true
+sql_paths = ["./seed.sql", "./fixtures/network.sql", "./fixtures/test_marker.sql"]
+
+[db.network_restrictions]
+enabled = false
+
+[realtime]
+enabled = false
+
+[studio]
+enabled = false
+port = 54333
+
+[local_smtp]
+enabled = false
+port = 54334
+
+[storage]
+enabled = false
+
+[storage.s3_protocol]
+enabled = false
+
+[storage.vector]
+enabled = false
+
+[auth]
+enabled = false
+
+[analytics]
+enabled = false
+port = 54337
