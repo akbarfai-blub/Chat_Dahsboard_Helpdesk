@@ -5,8 +5,14 @@ export interface TestEnvironmentConfig {
   expectedMarker: string;
 }
 
+export interface ClientQueryable {
+  query: (sql: string, params?: unknown[]) => Promise<{ rows: Record<string, unknown>[] }>;
+  release: (err?: Error | boolean) => void;
+}
+
 export interface PoolQueryable {
   query: (sql: string, params?: unknown[]) => Promise<{ rows: Record<string, unknown>[] }>;
+  connect?: () => Promise<ClientQueryable>;
   end?: () => Promise<void>;
 }
 
@@ -493,6 +499,38 @@ export async function cleanupFixture(
     }
     if (conditions.length > 0) {
       await pool.query(`DELETE FROM public.outbound_intents WHERE ${conditions.join(" OR ")}`, params);
+    }
+  });
+
+  await runStep("staff_conversation_reads", async () => {
+    const conditions: string[] = [];
+    const params: unknown[] = [];
+    if (allConversationIds.length > 0) {
+      params.push(allConversationIds);
+      conditions.push(`conversation_id = ANY($${params.length}::uuid[])`);
+    }
+    if (allMessageIds.length > 0) {
+      params.push(allMessageIds);
+      conditions.push(`last_read_message_id = ANY($${params.length}::uuid[])`);
+    }
+    if (conditions.length > 0) {
+      await pool.query(`DELETE FROM public.staff_conversation_reads WHERE ${conditions.join(" OR ")}`, params);
+    }
+  });
+
+  await runStep("staff_message_reads", async () => {
+    const conditions: string[] = [];
+    const params: unknown[] = [];
+    if (allConversationIds.length > 0) {
+      params.push(allConversationIds);
+      conditions.push(`conversation_id = ANY($${params.length}::uuid[])`);
+    }
+    if (allMessageIds.length > 0) {
+      params.push(allMessageIds);
+      conditions.push(`message_id = ANY($${params.length}::uuid[])`);
+    }
+    if (conditions.length > 0) {
+      await pool.query(`DELETE FROM public.staff_message_reads WHERE ${conditions.join(" OR ")}`, params);
     }
   });
 

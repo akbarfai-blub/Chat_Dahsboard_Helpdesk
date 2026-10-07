@@ -1,0 +1,64 @@
+{
+  "timestamp": "2026-10-07T08:13:05.468Z",
+  "runId": "guard-316b9a84",
+  "mode": "guard_rejection",
+  "expectedExitCode": 0,
+  "calculatedExitCode": 0,
+  "buildIdentity": {
+    "buildId": "I0LId5PqSH7QOBl8HCYN4",
+    "sourceHashesAtBuild": null,
+    "sourceHashesAtFinalize": {
+      "components/inbox/inbox-conversation-panel.tsx": "85d47b36a2918c74339b2f6bc45a5896dd5c4dbc346ce52945b8a03b4808fefb",
+      "components/inbox/inbox-dashboard.tsx": "308417cfb315def6f02974a934f189221a0cd8c371630ab31cd239b360da5d10",
+      "components/inbox/inbox-conversation-list.tsx": "37ef98a5530afdeada7ebac486e384c3f0c002659cd852e71984ee884534a3a5",
+      "app/dashboard/complaints/page.tsx": "aed660a75c1cad40c85f7ee61a06fa39c818200b175b0c68d2022fc366536de7",
+      "lib/supabase/auth-config.ts": "7ba80cf0a5bc0a16d473257c0e8a996151bdd35bf3c62b3c5ed8153312b4080d",
+      "lib/application/inbox-contracts.ts": "f5db1e3fc528d0aafa7d9ab2f2aef2f8f41fa5f38382942a8742999435757b3e",
+      "lib/application/inbox-service.server.ts": "2a3ba888fcebb66f6720e768177381c88111eaa569c183a15e88663571d8aed3",
+      "lib/application/origin-validator.ts": "d86014ec774013e5060a3a81137919071bbd134b2a04c7a56c7905cead6a1cb5"
+    },
+    "isSynchronized": true
+  },
+  "runnerRevisionSha256": "b945740e749ce38735c159e2bd4273d068dce74fe4d51612c0d1bb4fae779a23",
+  "screenshots": [],
+  "summary": {
+    "overallStatus": "PASS",
+    "exitCode": 0,
+    "total": 3,
+    "passed": 3,
+    "failed": 0,
+    "notRun": 0,
+    "mandatoryTotal": 3,
+    "mandatoryPassed": 3,
+    "mandatoryFailed": 0,
+    "mandatoryNotRun": 0
+  },
+  "assertions": [
+    {
+      "id": "guard_active_db_rejection",
+      "name": "Penolakan fail-closed terhadap database workspace pengguna aktif (port 54322)",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": "Error penolakan default user workspace database",
+      "actual": "FAIL-CLOSED: Target is the default user workspace database. Rejecting execution to protect user data."
+    },
+    {
+      "id": "guard_active_api_rejection",
+      "name": "Penolakan fail-closed terhadap Supabase API workspace pengguna aktif (port 54321)",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": "Error penolakan target API port 54321",
+      "actual": "FAIL-CLOSED: Target API is the default user workspace Supabase API (port 54321). Rejecting execution to protect user data."
+    },
+    {
+      "id": "guard_marker_mismatch_rejection",
+      "name": "Penolakan fail-closed saat marker token PostgreSQL dan Supabase API tidak cocok",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": "Error penolakan marker token mismatch",
+      "actual": "FAIL-CLOSED: Target mismatch: PostgreSQL and Supabase API returned different marker tokens. The two connections are accessing different databases!"
+    }
+  ],
+  "cleanupErrors": [],
+  "cleanupSummary": null
+}

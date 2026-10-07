@@ -1,0 +1,52 @@
+{
+  "timestamp": "2026-10-06T21:40:24.270Z",
+  "runId": "guard-test",
+  "mode": "guard_rejection",
+  "codeRevisions": {
+    "tests/interactive/verify-p26-inbox.mjs": "12cd2f1e3db45eae",
+    "components/inbox/inbox-conversation-panel.tsx": "85d47b36a2918c74",
+    "components/inbox/inbox-dashboard.tsx": "308417cfb315def6",
+    "components/inbox/inbox-conversation-list.tsx": "37ef98a5530afdea",
+    "lib/supabase/auth-config.ts": "7ba80cf0a5bc0a16"
+  },
+  "summary": {
+    "overallStatus": "PASS",
+    "exitCode": 0,
+    "total": 3,
+    "passed": 3,
+    "failed": 0,
+    "notRun": 0,
+    "mandatoryTotal": 3,
+    "mandatoryPassed": 3,
+    "mandatoryFailed": 0,
+    "mandatoryNotRun": 0
+  },
+  "assertions": [
+    {
+      "id": "guard_active_db_rejection",
+      "name": "Penolakan fail-closed terhadap database workspace pengguna aktif (port 54322)",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": "Error penolakan default user workspace database",
+      "actual": "FAIL-CLOSED: Target is the default user workspace database. Rejecting execution to protect user data."
+    },
+    {
+      "id": "guard_active_api_rejection",
+      "name": "Penolakan fail-closed terhadap Supabase API workspace pengguna aktif (port 54321)",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": "Error penolakan target API port 54321",
+      "actual": "FAIL-CLOSED: Target API is the default user workspace Supabase API (port 54321). Rejecting execution to protect user data."
+    },
+    {
+      "id": "guard_marker_mismatch_rejection",
+      "name": "Penolakan fail-closed saat marker token PostgreSQL dan Supabase API tidak cocok",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": "Error penolakan marker token mismatch",
+      "actual": "FAIL-CLOSED: Target mismatch: PostgreSQL and Supabase API returned different marker tokens. The two connections are accessing different databases!"
+    }
+  ],
+  "cleanupErrors": [],
+  "cleanupSummary": null
+}

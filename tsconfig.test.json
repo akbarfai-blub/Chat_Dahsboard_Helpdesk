@@ -29,7 +29,8 @@
     "lib/providers/**/*.ts",
     "lib/repositories/**/*.ts",
     "lib/supabase/database.types.ts",
-    "app/api/webhooks/telegram/**/*.ts"
+    "app/api/webhooks/telegram/**/*.ts",
+    "app/api/inbox/**/*.ts"
   ],
   "exclude": [
     "node_modules",

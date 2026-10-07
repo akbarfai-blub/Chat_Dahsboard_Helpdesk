@@ -1,0 +1,486 @@
+{
+  "timestamp": "2026-10-06T21:45:55.514Z",
+  "runId": "e476d7a3",
+  "mode": "live_browser_normal",
+  "codeRevisions": {
+    "tests/interactive/verify-p26-inbox.mjs": "b025ba8e41fd2c62",
+    "components/inbox/inbox-conversation-panel.tsx": "85d47b36a2918c74",
+    "components/inbox/inbox-dashboard.tsx": "308417cfb315def6",
+    "components/inbox/inbox-conversation-list.tsx": "37ef98a5530afdea",
+    "lib/supabase/auth-config.ts": "7ba80cf0a5bc0a16"
+  },
+  "summary": {
+    "overallStatus": "PASS",
+    "exitCode": 0,
+    "total": 23,
+    "passed": 23,
+    "failed": 0,
+    "notRun": 0,
+    "mandatoryTotal": 23,
+    "mandatoryPassed": 23,
+    "mandatoryFailed": 0,
+    "mandatoryNotRun": 0
+  },
+  "assertions": [
+    {
+      "id": "auth_setup",
+      "name": "Autentikasi sesi staf untuk pengujian UI Inbox",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": "Sesi aktif pada rute /dashboard",
+      "actual": "Sesi aktif pada rute /dashboard"
+    },
+    {
+      "id": "shell_integration_and_indicators",
+      "name": "Integrasi shell dashboard: judul 'Inbox / Antrean', badge SHADOW, penanda dummy, dan target sentuh direktori pelanggan",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": {
+        "titleText": "Inbox / Antrean",
+        "hasShadowBadge": true,
+        "hasDummyBadge": true,
+        "touchTargetOk": true
+      },
+      "actual": {
+        "headerFound": true,
+        "titleText": "Inbox / Antrean",
+        "hasShadowBadge": true,
+        "hasDummyBadge": true,
+        "hasCustomerDirectoryLink": true,
+        "touchTargetOk": true
+      }
+    },
+    {
+      "id": "desktop_two_pane_layout",
+      "name": "Layout desktop (1280x800): dua panel berdampingan tanpa overflow",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": {
+        "hasList": true,
+        "hasDetail": true,
+        "isSideBySide": true,
+        "noHorizontalOverflow": true
+      },
+      "actual": {
+        "hasList": true,
+        "hasDetail": true,
+        "listWidth": 380,
+        "detailWidth": 797,
+        "isSideBySide": true,
+        "bodyScrollWidth": 1249,
+        "bodyClientWidth": 1249,
+        "noHorizontalOverflow": true
+      }
+    },
+    {
+      "id": "conversation_list_rendering",
+      "name": "Daftar percakapan memuat identitas pengirim, preview pesan, waktu WIB, badge unread, dan item percakapan",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": {
+        "totalItemsRendered": 25,
+        "hasWibTimeFormat": true
+      },
+      "actual": {
+        "totalItemsRendered": 25,
+        "unreadBadgeCount": 0,
+        "hasWibTimeFormat": true
+      }
+    },
+    {
+      "id": "non_color_selection_indicator",
+      "name": "Indikator percakapan terpilih memiliki pembeda non-warna ganda (border 4px + teks 'Dipilih')",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": {
+        "isSelected": true,
+        "borderLeftWidth": "4px",
+        "hasSelectedBadge": true,
+        "badgeText": "Dipilih"
+      },
+      "actual": {
+        "isSelected": true,
+        "borderLeftWidth": "4px",
+        "borderLeftColor": "rgb(0, 166, 81)",
+        "hasSelectedBadge": true,
+        "badgeText": "Dipilih"
+      }
+    },
+    {
+      "id": "conversation_detail_thread",
+      "name": "Panel detail menampilkan riwayat kronologis receivedAt ASC dan kartu informasi Fase P3",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": {
+        "messageCount": 9,
+        "hasP3Notice": true
+      },
+      "actual": {
+        "messageCount": 9,
+        "hasP3Notice": true,
+        "p3NoticeText": "Lewati ke konten utamaUpaznet HelpdeskWorkspaceInbox / AntreanGangguanBelum tersediaPelangganTemplateBelum tersediaLog & kesehatanBelum tersediaPengaturanBelum tersediaPrototype HelpdeskSeluruh data operasional adalah simulasi pengujian.Inbox / AntreanPrototype · Data dummyData dummytest-staff-e476d7a3@example.testKeluarWorkspace Antrean·Mode Otomasi: SHADOW (evaluasi internal tanpa pengiriman otomatis)·Data DummyBuka Direktori PelangganInbox / AntreanSHADOWDaftar komplain dan percakapan pelanggan dari Telegram.Cari percakapanCariPercakapan:SemuaAktifDitutupEpisode:Semua episodeBaru (NEW)Ditangani (IN_PROGRESS)Pulih (RESOLVED)Ditutup (CLOSED)Tanpa episodeBelum dibacaPerlu diperiksaMenampilkan 150 percakapan Limit 25 per halamansender-read-e476d7a3([Run-e476d7a3] Pelanggan Delta (Read Test))Terverifikasitelegrambaru sajaPesan Read 9: Konfirmasi penerimaan laporan ini ditunggu oleh pelanggan yang bersangkutan.Baru9sender-c-e476d7a3([Run-e476d7a3] Pelanggan Gamma (Non-Komplain))Terverifikasitelegrambaru sajaHalo admin, mau tanya info upgrade paket internet 50Mbps.Tanpa episode1sender-b-e476d7a3([Run-e476d7a3] Pelanggan Beta)Terverifikasitelegrambaru sajaKoneksi sangat lambat sejak kemarin.Ditangani1sender-a-e476d7a3([Run-e476d7a3] Pelanggan Alpha)Terverifikasitelegrambaru sajaDipilihPesan 9: Terima kasih atas responnya, kami menunggu update perbaikan dari tim teknisi.Baru6sender-extra-1-e476d7a3([Run-e476d7a3] Antrean Tambahan 01)Terverifikasitelegram1 mnt laluPesan antrean nomor 1 untuk pengujian paginasi.Ditangani1sender-extra-2-e476d7a3([Run-e476d7a3] Antrean Tambahan 02)Terverifikasitelegram2 mnt laluPesan antrean nomor 2 untuk pengujian paginasi.Baru1sender-extra-3-e476d7a3([Run-e476d7a3] Antrean Tambahan 03)Terverifikasitelegram3 mnt laluPesan antrean nomor 3 untuk pengujian paginasi.Ditangani1sender-extra-4-e476d7a3([Run-e476d7a3] Antrean Tambahan 04)Terverifikasitelegram4 mnt laluPesan antrean nomor 4 untuk pengujian paginasi.Baru1sender-extra-5-e476d7a3([Run-e476d7a3] Antrean Tambahan 05)Terverifikasitelegram5 mnt laluPesan antrean nomor 5 untuk pengujian paginasi.Ditangani1sender-extra-6-e476d7a3([Run-e476d7a3] Antrean Tambahan 06)Terverifikasitelegram6 mnt laluPesan antrean nomor 6 untuk pengujian paginasi.Baru1sender-extra-7-e476d7a3([Run-e476d7a3] Antrean Tambahan 07)Terverifikasitelegram7 mnt laluPesan antrean nomor 7 untuk pengujian paginasi.Ditangani1sender-extra-8-e476d7a3([Run-e476d7a3] Antrean Tambahan 08)Terverifikasitelegram8 mnt laluPesan antrean nomor 8 untuk pengujian paginasi.Baru1sender-extra-9-e476d7a3([Run-e476d7a3] Antrean Tambahan 09)Terverifikasitelegram9 mnt laluPesan antrean nomor 9 untuk pengujian paginasi.Ditangani1sender-extra-10-e476d7a3([Run-e476d7a3] Antrean Tambahan 10)Terverifikasitelegram10 mnt laluPesan antrean nomor 10 untuk pengujian paginasi.Baru1sender-extra-11-e476d7a3([Run-e476d7a3] Antrean Tambahan 11)Terverifikasitelegram11 mnt laluPesan antrean nomor 11 untuk pengujian paginasi.Ditangani1sender-extra-12-e476d7a3([Run-e476d7a3] Antrean Tambahan 12)Terverifikasitelegram12 mnt laluPesan antrean nomor 12 untuk pengujian paginasi.Baru1sender-extra-13-e476d7a3([Run-e476d7a3] Antrean Tambahan 13)Terverifikasitelegram13 mnt laluPesan antrean nomor 13 untuk pengujian paginasi.Ditangani1sender-extra-14-e476d7a3([Run-e476d7a3] Antrean Tambahan 14)Terverifikasitelegram14 mnt laluPesan antrean nomor 14 untuk pengujian paginasi.Baru1sender-extra-15-e476d7a3([Run-e476d7a3] Antrean Tambahan 15)Terverifikasitelegram15 mnt laluPesan antrean nomor 15 untuk pengujian paginasi.Ditangani1sender-extra-16-e476d7a3([Run-e476d7a3] Antrean Tambahan 16)Terverifikasitelegram16 mnt laluPesan antrean nomor 16 untuk pengujian paginasi.Baru1sender-extra-17-e476d7a3([Run-e476d7a3] Antrean Tambahan 17)Terverifikasitelegram17 mnt laluPesan antrean nomor 17 untuk pengujian paginasi.Ditangani1sender-extra-18-e476d7a3([Run-e476d7a3] Antrean Tambahan 18)Terverifikasitelegram18 mnt laluPesan antrean nomor 18 untuk pengujian paginasi.Baru1sender-extra-19-e476d7a3([Run-e476d7a3] Antrean Tambahan 19)Terverifikasitelegram19 mnt laluPesan antrean nomor 19 untuk pengujian paginasi.Ditangani1sender-extra-20-e476d7a3([Run-e476d7a3] Antrean Tambahan 20)Terverifikasitelegram20 mnt laluPesan antrean nomor 20 untuk pengujian paginasi.Baru1sender-extra-21-e476d7a3([Run-e476d7a3] Antrean Tambahan 21)Terverifikasitelegram21 mnt laluPesan antrean nomor 21 untuk pengujian paginasi.Ditangani1Halaman 1 dari 6·Total 150SebelumnyaBerikutnyasender-a-e476d7a3· Pelanggan: [Run-e476d7a3] Pelanggan AlphaTerverifikasi·ID: sender-a-e476d7a3·telegramPercakapan AktifBarusender-a-e476d7a304.44 WIB·BaruPesan 1: Internet saya mati total sejak tadi subuh di Perumahan Griya Indah Blok A.Klasifikasi:KONEKSI_MATI(keyword_match)Kata kunci:mati totalAssessment Triage OtomatisMode SHADOWKeputusan: triaged (keyword_match)Klaim: claimed (new_complaint) · Dispatch: Tidaksender-a-e476d7a304.44 WIB·BaruPesan 2: Lampu indikator LOS modem berkedip merah terang dan tidak ada sinyal sama sekali.Klasifikasi:KONEKSI_MATI(keyword_match)Kata kunci:mati totalsender-a-e476d7a304.44 WIB·BaruPesan 3: Sudah saya coba cabut pasang kabel optik biru dan restart adaptor berkali-kali.Klasifikasi:KONEKSI_MATI(keyword_match)Kata kunci:mati totalsender-a-e476d7a304.45 WIB·BaruPesan 4: Tetangga sebelah rumah juga mengeluhkan sambungan internetnya terputus mendadak.Klasifikasi:KONEKSI_MATI(keyword_match)Kata kunci:mati totalsender-a-e476d7a304.45 WIB·BaruPesan 5: Mohon bantuan teknisi lapangan untuk memeriksa ODP distribusi di tiang depan rumah.Klasifikasi:KONEKSI_MATI(keyword_match)Kata kunci:mati totalsender-a-e476d7a304.45 WIB·BaruPesan 6: Apakah ada informasi perkiraan waktu penyelesaian atau ada pemeliharaan jaringan?Klasifikasi:KONEKSI_MATI(keyword_match)Kata kunci:mati totalsender-a-e476d7a304.45 WIB·DibacaPesan 7: Kami sangat membutuhkan koneksi yang stabil untuk operasional kerja harian dari rumah.Klasifikasi:KONEKSI_MATI(keyword_match)Kata kunci:mati totalsender-a-e476d7a304.45 WIB·DibacaPesan 8: Sampai siang ini status koneksi masih belum berubah dan modem tetap alarm merah.Klasifikasi:KONEKSI_MATI(keyword_match)Kata kunci:mati totalsender-a-e476d7a304.45 WIB·DibacaPesan 9: Terima kasih atas responnya, kami menunggu update perbaikan dari tim teknisi.Klasifikasi:KONEKSI_MATI(keyword_match)Kata kunci:mati totalBalasan Staf & Catatan Internal (Tahap P3)Composer pengetikan balasan manual ke pelanggan Telegram dan penyimpanan catatan internal staf akan hadir pada fase P3. Mode otomasi saat ini berjalan di mode SHADOW (evaluasi internal tanpa pengiriman otomatis)."
+      }
+    },
+    {
+      "id": "search_and_filters",
+      "name": "Filter bar mendukung pencarian kata kunci dan menyaring daftar secara akurat",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": {
+        "searchValue": "[Run-e476d7a3] Pelanggan Beta",
+        "onlyBetaVisible": true,
+        "isPageReset": true
+      },
+      "actual": {
+        "searchValue": "[Run-e476d7a3] Pelanggan Beta",
+        "filteredCount": 1,
+        "onlyBetaVisible": true,
+        "isPageReset": true
+      }
+    },
+    {
+      "id": "pagination_reset_on_filter_change",
+      "name": "Penerapan filter dari halaman 2 secara otomatis mereset paginasi kembali ke halaman 1",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": {
+        "initialPage2Active": true,
+        "initialPrevEnabled": true,
+        "isResetToPage1": true,
+        "prevDisabled": true,
+        "hasAlpha": true
+      },
+      "actual": {
+        "initialPage2Active": true,
+        "initialPrevEnabled": true,
+        "initialNavText": "Halaman 2 dari 2·Total 28SebelumnyaBerikutnya",
+        "isResetToPage1": true,
+        "prevDisabled": true,
+        "hasAlpha": true,
+        "navTextAfterReset": "Halaman 1 dari 1·Total 6SebelumnyaBerikutnya",
+        "filteredCount": 6
+      }
+    },
+    {
+      "id": "empty_vs_filtered_empty_states",
+      "name": "Membedakan state 'Inbox Kosong' dengan state 'Tidak ada hasil untuk filter ini' lengkap dengan tombol reset filter",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": {
+        "hasEmptyMessage": true,
+        "hasResetButton": true
+      },
+      "actual": {
+        "hasEmptyMessage": true,
+        "emptyMessageText": "Tidak ada hasil untuk filter ini.Coba ganti filter atau kata kunci pencarian Anda.Reset filter",
+        "hasResetButton": true
+      }
+    },
+    {
+      "id": "pagination_dataset_integrity",
+      "name": "Integritas paginasi 28 fixture: Halaman 1 (25 item) dan Halaman 2 (3 item) disjoin dan mencakup seluruh dataset",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": {
+        "page1Count": 25,
+        "page2Count": 3,
+        "combinedTotal": 28,
+        "intersectionCount": 0,
+        "missingFromRendered": 0,
+        "unexpectedRendered": 0
+      },
+      "actual": {
+        "page1Count": 25,
+        "page2Count": 3,
+        "combinedTotal": 28,
+        "intersectionCount": 0,
+        "missingFromRendered": 0,
+        "unexpectedRendered": 0
+      }
+    },
+    {
+      "id": "viewport_read_acknowledgment",
+      "name": "Penandaan baca hanya mengirim pesan yang terlihat dalam viewport panel aktif dan mengurangi badge unread secara akurat",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": {
+        "initialDbReadCount": 0,
+        "hasSuccessfulHttp200AndEnvelope": true,
+        "allVisibleConfirmed": true,
+        "anyOffViewportConfirmed": false,
+        "noSyncError": true
+      },
+      "actual": {
+        "initialDbReadCount": 0,
+        "hasSuccessfulHttp200AndEnvelope": true,
+        "successfulCallDetails": {
+          "status": 200,
+          "envelopeSuccess": true
+        },
+        "visibleCount": 3,
+        "offViewportCount": 6,
+        "confirmedInDbCount": 3,
+        "allVisibleConfirmed": true,
+        "anyOffViewportConfirmed": false,
+        "noSyncError": true
+      }
+    },
+    {
+      "id": "read_acknowledgment_retry_isolation",
+      "name": "Retry read-ack mengirimkan tepat snapshot pesan gagal tanpa penambahan ID baru dan terkonfirmasi di database",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": {
+        "bannerFound": true,
+        "isReadAckSpecific": true,
+        "exactSnapshotMatch": true,
+        "bannerDismissed": true,
+        "retriedDbConfirmed": true
+      },
+      "actual": {
+        "bannerFound": true,
+        "bannerText": "Gagal menyinkronkan status baca ke server.Coba lagi",
+        "failedIdsCount": 1,
+        "retriedIdsCount": 1,
+        "exactSnapshotMatch": true,
+        "bannerDismissed": true,
+        "retriedDbConfirmed": true
+      }
+    },
+    {
+      "id": "hidden_tab_read_suppression",
+      "name": "Tab dokumen tersembunyi tidak mengirim request read-ack atau mengubah status baca di database",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": {
+        "noNetworkCallsWhileHidden": true,
+        "noDbMutationsWhileHidden": true,
+        "readsTriggeredAfterVisible": true
+      },
+      "actual": {
+        "readsBeforeHidden": 2,
+        "readsWhileHidden": 2,
+        "noNetworkCallsWhileHidden": true,
+        "noDbMutationsWhileHidden": true,
+        "readsAfterVisible": 3,
+        "readsTriggeredAfterVisible": true
+      }
+    },
+    {
+      "id": "polling_and_scroll_retention",
+      "name": "Polling 5 detik memperbarui pesan tanpa memaksa auto-scroll saat membaca pesan lama, memunculkan pill 'Pesan baru di bawah'",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": {
+        "containerScrolledToTop": true,
+        "hasNewMessagePill": true
+      },
+      "actual": {
+        "containerScrolledToTop": true,
+        "hasNewMessagePill": true,
+        "pillText": "Pesan baru di bawah"
+      }
+    },
+    {
+      "id": "polling_failure_and_banner_alert",
+      "name": "Kegagalan polling mempertahankan data terakhir dan menampilkan banner 'Pembaruan terhenti' dengan timestamp pembaruan terakhir (WIB)",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": {
+        "bannerFound": true,
+        "bannerTextContains": "Pembaruan terhenti",
+        "hasRetryBtn": true
+      },
+      "actual": {
+        "bannerFound": true,
+        "bannerText": "Pembaruan terhenti. Terakhir diperbarui pukul 04.45 WIB. Data terakhir tetap ditampilkan.Coba lagi",
+        "hasRetryBtn": true
+      }
+    },
+    {
+      "id": "polling_overlap_with_foreground_fetch",
+      "name": "Resiliensi loading saat request foreground tumpang tindih dengan polling komponen (loading selesai, tombol aktif, data sesuai)",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": {
+        "foregroundStarted": true,
+        "pollingStarted": true,
+        "itemCount": 3,
+        "prevEnabled": true,
+        "nextDisabled": true
+      },
+      "actual": {
+        "foregroundStarted": true,
+        "pollingStarted": true,
+        "pollingResolved": true,
+        "foregroundResolved": true,
+        "prevDisabled": false,
+        "nextDisabled": true,
+        "itemCount": 3,
+        "navText": "Halaman 2 dari 2·Total 28SebelumnyaBerikutnya"
+      }
+    },
+    {
+      "id": "stale_response_rejection",
+      "name": "Respons detail lama yang tertunda tidak menimpa percakapan baru yang telah dipilih",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": {
+        "initialConversationIsC": true,
+        "aRequestedAndHeld": true,
+        "bRenderedBeforeARelease": true,
+        "aSettled": true,
+        "panelDisplaysBeta": true,
+        "panelDisplaysAlpha": false,
+        "selectedItemIsBeta": true
+      },
+      "actual": {
+        "initialConversationIsC": true,
+        "aRequestedAndHeld": true,
+        "bRenderedBeforeARelease": true,
+        "aSettled": true,
+        "panelDisplaysBeta": true,
+        "panelDisplaysAlpha": false,
+        "selectedItemIsBeta": true,
+        "eventSequence": [
+          "A_requested",
+          "A_released",
+          "A_resolved",
+          "B_remains_active"
+        ],
+        "conversations": {
+          "convAId": "f82bd2c0-056f-43fc-bb4d-5c4b5af31128",
+          "convBId": "1988bc63-5566-41b6-9073-b08e58e5ba5c",
+          "initialConvCId": "9cb52f0b-02d1-4651-86f4-1ecb579297aa"
+        }
+      }
+    },
+    {
+      "id": "detail_failure_isolation_after_open",
+      "name": "Kegagalan memuat detail percakapan baru menampilkan pesan error terisolasi tanpa membocorkan data percakapan sebelumnya",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": {
+        "isAlphaRendered": false,
+        "hasDetailError": true
+      },
+      "actual": {
+        "isAlphaRendered": false,
+        "hasDetailError": true,
+        "errorText": "Gagal memuat detail percakapanGagal memuat detail percakapan (status 500).Coba lagi"
+      }
+    },
+    {
+      "id": "list_error_and_recovery_isolated",
+      "name": "Kegagalan daftar percakapan terisolasi dari panel detail dan pulih secara independen saat dicoba lagi",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": {
+        "beforeRecovery": {
+          "hasListError": true,
+          "hasDetailError": true
+        },
+        "afterRecovery": {
+          "listErrorCleared": true,
+          "itemsRestored": true,
+          "detailErrorPersists": true
+        }
+      },
+      "actual": {
+        "beforeRecovery": {
+          "hasListError": true,
+          "hasListRetryBtn": true,
+          "hasDetailError": true
+        },
+        "afterRecovery": {
+          "hasListError": false,
+          "itemsRestoredCount": 25,
+          "hasDetailError": true,
+          "listRetryRequested": true
+        }
+      }
+    },
+    {
+      "id": "detail_error_and_recovery_isolated",
+      "name": "Kegagalan detail percakapan terisolasi dari daftar dan pulih secara independen saat dicoba lagi",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": {
+        "beforeRecovery": {
+          "hasListError": true,
+          "hasDetailError": true
+        },
+        "afterRecovery": {
+          "detailErrorCleared": true,
+          "displaysBeta": true,
+          "messagesLoaded": true,
+          "listErrorPersists": true
+        }
+      },
+      "actual": {
+        "beforeRecovery": {
+          "hasListError": true,
+          "hasDetailError": true,
+          "hasDetailRetryBtn": true
+        },
+        "afterRecovery": {
+          "hasListError": true,
+          "hasDetailError": false,
+          "displaysBeta": true,
+          "messagesLoaded": true,
+          "detailRetryRequested": true
+        }
+      }
+    },
+    {
+      "id": "mobile_viewport_and_navigation",
+      "name": "Viewport mobile (375x667) menampilkan single-pane dengan tombol 'Kembali' yang mempertahankan konteks filter dan daftar",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": {
+        "backToListOk": true,
+        "reopenSameConvOk": true
+      },
+      "actual": {
+        "back": {
+          "isListVisible": true,
+          "isDetailHidden": true
+        },
+        "reopen": {
+          "isListHidden": true,
+          "isDetailVisible": true,
+          "detailHasBeta": true
+        }
+      }
+    },
+    {
+      "id": "keyboard_navigation_and_focus",
+      "name": "Navigasi keyboard menampilkan focus ring yang terlihat jelas dan region aria-live polite untuk notifikasi",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": {
+        "hasFocusVisibleClass": true,
+        "hasAriaLiveRegion": true
+      },
+      "actual": {
+        "activeTagName": "button",
+        "hasFocusVisibleClass": true,
+        "hasAriaLiveRegion": true
+      }
+    },
+    {
+      "id": "runner_cleanup_and_teardown",
+      "name": "Pembersihan proses, user staf, dan fixture pengujian selesai tanpa residu atau kegagalan",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": "Cleanup selesai tanpa error dan 0 residu",
+      "actual": "Semua proses dihentikan, user dihapus, fixture dibersihkan, residu = 0"
+    }
+  ],
+  "cleanupErrors": [],
+  "cleanupSummary": {
+    "initialCleanupError": null,
+    "totalCleanupErrors": 0,
+    "residualVerification": "0 residu (conversations=0, messages=0, identities=0)"
+  }
+}

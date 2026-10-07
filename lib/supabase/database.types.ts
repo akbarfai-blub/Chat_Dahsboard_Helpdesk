@@ -490,6 +490,134 @@ export type Database = {
           },
         ]
       }
+      conversations: {
+        Row: {
+          id: string
+          identity_id: string
+          channel: string
+          account_id: string
+          chat_id: string
+          status: string
+          started_at: string
+          last_activity_at: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          identity_id: string
+          channel: string
+          account_id: string
+          chat_id: string
+          status?: string
+          started_at: string
+          last_activity_at: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          identity_id?: string
+          channel?: string
+          account_id?: string
+          chat_id?: string
+          status?: string
+          started_at?: string
+          last_activity_at?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversations_identity_id_fkey"
+            columns: ["identity_id"]
+            isOneToOne: false
+            referencedRelation: "channel_identities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      staff_conversation_reads: {
+        Row: {
+          staff_id: string
+          conversation_id: string
+          last_read_message_id: string
+          last_read_at: string
+          updated_at: string
+          is_confirmed: boolean
+        }
+        Insert: {
+          staff_id: string
+          conversation_id: string
+          last_read_message_id: string
+          last_read_at: string
+          updated_at?: string
+          is_confirmed?: boolean
+        }
+        Update: {
+          staff_id?: string
+          conversation_id?: string
+          last_read_message_id?: string
+          last_read_at?: string
+          updated_at?: string
+          is_confirmed?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_conversation_reads_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_conversation_reads_last_read_message_id_fkey"
+            columns: ["last_read_message_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      staff_message_reads: {
+        Row: {
+          staff_id: string
+          conversation_id: string
+          message_id: string
+          read_at: string
+          is_confirmed: boolean
+        }
+        Insert: {
+          staff_id: string
+          conversation_id: string
+          message_id: string
+          read_at?: string
+          is_confirmed?: boolean
+        }
+        Update: {
+          staff_id?: string
+          conversation_id?: string
+          message_id?: string
+          read_at?: string
+          is_confirmed?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_message_reads_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_message_reads_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never

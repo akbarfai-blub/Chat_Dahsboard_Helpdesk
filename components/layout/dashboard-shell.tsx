@@ -19,17 +19,6 @@ interface NavItemConfig {
   icon: (props: { className?: string }) => React.JSX.Element;
 }
 
-function IconGrid({ className = "w-5 h-5" }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
-      <rect x="3" y="3" width="7" height="7" rx="1" />
-      <rect x="14" y="3" width="7" height="7" rx="1" />
-      <rect x="14" y="14" width="7" height="7" rx="1" />
-      <rect x="3" y="14" width="7" height="7" rx="1" />
-    </svg>
-  );
-}
-
 function IconInbox({ className = "w-5 h-5" }: { className?: string }) {
   return (
     <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
@@ -100,16 +89,9 @@ function IconUserBadge({ className = "w-4 h-4" }: { className?: string }) {
 
 const NAV_ITEMS: NavItemConfig[] = [
   {
-    label: "Ringkasan",
+    label: "Inbox / Antrean",
     href: "/dashboard",
     isAvailable: true,
-    icon: IconGrid,
-  },
-  {
-    label: "Inbox / Antrean",
-    isAvailable: false,
-    badge: "Belum tersedia",
-    unavailableNote: "Target utama produk · Tersedia pada tahap berikutnya",
     icon: IconInbox,
   },
   {
@@ -232,7 +214,7 @@ export function DashboardShell({ userEmail, children }: DashboardShellProps) {
   }, [isDrawerOpen]);
 
   // Determine active route title for Topbar
-  let pageTitle = "Ringkasan";
+  let pageTitle = "Inbox / Antrean";
   if (pathname.startsWith("/dashboard/customers")) {
     pageTitle = "Pelanggan";
   }
@@ -240,7 +222,7 @@ export function DashboardShell({ userEmail, children }: DashboardShellProps) {
   const isItemActive = (item: NavItemConfig) => {
     if (!item.isAvailable || !item.href) return false;
     if (item.href === "/dashboard") {
-      return pathname === "/dashboard";
+      return pathname === "/dashboard" || pathname.startsWith("/dashboard/complaints");
     }
     return pathname.startsWith(item.href);
   };
@@ -614,7 +596,15 @@ export function DashboardShell({ userEmail, children }: DashboardShellProps) {
         </header>
 
         {/* Main Content Area (Fleksibel, tanpa max-width sempit) */}
-        <main id="main-content" tabIndex={-1} className="flex-1 p-4 sm:p-6 lg:p-8 outline-none">
+        <main
+          id="main-content"
+          tabIndex={-1}
+          className={`flex-1 outline-none ${
+            pathname === "/dashboard" || pathname.startsWith("/dashboard/complaints")
+              ? "p-0 flex flex-col"
+              : "p-4 sm:p-6 lg:p-8"
+          }`}
+        >
           {children}
         </main>
       </div>

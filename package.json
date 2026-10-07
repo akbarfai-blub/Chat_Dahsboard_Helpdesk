@@ -4,11 +4,11 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "node scripts/build-source-manifest.mjs",
     "start": "next start",
     "lint": "eslint",
     "test": "npm run test:unit",
-    "test:unit": "tsc -p tsconfig.test.json && node --conditions=react-server --test .test-build/tests/domain/*.test.js .test-build/tests/providers/*.test.js .test-build/tests/adapters/*.test.js .test-build/tests/application/*.test.js",
+    "test:unit": "tsc -p tsconfig.test.json && node --conditions=react-server --test .test-build/tests/domain/*.test.js .test-build/tests/providers/*.test.js .test-build/tests/adapters/*.test.js .test-build/tests/application/*.test.js .test-build/tests/utils/*.test.js",
     "test:network:local": "tsc -p tsconfig.test.json && node --conditions=react-server --test .test-build/tests/integration/network.test.js",
     "test:identity:local": "tsc -p tsconfig.test.json && node --conditions=react-server --test .test-build/tests/integration/identity.test.js",
     "test:triage:local": "tsc -p tsconfig.test.json && node --conditions=react-server --test .test-build/tests/integration/triage.test.js",
@@ -16,7 +16,9 @@
     "test:telegram:local": "tsc -p tsconfig.test.json && node --conditions=react-server --test .test-build/tests/integration/telegram-webhook.test.js",
     "test:conversation:local": "tsc -p tsconfig.test.json && node --conditions=react-server --test .test-build/tests/integration/conversation.test.js",
     "test:orchestration:local": "tsc -p tsconfig.test.json && node --conditions=react-server --test .test-build/tests/integration/orchestration.test.js",
-    "test:worker:local": "tsc -p tsconfig.test.json && node --conditions=react-server --env-file=.env.test --test .test-build/tests/integration/job-worker.test.js"
+    "test:worker:local": "tsc -p tsconfig.test.json && node --conditions=react-server --env-file=.env.test --test .test-build/tests/integration/job-worker.test.js",
+    "test:inbox:local": "tsc -p tsconfig.test.json && node --conditions=react-server --env-file=.env.test --test .test-build/tests/integration/inbox.test.js",
+    "test:migrations:local": "tsc -p tsconfig.test.json && node --conditions=react-server --env-file=.env.test --test .test-build/tests/integration/migration-runner.test.js"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",

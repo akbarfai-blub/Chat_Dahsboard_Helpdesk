@@ -1,0 +1,129 @@
+{
+  "timestamp": "2026-10-06T21:40:40.672Z",
+  "runId": "d3e593b0",
+  "mode": "midrun_failure",
+  "codeRevisions": {
+    "tests/interactive/verify-p26-inbox.mjs": "12cd2f1e3db45eae",
+    "components/inbox/inbox-conversation-panel.tsx": "85d47b36a2918c74",
+    "components/inbox/inbox-dashboard.tsx": "308417cfb315def6",
+    "components/inbox/inbox-conversation-list.tsx": "37ef98a5530afdea",
+    "lib/supabase/auth-config.ts": "7ba80cf0a5bc0a16"
+  },
+  "summary": {
+    "overallStatus": "FAIL",
+    "exitCode": 1,
+    "total": 8,
+    "passed": 7,
+    "failed": 1,
+    "notRun": 0,
+    "mandatoryTotal": 8,
+    "mandatoryPassed": 7,
+    "mandatoryFailed": 1,
+    "mandatoryNotRun": 0
+  },
+  "assertions": [
+    {
+      "id": "auth_setup",
+      "name": "Autentikasi sesi staf untuk pengujian UI Inbox",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": "Sesi aktif pada rute /dashboard",
+      "actual": "Sesi aktif pada rute /dashboard"
+    },
+    {
+      "id": "shell_integration_and_indicators",
+      "name": "Integrasi shell dashboard: judul 'Inbox / Antrean', badge SHADOW, penanda dummy, dan target sentuh direktori pelanggan",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": {
+        "titleText": "Inbox / Antrean",
+        "hasShadowBadge": true,
+        "hasDummyBadge": true,
+        "touchTargetOk": true
+      },
+      "actual": {
+        "headerFound": true,
+        "titleText": "Inbox / Antrean",
+        "hasShadowBadge": true,
+        "hasDummyBadge": true,
+        "hasCustomerDirectoryLink": true,
+        "touchTargetOk": true
+      }
+    },
+    {
+      "id": "desktop_two_pane_layout",
+      "name": "Layout desktop (1280x800): dua panel berdampingan tanpa overflow",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": {
+        "hasList": true,
+        "hasDetail": true,
+        "isSideBySide": true,
+        "noHorizontalOverflow": true
+      },
+      "actual": {
+        "hasList": true,
+        "hasDetail": true,
+        "listWidth": 380,
+        "detailWidth": 797,
+        "isSideBySide": true,
+        "bodyScrollWidth": 1249,
+        "bodyClientWidth": 1249,
+        "noHorizontalOverflow": true
+      }
+    },
+    {
+      "id": "conversation_list_rendering",
+      "name": "Daftar percakapan memuat identitas pengirim, preview pesan, waktu WIB, badge unread, dan item percakapan",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": {
+        "totalItemsRendered": 25,
+        "hasWibTimeFormat": true
+      },
+      "actual": {
+        "totalItemsRendered": 25,
+        "unreadBadgeCount": 0,
+        "hasWibTimeFormat": true
+      }
+    },
+    {
+      "id": "midrun_failure_injected",
+      "name": "Injeksi kegagalan di tengah run setelah fixture terbentuk",
+      "isOptional": false,
+      "status": "FAIL",
+      "expected": "Kegagalan mid-run memicu rollback di catch/finally",
+      "actual": "Simulated mid-run failure after fixture creation and initial render"
+    },
+    {
+      "id": "teardown_processes_killed",
+      "name": "Proses Chrome dan Next.js berhasil dihentikan saat mid-run rollback",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": "Proses dihentikan tanpa error",
+      "actual": "Proses Chrome dan Next.js dihentikan"
+    },
+    {
+      "id": "teardown_resources_cleaned",
+      "name": "Resource fixture dan user staf berhasil dibersihkan saat mid-run rollback",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": "Semua resource run dibersihkan",
+      "actual": "Semua fixture dan user berhasil dibersihkan via cleanupFixture & deleteUser"
+    },
+    {
+      "id": "runner_cleanup_and_teardown",
+      "name": "Pembersihan proses, user staf, dan fixture pengujian selesai tanpa residu atau kegagalan",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": "Cleanup selesai tanpa error dan 0 residu",
+      "actual": "Semua proses dihentikan, user dihapus, fixture dibersihkan, residu = 0"
+    }
+  ],
+  "cleanupErrors": [],
+  "cleanupSummary": {
+    "initialCleanupError": null,
+    "totalCleanupErrors": 0,
+    "residualVerification": "0 residu (conversations=0, messages=0, identities=0)"
+  }
+}

@@ -1,0 +1,640 @@
+{
+  "timestamp": "2026-10-07T08:48:29.368Z",
+  "runId": "run-7fc817aa",
+  "mode": "live_browser_normal",
+  "expectedExitCode": 0,
+  "calculatedExitCode": 0,
+  "buildIdentity": {
+    "status": "SYNCHRONIZED",
+    "isApplicable": true,
+    "isValid": true,
+    "buildId": "F-DKJqKQFwVIN2WjYeN-h",
+    "manifestBuildId": "F-DKJqKQFwVIN2WjYeN-h",
+    "scope": "p26_inbox_and_auth",
+    "scopeDescription": "Subkelompok berkas UI Inbox, layout shell, routing, auth configuration, format helper, dan service server/kontrak P2.6",
+    "trackedFiles": [
+      "components/inbox/inbox-conversation-panel.tsx",
+      "components/inbox/inbox-dashboard.tsx",
+      "components/inbox/inbox-conversation-list.tsx",
+      "components/inbox/inbox-filter-bar.tsx",
+      "components/inbox/inbox-pagination.tsx",
+      "components/inbox/inbox-status-badge.tsx",
+      "components/inbox/inbox-status-banner.tsx",
+      "components/inbox/inbox-types.ts",
+      "components/layout/dashboard-shell.tsx",
+      "app/dashboard/page.tsx",
+      "app/dashboard/complaints/page.tsx",
+      "lib/supabase/auth-config.ts",
+      "lib/supabase/server.ts",
+      "lib/application/inbox-contracts.ts",
+      "lib/application/inbox-service.server.ts",
+      "lib/application/inbox-service.ts",
+      "lib/application/origin-validator.ts",
+      "lib/utils/format-date.ts"
+    ],
+    "sourceHashesAtBuild": {
+      "components/inbox/inbox-conversation-panel.tsx": "85d47b36a2918c74339b2f6bc45a5896dd5c4dbc346ce52945b8a03b4808fefb",
+      "components/inbox/inbox-dashboard.tsx": "308417cfb315def6f02974a934f189221a0cd8c371630ab31cd239b360da5d10",
+      "components/inbox/inbox-conversation-list.tsx": "37ef98a5530afdeada7ebac486e384c3f0c002659cd852e71984ee884534a3a5",
+      "components/inbox/inbox-filter-bar.tsx": "a04ffd161867dca515fce0ec29385cbe8dc2cbdcb58d3c015445244434ecb6fb",
+      "components/inbox/inbox-pagination.tsx": "8c21fc06243d63d938a1240f7e4f02ff6273ce8a940e15c5a267747bb3c8be4f",
+      "components/inbox/inbox-status-badge.tsx": "cae837e2e7916275674f1c56c4ca5175984646a4783759fd784e13e4fbc3a494",
+      "components/inbox/inbox-status-banner.tsx": "ea86dc334dfa173d6eae6740dd2955afba051d6ac43b2639f2ff3ae187912fa6",
+      "components/inbox/inbox-types.ts": "ec1766f0e9d1b34e893db083f3b525518e58faf036972d18621cb8dd19bbb813",
+      "components/layout/dashboard-shell.tsx": "e6834cf374d8c315b6fb2c439bfe28d0fe020f32d0e5e8dffcf0d64bc6e245ac",
+      "app/dashboard/page.tsx": "fafe3fb0e885294f256e1d717be27c7f64d0e5ef45b4ea9c83e700fe263e6d72",
+      "app/dashboard/complaints/page.tsx": "aed660a75c1cad40c85f7ee61a06fa39c818200b175b0c68d2022fc366536de7",
+      "lib/supabase/auth-config.ts": "7ba80cf0a5bc0a16d473257c0e8a996151bdd35bf3c62b3c5ed8153312b4080d",
+      "lib/supabase/server.ts": "1a34658a36d1c89c772d92236943ccc6667517cc57d19d72cfe57ce29d01607b",
+      "lib/application/inbox-contracts.ts": "f5db1e3fc528d0aafa7d9ab2f2aef2f8f41fa5f38382942a8742999435757b3e",
+      "lib/application/inbox-service.server.ts": "2a3ba888fcebb66f6720e768177381c88111eaa569c183a15e88663571d8aed3",
+      "lib/application/inbox-service.ts": "e7dd3b77b5857406f5d540aaa784b4077857312baa7fbe20695e2d37e819398e",
+      "lib/application/origin-validator.ts": "d86014ec774013e5060a3a81137919071bbd134b2a04c7a56c7905cead6a1cb5",
+      "lib/utils/format-date.ts": "d9570454184cdd3edc7d56a9a3d140b188aa87be61fd81484fe3ad6397c92bb3"
+    },
+    "sourceHashesAtLaunch": {
+      "components/inbox/inbox-conversation-panel.tsx": "85d47b36a2918c74339b2f6bc45a5896dd5c4dbc346ce52945b8a03b4808fefb",
+      "components/inbox/inbox-dashboard.tsx": "308417cfb315def6f02974a934f189221a0cd8c371630ab31cd239b360da5d10",
+      "components/inbox/inbox-conversation-list.tsx": "37ef98a5530afdeada7ebac486e384c3f0c002659cd852e71984ee884534a3a5",
+      "components/inbox/inbox-filter-bar.tsx": "a04ffd161867dca515fce0ec29385cbe8dc2cbdcb58d3c015445244434ecb6fb",
+      "components/inbox/inbox-pagination.tsx": "8c21fc06243d63d938a1240f7e4f02ff6273ce8a940e15c5a267747bb3c8be4f",
+      "components/inbox/inbox-status-badge.tsx": "cae837e2e7916275674f1c56c4ca5175984646a4783759fd784e13e4fbc3a494",
+      "components/inbox/inbox-status-banner.tsx": "ea86dc334dfa173d6eae6740dd2955afba051d6ac43b2639f2ff3ae187912fa6",
+      "components/inbox/inbox-types.ts": "ec1766f0e9d1b34e893db083f3b525518e58faf036972d18621cb8dd19bbb813",
+      "components/layout/dashboard-shell.tsx": "e6834cf374d8c315b6fb2c439bfe28d0fe020f32d0e5e8dffcf0d64bc6e245ac",
+      "app/dashboard/page.tsx": "fafe3fb0e885294f256e1d717be27c7f64d0e5ef45b4ea9c83e700fe263e6d72",
+      "app/dashboard/complaints/page.tsx": "aed660a75c1cad40c85f7ee61a06fa39c818200b175b0c68d2022fc366536de7",
+      "lib/supabase/auth-config.ts": "7ba80cf0a5bc0a16d473257c0e8a996151bdd35bf3c62b3c5ed8153312b4080d",
+      "lib/supabase/server.ts": "1a34658a36d1c89c772d92236943ccc6667517cc57d19d72cfe57ce29d01607b",
+      "lib/application/inbox-contracts.ts": "f5db1e3fc528d0aafa7d9ab2f2aef2f8f41fa5f38382942a8742999435757b3e",
+      "lib/application/inbox-service.server.ts": "2a3ba888fcebb66f6720e768177381c88111eaa569c183a15e88663571d8aed3",
+      "lib/application/inbox-service.ts": "e7dd3b77b5857406f5d540aaa784b4077857312baa7fbe20695e2d37e819398e",
+      "lib/application/origin-validator.ts": "d86014ec774013e5060a3a81137919071bbd134b2a04c7a56c7905cead6a1cb5",
+      "lib/utils/format-date.ts": "d9570454184cdd3edc7d56a9a3d140b188aa87be61fd81484fe3ad6397c92bb3"
+    },
+    "sourceHashesAtFinalize": {
+      "components/inbox/inbox-conversation-panel.tsx": "85d47b36a2918c74339b2f6bc45a5896dd5c4dbc346ce52945b8a03b4808fefb",
+      "components/inbox/inbox-dashboard.tsx": "308417cfb315def6f02974a934f189221a0cd8c371630ab31cd239b360da5d10",
+      "components/inbox/inbox-conversation-list.tsx": "37ef98a5530afdeada7ebac486e384c3f0c002659cd852e71984ee884534a3a5",
+      "components/inbox/inbox-filter-bar.tsx": "a04ffd161867dca515fce0ec29385cbe8dc2cbdcb58d3c015445244434ecb6fb",
+      "components/inbox/inbox-pagination.tsx": "8c21fc06243d63d938a1240f7e4f02ff6273ce8a940e15c5a267747bb3c8be4f",
+      "components/inbox/inbox-status-badge.tsx": "cae837e2e7916275674f1c56c4ca5175984646a4783759fd784e13e4fbc3a494",
+      "components/inbox/inbox-status-banner.tsx": "ea86dc334dfa173d6eae6740dd2955afba051d6ac43b2639f2ff3ae187912fa6",
+      "components/inbox/inbox-types.ts": "ec1766f0e9d1b34e893db083f3b525518e58faf036972d18621cb8dd19bbb813",
+      "components/layout/dashboard-shell.tsx": "e6834cf374d8c315b6fb2c439bfe28d0fe020f32d0e5e8dffcf0d64bc6e245ac",
+      "app/dashboard/page.tsx": "fafe3fb0e885294f256e1d717be27c7f64d0e5ef45b4ea9c83e700fe263e6d72",
+      "app/dashboard/complaints/page.tsx": "aed660a75c1cad40c85f7ee61a06fa39c818200b175b0c68d2022fc366536de7",
+      "lib/supabase/auth-config.ts": "7ba80cf0a5bc0a16d473257c0e8a996151bdd35bf3c62b3c5ed8153312b4080d",
+      "lib/supabase/server.ts": "1a34658a36d1c89c772d92236943ccc6667517cc57d19d72cfe57ce29d01607b",
+      "lib/application/inbox-contracts.ts": "f5db1e3fc528d0aafa7d9ab2f2aef2f8f41fa5f38382942a8742999435757b3e",
+      "lib/application/inbox-service.server.ts": "2a3ba888fcebb66f6720e768177381c88111eaa569c183a15e88663571d8aed3",
+      "lib/application/inbox-service.ts": "e7dd3b77b5857406f5d540aaa784b4077857312baa7fbe20695e2d37e819398e",
+      "lib/application/origin-validator.ts": "d86014ec774013e5060a3a81137919071bbd134b2a04c7a56c7905cead6a1cb5",
+      "lib/utils/format-date.ts": "d9570454184cdd3edc7d56a9a3d140b188aa87be61fd81484fe3ad6397c92bb3"
+    },
+    "checks": {
+      "manifestExists": true,
+      "buildIdMatch": true,
+      "launchSourceMatch": true,
+      "runtimeSourceMatch": true
+    },
+    "reason": "BUILD_ID dan seluruh source hashes cocok dengan manifest build"
+  },
+  "runnerRevisionSha256": "981bed57424824f3c5fd000301eda833efef56eaecea9a3a9645c45471393525",
+  "screenshots": [
+    {
+      "name": "desktop_inbox_two_pane.png",
+      "path": "D:\\Web Dev\\Chat_Automation_Helpdesk\\docs\\evidence\\P2_6\\run-7fc817aa\\desktop_inbox_two_pane.png",
+      "relativePath": "docs/evidence/P2_6/run-7fc817aa/desktop_inbox_two_pane.png",
+      "sizeBytes": 89900
+    },
+    {
+      "name": "desktop_filter_applied.png",
+      "path": "D:\\Web Dev\\Chat_Automation_Helpdesk\\docs\\evidence\\P2_6\\run-7fc817aa\\desktop_filter_applied.png",
+      "relativePath": "docs/evidence/P2_6/run-7fc817aa/desktop_filter_applied.png",
+      "sizeBytes": 130684
+    },
+    {
+      "name": "desktop_empty_filtered.png",
+      "path": "D:\\Web Dev\\Chat_Automation_Helpdesk\\docs\\evidence\\P2_6\\run-7fc817aa\\desktop_empty_filtered.png",
+      "relativePath": "docs/evidence/P2_6/run-7fc817aa/desktop_empty_filtered.png",
+      "sizeBytes": 126561
+    },
+    {
+      "name": "desktop_polling_stopped_banner.png",
+      "path": "D:\\Web Dev\\Chat_Automation_Helpdesk\\docs\\evidence\\P2_6\\run-7fc817aa\\desktop_polling_stopped_banner.png",
+      "relativePath": "docs/evidence/P2_6/run-7fc817aa/desktop_polling_stopped_banner.png",
+      "sizeBytes": 149743
+    },
+    {
+      "name": "mobile_inbox_detail.png",
+      "path": "D:\\Web Dev\\Chat_Automation_Helpdesk\\docs\\evidence\\P2_6\\run-7fc817aa\\mobile_inbox_detail.png",
+      "relativePath": "docs/evidence/P2_6/run-7fc817aa/mobile_inbox_detail.png",
+      "sizeBytes": 126441
+    },
+    {
+      "name": "mobile_inbox_list.png",
+      "path": "D:\\Web Dev\\Chat_Automation_Helpdesk\\docs\\evidence\\P2_6\\run-7fc817aa\\mobile_inbox_list.png",
+      "relativePath": "docs/evidence/P2_6/run-7fc817aa/mobile_inbox_list.png",
+      "sizeBytes": 128607
+    },
+    {
+      "name": "keyboard_focus_ring.png",
+      "path": "D:\\Web Dev\\Chat_Automation_Helpdesk\\docs\\evidence\\P2_6\\run-7fc817aa\\keyboard_focus_ring.png",
+      "relativePath": "docs/evidence/P2_6/run-7fc817aa/keyboard_focus_ring.png",
+      "sizeBytes": 131866
+    }
+  ],
+  "summary": {
+    "overallStatus": "PASS",
+    "exitCode": 0,
+    "total": 24,
+    "passed": 24,
+    "failed": 0,
+    "notRun": 0,
+    "mandatoryTotal": 24,
+    "mandatoryPassed": 24,
+    "mandatoryFailed": 0,
+    "mandatoryNotRun": 0
+  },
+  "assertions": [
+    {
+      "id": "build_source_binding_verification",
+      "name": "Validasi pengikatan BUILD_ID dan source hashes terhadap manifest build",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": "BUILD_ID dan seluruh source hashes cocok dengan manifest build (status VALID/SYNCHRONIZED)",
+      "actual": "SYNCHRONIZED: BUILD_ID dan seluruh source hashes cocok dengan manifest build"
+    },
+    {
+      "id": "auth_setup",
+      "name": "Autentikasi sesi staf untuk pengujian UI Inbox",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": "Sesi aktif pada rute /dashboard",
+      "actual": "Sesi aktif pada rute /dashboard"
+    },
+    {
+      "id": "shell_integration_and_indicators",
+      "name": "Integrasi shell dashboard: judul 'Inbox / Antrean', badge SHADOW, penanda dummy, dan target sentuh direktori pelanggan",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": {
+        "titleText": "Inbox / Antrean",
+        "hasShadowBadge": true,
+        "hasDummyBadge": true,
+        "touchTargetOk": true
+      },
+      "actual": {
+        "headerFound": true,
+        "titleText": "Inbox / Antrean",
+        "hasShadowBadge": true,
+        "hasDummyBadge": true,
+        "hasCustomerDirectoryLink": true,
+        "touchTargetOk": true
+      }
+    },
+    {
+      "id": "desktop_two_pane_layout",
+      "name": "Layout desktop (1280x800): dua panel berdampingan tanpa overflow",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": {
+        "hasList": true,
+        "hasDetail": true,
+        "isSideBySide": true,
+        "noHorizontalOverflow": true
+      },
+      "actual": {
+        "hasList": true,
+        "hasDetail": true,
+        "listWidth": 380,
+        "detailWidth": 797,
+        "isSideBySide": true,
+        "bodyScrollWidth": 1249,
+        "bodyClientWidth": 1249,
+        "noHorizontalOverflow": true
+      }
+    },
+    {
+      "id": "conversation_list_rendering",
+      "name": "Daftar percakapan memuat identitas pengirim, preview pesan, waktu WIB, badge unread, dan item percakapan",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": {
+        "totalItemsRendered": 25,
+        "hasWibTimeFormat": true
+      },
+      "actual": {
+        "totalItemsRendered": 25,
+        "unreadBadgeCount": 0,
+        "hasWibTimeFormat": true
+      }
+    },
+    {
+      "id": "non_color_selection_indicator",
+      "name": "Indikator percakapan terpilih memiliki pembeda non-warna ganda (border 4px + teks 'Dipilih')",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": {
+        "isSelected": true,
+        "borderLeftWidth": "4px",
+        "hasSelectedBadge": true,
+        "badgeText": "Dipilih"
+      },
+      "actual": {
+        "isSelected": true,
+        "borderLeftWidth": "4px",
+        "borderLeftColor": "rgb(0, 166, 81)",
+        "hasSelectedBadge": true,
+        "badgeText": "Dipilih"
+      }
+    },
+    {
+      "id": "conversation_detail_thread",
+      "name": "Panel detail menampilkan riwayat kronologis receivedAt ASC dan kartu informasi Fase P3",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": {
+        "messageCount": 9,
+        "hasP3Notice": true
+      },
+      "actual": {
+        "messageCount": 9,
+        "hasP3Notice": true,
+        "p3NoticeText": "Lewati ke konten utamaUpaznet HelpdeskWorkspaceInbox / AntreanGangguanBelum tersediaPelangganTemplateBelum tersediaLog & kesehatanBelum tersediaPengaturanBelum tersediaPrototype HelpdeskSeluruh data operasional adalah simulasi pengujian.Inbox / AntreanPrototype · Data dummyData dummytest-staff-run-7fc817aa@example.testKeluarWorkspace Antrean·Mode Otomasi: SHADOW (evaluasi internal tanpa pengiriman otomatis)·Data DummyBuka Direktori PelangganInbox / AntreanSHADOWDaftar komplain dan percakapan pelanggan dari Telegram.Cari percakapanCariPercakapan:SemuaAktifDitutupEpisode:Semua episodeBaru (NEW)Ditangani (IN_PROGRESS)Pulih (RESOLVED)Ditutup (CLOSED)Tanpa episodeBelum dibacaPerlu diperiksaMenampilkan 178 percakapan Limit 25 per halamansender-read-run-7fc817aa([Run-run-7fc817aa] Pelanggan Delta (Read Test))Terverifikasitelegrambaru sajaPesan Read 9: Konfirmasi penerimaan laporan ini ditunggu oleh pelanggan yang bersangkutan.Baru9sender-c-run-7fc817aa([Run-run-7fc817aa] Pelanggan Gamma (Non-Komplain))Terverifikasitelegrambaru sajaHalo admin, mau tanya info upgrade paket internet 50Mbps.Tanpa episode1sender-b-run-7fc817aa([Run-run-7fc817aa] Pelanggan Beta)Terverifikasitelegrambaru sajaKoneksi sangat lambat sejak kemarin.Ditangani1sender-a-run-7fc817aa([Run-run-7fc817aa] Pelanggan Alpha)Terverifikasitelegrambaru sajaDipilihPesan 9: Terima kasih atas responnya, kami menunggu update perbaikan dari tim teknisi.Baru6sender-extra-1-run-7fc817aa([Run-run-7fc817aa] Antrean Tambahan 01)Terverifikasitelegram1 mnt laluPesan antrean nomor 1 untuk pengujian paginasi.Ditangani1sender-extra-2-run-7fc817aa([Run-run-7fc817aa] Antrean Tambahan 02)Terverifikasitelegram2 mnt laluPesan antrean nomor 2 untuk pengujian paginasi.Baru1sender-extra-3-run-7fc817aa([Run-run-7fc817aa] Antrean Tambahan 03)Terverifikasitelegram3 mnt laluPesan antrean nomor 3 untuk pengujian paginasi.Ditangani1sender-extra-4-run-7fc817aa([Run-run-7fc817aa] Antrean Tambahan 04)Terverifikasitelegram4 mnt laluPesan antrean nomor 4 untuk pengujian paginasi.Baru1sender-extra-5-run-7fc817aa([Run-run-7fc817aa] Antrean Tambahan 05)Terverifikasitelegram5 mnt laluPesan antrean nomor 5 untuk pengujian paginasi.Ditangani1sender-extra-6-run-7fc817aa([Run-run-7fc817aa] Antrean Tambahan 06)Terverifikasitelegram6 mnt laluPesan antrean nomor 6 untuk pengujian paginasi.Baru1sender-extra-7-run-7fc817aa([Run-run-7fc817aa] Antrean Tambahan 07)Terverifikasitelegram7 mnt laluPesan antrean nomor 7 untuk pengujian paginasi.Ditangani1sender-extra-8-run-7fc817aa([Run-run-7fc817aa] Antrean Tambahan 08)Terverifikasitelegram8 mnt laluPesan antrean nomor 8 untuk pengujian paginasi.Baru1sender-extra-9-run-7fc817aa([Run-run-7fc817aa] Antrean Tambahan 09)Terverifikasitelegram9 mnt laluPesan antrean nomor 9 untuk pengujian paginasi.Ditangani1sender-extra-10-run-7fc817aa([Run-run-7fc817aa] Antrean Tambahan 10)Terverifikasitelegram10 mnt laluPesan antrean nomor 10 untuk pengujian paginasi.Baru1sender-extra-11-run-7fc817aa([Run-run-7fc817aa] Antrean Tambahan 11)Terverifikasitelegram11 mnt laluPesan antrean nomor 11 untuk pengujian paginasi.Ditangani1sender-extra-12-run-7fc817aa([Run-run-7fc817aa] Antrean Tambahan 12)Terverifikasitelegram12 mnt laluPesan antrean nomor 12 untuk pengujian paginasi.Baru1sender-extra-13-run-7fc817aa([Run-run-7fc817aa] Antrean Tambahan 13)Terverifikasitelegram13 mnt laluPesan antrean nomor 13 untuk pengujian paginasi.Ditangani1sender-extra-14-run-7fc817aa([Run-run-7fc817aa] Antrean Tambahan 14)Terverifikasitelegram14 mnt laluPesan antrean nomor 14 untuk pengujian paginasi.Baru1sender-extra-15-run-7fc817aa([Run-run-7fc817aa] Antrean Tambahan 15)Terverifikasitelegram15 mnt laluPesan antrean nomor 15 untuk pengujian paginasi.Ditangani1sender-extra-16-run-7fc817aa([Run-run-7fc817aa] Antrean Tambahan 16)Terverifikasitelegram16 mnt laluPesan antrean nomor 16 untuk pengujian paginasi.Baru1sender-extra-17-run-7fc817aa([Run-run-7fc817aa] Antrean Tambahan 17)Terverifikasitelegram17 mnt laluPesan antrean nomor 17 untuk pengujian paginasi.Ditangani1sender-extra-18-run-7fc817aa([Run-run-7fc817aa] Antrean Tambahan 18)Terverifikasitelegram18 mnt laluPesan antrean nomor 18 untuk pengujian paginasi.Baru1sender-extra-19-run-7fc817aa([Run-run-7fc817aa] Antrean Tambahan 19)Terverifikasitelegram19 mnt laluPesan antrean nomor 19 untuk pengujian paginasi.Ditangani1sender-extra-20-run-7fc817aa([Run-run-7fc817aa] Antrean Tambahan 20)Terverifikasitelegram20 mnt laluPesan antrean nomor 20 untuk pengujian paginasi.Baru1sender-extra-21-run-7fc817aa([Run-run-7fc817aa] Antrean Tambahan 21)Terverifikasitelegram21 mnt laluPesan antrean nomor 21 untuk pengujian paginasi.Ditangani1Halaman 1 dari 8·Total 178SebelumnyaBerikutnyasender-a-run-7fc817aa· Pelanggan: [Run-run-7fc817aa] Pelanggan AlphaTerverifikasi·ID: sender-a-run-7fc817aa·telegramPercakapan AktifBarusender-a-run-7fc817aa15.47 WIB·BaruPesan 1: Internet saya mati total sejak tadi subuh di Perumahan Griya Indah Blok A.Klasifikasi:KONEKSI_MATI(keyword_match)Kata kunci:mati totalAssessment Triage OtomatisMode SHADOWKeputusan: triaged (keyword_match)Klaim: claimed (new_complaint) · Dispatch: Tidaksender-a-run-7fc817aa15.47 WIB·BaruPesan 2: Lampu indikator LOS modem berkedip merah terang dan tidak ada sinyal sama sekali.Klasifikasi:KONEKSI_MATI(keyword_match)Kata kunci:mati totalsender-a-run-7fc817aa15.47 WIB·BaruPesan 3: Sudah saya coba cabut pasang kabel optik biru dan restart adaptor berkali-kali.Klasifikasi:KONEKSI_MATI(keyword_match)Kata kunci:mati totalsender-a-run-7fc817aa15.47 WIB·BaruPesan 4: Tetangga sebelah rumah juga mengeluhkan sambungan internetnya terputus mendadak.Klasifikasi:KONEKSI_MATI(keyword_match)Kata kunci:mati totalsender-a-run-7fc817aa15.47 WIB·BaruPesan 5: Mohon bantuan teknisi lapangan untuk memeriksa ODP distribusi di tiang depan rumah.Klasifikasi:KONEKSI_MATI(keyword_match)Kata kunci:mati totalsender-a-run-7fc817aa15.47 WIB·BaruPesan 6: Apakah ada informasi perkiraan waktu penyelesaian atau ada pemeliharaan jaringan?Klasifikasi:KONEKSI_MATI(keyword_match)Kata kunci:mati totalsender-a-run-7fc817aa15.47 WIB·DibacaPesan 7: Kami sangat membutuhkan koneksi yang stabil untuk operasional kerja harian dari rumah.Klasifikasi:KONEKSI_MATI(keyword_match)Kata kunci:mati totalsender-a-run-7fc817aa15.47 WIB·DibacaPesan 8: Sampai siang ini status koneksi masih belum berubah dan modem tetap alarm merah.Klasifikasi:KONEKSI_MATI(keyword_match)Kata kunci:mati totalsender-a-run-7fc817aa15.47 WIB·DibacaPesan 9: Terima kasih atas responnya, kami menunggu update perbaikan dari tim teknisi.Klasifikasi:KONEKSI_MATI(keyword_match)Kata kunci:mati totalBalasan Staf & Catatan Internal (Tahap P3)Composer pengetikan balasan manual ke pelanggan Telegram dan penyimpanan catatan internal staf akan hadir pada fase P3. Mode otomasi saat ini berjalan di mode SHADOW (evaluasi internal tanpa pengiriman otomatis)."
+      }
+    },
+    {
+      "id": "search_and_filters",
+      "name": "Filter bar mendukung pencarian kata kunci dan menyaring daftar secara akurat",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": {
+        "searchValue": "[Run-run-7fc817aa] Pelanggan Beta",
+        "onlyBetaVisible": true,
+        "isPageReset": true
+      },
+      "actual": {
+        "searchValue": "[Run-run-7fc817aa] Pelanggan Beta",
+        "filteredCount": 1,
+        "onlyBetaVisible": true,
+        "isPageReset": true
+      }
+    },
+    {
+      "id": "pagination_reset_on_filter_change",
+      "name": "Penerapan filter dari halaman 2 secara otomatis mereset paginasi kembali ke halaman 1",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": {
+        "initialPage2Active": true,
+        "initialPrevEnabled": true,
+        "isResetToPage1": true,
+        "prevDisabled": true,
+        "hasAlpha": true
+      },
+      "actual": {
+        "initialPage2Active": true,
+        "initialPrevEnabled": true,
+        "initialNavText": "Halaman 2 dari 2·Total 28SebelumnyaBerikutnya",
+        "isResetToPage1": true,
+        "prevDisabled": true,
+        "hasAlpha": true,
+        "navTextAfterReset": "Halaman 1 dari 1·Total 7SebelumnyaBerikutnya",
+        "filteredCount": 7
+      }
+    },
+    {
+      "id": "empty_vs_filtered_empty_states",
+      "name": "Membedakan state 'Inbox Kosong' dengan state 'Tidak ada hasil untuk filter ini' lengkap dengan tombol reset filter",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": {
+        "hasEmptyMessage": true,
+        "hasResetButton": true
+      },
+      "actual": {
+        "hasEmptyMessage": true,
+        "emptyMessageText": "Tidak ada hasil untuk filter ini.Coba ganti filter atau kata kunci pencarian Anda.Reset filter",
+        "hasResetButton": true
+      }
+    },
+    {
+      "id": "pagination_dataset_integrity",
+      "name": "Integritas paginasi 28 fixture: Halaman 1 (25 item) dan Halaman 2 (3 item) disjoin dan mencakup seluruh dataset",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": {
+        "page1Count": 25,
+        "page2Count": 3,
+        "combinedTotal": 28,
+        "intersectionCount": 0,
+        "missingFromRendered": 0,
+        "unexpectedRendered": 0
+      },
+      "actual": {
+        "page1Count": 25,
+        "page2Count": 3,
+        "combinedTotal": 28,
+        "intersectionCount": 0,
+        "missingFromRendered": 0,
+        "unexpectedRendered": 0
+      }
+    },
+    {
+      "id": "viewport_read_acknowledgment",
+      "name": "Penandaan baca hanya mengirim pesan yang terlihat dalam viewport panel aktif dan mengurangi badge unread secara akurat",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": {
+        "initialDbReadCount": 0,
+        "hasSuccessfulHttp200AndEnvelope": true,
+        "allVisibleConfirmed": true,
+        "anyOffViewportConfirmed": false,
+        "noSyncError": true
+      },
+      "actual": {
+        "initialDbReadCount": 0,
+        "hasSuccessfulHttp200AndEnvelope": true,
+        "successfulCallDetails": {
+          "status": 200,
+          "envelopeSuccess": true
+        },
+        "visibleCount": 3,
+        "offViewportCount": 6,
+        "confirmedInDbCount": 3,
+        "allVisibleConfirmed": true,
+        "anyOffViewportConfirmed": false,
+        "noSyncError": true
+      }
+    },
+    {
+      "id": "read_acknowledgment_retry_isolation",
+      "name": "Retry read-ack mengirimkan tepat snapshot pesan gagal tanpa penambahan ID baru dan terkonfirmasi di database",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": {
+        "bannerFound": true,
+        "isReadAckSpecific": true,
+        "exactSnapshotMatch": true,
+        "bannerDismissed": true,
+        "retriedDbConfirmed": true
+      },
+      "actual": {
+        "bannerFound": true,
+        "bannerText": "Gagal menyinkronkan status baca ke server.Coba lagi",
+        "failedIdsCount": 1,
+        "retriedIdsCount": 1,
+        "exactSnapshotMatch": true,
+        "bannerDismissed": true,
+        "retriedDbConfirmed": true
+      }
+    },
+    {
+      "id": "hidden_tab_read_suppression",
+      "name": "Tab dokumen tersembunyi tidak mengirim request read-ack atau mengubah status baca di database",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": {
+        "noNetworkCallsWhileHidden": true,
+        "noDbMutationsWhileHidden": true,
+        "readsTriggeredAfterVisible": true
+      },
+      "actual": {
+        "readsBeforeHidden": 2,
+        "readsWhileHidden": 2,
+        "noNetworkCallsWhileHidden": true,
+        "noDbMutationsWhileHidden": true,
+        "readsAfterVisible": 3,
+        "readsTriggeredAfterVisible": true
+      }
+    },
+    {
+      "id": "polling_and_scroll_retention",
+      "name": "Polling 5 detik memperbarui pesan tanpa memaksa auto-scroll saat membaca pesan lama, memunculkan pill 'Pesan baru di bawah'",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": {
+        "containerScrolledToTop": true,
+        "hasNewMessagePill": true
+      },
+      "actual": {
+        "containerScrolledToTop": true,
+        "hasNewMessagePill": true,
+        "pillText": "Pesan baru di bawah"
+      }
+    },
+    {
+      "id": "polling_failure_and_banner_alert",
+      "name": "Kegagalan polling mempertahankan data terakhir dan menampilkan banner 'Pembaruan terhenti' dengan timestamp pembaruan terakhir (WIB)",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": {
+        "bannerFound": true,
+        "bannerTextContains": "Pembaruan terhenti",
+        "hasRetryBtn": true
+      },
+      "actual": {
+        "bannerFound": true,
+        "bannerText": "Pembaruan terhenti. Terakhir diperbarui pukul 15.47 WIB. Data terakhir tetap ditampilkan.Coba lagi",
+        "hasRetryBtn": true
+      }
+    },
+    {
+      "id": "polling_overlap_with_foreground_fetch",
+      "name": "Resiliensi loading saat request foreground tumpang tindih dengan polling komponen (loading selesai, tombol aktif, data sesuai)",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": {
+        "foregroundStarted": true,
+        "pollingStarted": true,
+        "itemCount": 3,
+        "prevEnabled": true,
+        "nextDisabled": true
+      },
+      "actual": {
+        "foregroundStarted": true,
+        "pollingStarted": true,
+        "pollingResolved": true,
+        "foregroundResolved": true,
+        "prevDisabled": false,
+        "nextDisabled": true,
+        "itemCount": 3,
+        "navText": "Halaman 2 dari 2·Total 28SebelumnyaBerikutnya"
+      }
+    },
+    {
+      "id": "stale_response_rejection",
+      "name": "Respons detail lama yang tertunda tidak menimpa percakapan baru yang telah dipilih",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": {
+        "initialConversationIsC": true,
+        "aRequestedAndHeld": true,
+        "bRenderedBeforeARelease": true,
+        "aSettled": true,
+        "panelDisplaysBeta": true,
+        "panelDisplaysAlpha": false,
+        "selectedItemIsBeta": true,
+        "eventSequence": [
+          "A_requested",
+          "B_rendered",
+          "A_released",
+          "A_resolved",
+          "B_remains_active"
+        ]
+      },
+      "actual": {
+        "initialConversationIsC": true,
+        "aRequestedAndHeld": true,
+        "bRenderedBeforeARelease": true,
+        "aSettled": true,
+        "panelDisplaysBeta": true,
+        "panelDisplaysAlpha": false,
+        "selectedItemIsBeta": true,
+        "eventSequence": [
+          "A_requested",
+          "B_rendered",
+          "A_released",
+          "A_resolved",
+          "B_remains_active"
+        ],
+        "conversations": {
+          "convAId": "c322ebfe-b3b9-4a26-b5db-62436f1e9e19",
+          "convBId": "33b20c65-febb-4ce8-87df-e02690b79fa7",
+          "initialConvCId": "158ebe67-f7d9-48d2-9eef-8ffd20373c7b"
+        }
+      }
+    },
+    {
+      "id": "detail_failure_isolation_after_open",
+      "name": "Kegagalan memuat detail percakapan baru menampilkan pesan error terisolasi tanpa membocorkan data percakapan sebelumnya",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": {
+        "initialAOpen": true,
+        "isAlphaRendered": false,
+        "hasDetailError": true
+      },
+      "actual": {
+        "initialAOpen": true,
+        "isAlphaRendered": false,
+        "hasDetailError": true,
+        "errorText": "Gagal memuat detail percakapanGagal memuat detail percakapan (status 500).Coba lagi"
+      }
+    },
+    {
+      "id": "list_error_and_recovery_isolated",
+      "name": "Kegagalan daftar percakapan terisolasi dari panel detail dan pulih secara independen saat dicoba lagi",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": {
+        "beforeRecovery": {
+          "hasListError": true,
+          "hasDetailError": true
+        },
+        "afterRecovery": {
+          "listErrorCleared": true,
+          "itemsRestored": true,
+          "detailErrorPersists": true
+        }
+      },
+      "actual": {
+        "beforeRecovery": {
+          "hasListError": true,
+          "hasListRetryBtn": true,
+          "hasDetailError": true
+        },
+        "afterRecovery": {
+          "hasListError": false,
+          "itemsRestoredCount": 25,
+          "hasDetailError": true,
+          "listRetryRequested": true
+        }
+      }
+    },
+    {
+      "id": "detail_error_and_recovery_isolated",
+      "name": "Kegagalan detail percakapan terisolasi dari daftar dan pulih secara independen saat dicoba lagi",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": {
+        "beforeRecovery": {
+          "hasListError": true,
+          "hasDetailError": true
+        },
+        "afterRecovery": {
+          "detailErrorCleared": true,
+          "displaysBeta": true,
+          "messagesLoaded": true,
+          "listErrorPersists": true
+        }
+      },
+      "actual": {
+        "beforeRecovery": {
+          "hasListError": true,
+          "hasDetailError": true,
+          "hasDetailRetryBtn": true
+        },
+        "afterRecovery": {
+          "hasListError": true,
+          "hasDetailError": false,
+          "displaysBeta": true,
+          "messagesLoaded": true,
+          "detailRetryRequested": true
+        }
+      }
+    },
+    {
+      "id": "mobile_viewport_and_navigation",
+      "name": "Viewport mobile (375x667) menampilkan single-pane dengan tombol 'Kembali' yang mempertahankan konteks filter dan daftar",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": {
+        "backToListOk": true,
+        "reopenSameConvOk": true
+      },
+      "actual": {
+        "back": {
+          "isListVisible": true,
+          "isDetailHidden": true
+        },
+        "reopen": {
+          "isListHidden": true,
+          "isDetailVisible": true,
+          "detailHasBeta": true
+        }
+      }
+    },
+    {
+      "id": "keyboard_navigation_and_focus",
+      "name": "Navigasi keyboard menampilkan focus ring yang terlihat jelas dan region aria-live polite untuk notifikasi",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": {
+        "hasFocusVisibleClass": true,
+        "hasAriaLiveRegion": true
+      },
+      "actual": {
+        "activeTagName": "button",
+        "hasFocusVisibleClass": true,
+        "hasAriaLiveRegion": true
+      }
+    },
+    {
+      "id": "runner_cleanup_and_teardown",
+      "name": "Pembersihan proses, user staf, dan fixture pengujian selesai tanpa residu atau kegagalan",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": "Cleanup selesai tanpa error dan 0 residu",
+      "actual": "Semua proses dihentikan, user dihapus, fixture dibersihkan, residu = 0"
+    }
+  ],
+  "cleanupErrors": [],
+  "cleanupSummary": {
+    "initialCleanupError": null,
+    "totalCleanupErrors": 0,
+    "residualVerification": "0 residu (conversations=0, messages=0, identities=0)"
+  }
+}

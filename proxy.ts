@@ -1,12 +1,14 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { resolveSupabaseAuthConfig } from "./lib/supabase/auth-config";
 
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request });
+  const { url, key } = resolveSupabaseAuthConfig(process.env);
 
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
+    url,
+    key,
     {
       cookies: {
         getAll() {
@@ -40,7 +42,9 @@ export async function proxy(request: NextRequest) {
     "private, no-cache, no-store, must-revalidate, max-age=0",
   );
   response.headers.set("Pragma", "no-cache");
-  response.headers.set("Expires", "0");
+  if (process.env.TEST_RUN_ID) {
+    response.headers.set("x-test-server-run-id", process.env.TEST_RUN_ID);
+  }
 
   return response;
 }

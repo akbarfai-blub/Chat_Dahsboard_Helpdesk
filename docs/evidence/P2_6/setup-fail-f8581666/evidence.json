@@ -1,0 +1,77 @@
+{
+  "timestamp": "2026-10-07T08:13:10.586Z",
+  "runId": "setup-fail-f8581666",
+  "mode": "setup_failure",
+  "expectedExitCode": 1,
+  "calculatedExitCode": 1,
+  "buildIdentity": {
+    "buildId": "I0LId5PqSH7QOBl8HCYN4",
+    "sourceHashesAtBuild": {
+      "components/inbox/inbox-conversation-panel.tsx": "85d47b36a2918c74339b2f6bc45a5896dd5c4dbc346ce52945b8a03b4808fefb",
+      "components/inbox/inbox-dashboard.tsx": "308417cfb315def6f02974a934f189221a0cd8c371630ab31cd239b360da5d10",
+      "components/inbox/inbox-conversation-list.tsx": "37ef98a5530afdeada7ebac486e384c3f0c002659cd852e71984ee884534a3a5",
+      "app/dashboard/complaints/page.tsx": "aed660a75c1cad40c85f7ee61a06fa39c818200b175b0c68d2022fc366536de7",
+      "lib/supabase/auth-config.ts": "7ba80cf0a5bc0a16d473257c0e8a996151bdd35bf3c62b3c5ed8153312b4080d",
+      "lib/application/inbox-contracts.ts": "f5db1e3fc528d0aafa7d9ab2f2aef2f8f41fa5f38382942a8742999435757b3e",
+      "lib/application/inbox-service.server.ts": "2a3ba888fcebb66f6720e768177381c88111eaa569c183a15e88663571d8aed3",
+      "lib/application/origin-validator.ts": "d86014ec774013e5060a3a81137919071bbd134b2a04c7a56c7905cead6a1cb5"
+    },
+    "sourceHashesAtFinalize": {
+      "components/inbox/inbox-conversation-panel.tsx": "85d47b36a2918c74339b2f6bc45a5896dd5c4dbc346ce52945b8a03b4808fefb",
+      "components/inbox/inbox-dashboard.tsx": "308417cfb315def6f02974a934f189221a0cd8c371630ab31cd239b360da5d10",
+      "components/inbox/inbox-conversation-list.tsx": "37ef98a5530afdeada7ebac486e384c3f0c002659cd852e71984ee884534a3a5",
+      "app/dashboard/complaints/page.tsx": "aed660a75c1cad40c85f7ee61a06fa39c818200b175b0c68d2022fc366536de7",
+      "lib/supabase/auth-config.ts": "7ba80cf0a5bc0a16d473257c0e8a996151bdd35bf3c62b3c5ed8153312b4080d",
+      "lib/application/inbox-contracts.ts": "f5db1e3fc528d0aafa7d9ab2f2aef2f8f41fa5f38382942a8742999435757b3e",
+      "lib/application/inbox-service.server.ts": "2a3ba888fcebb66f6720e768177381c88111eaa569c183a15e88663571d8aed3",
+      "lib/application/origin-validator.ts": "d86014ec774013e5060a3a81137919071bbd134b2a04c7a56c7905cead6a1cb5"
+    },
+    "isSynchronized": true
+  },
+  "runnerRevisionSha256": "b945740e749ce38735c159e2bd4273d068dce74fe4d51612c0d1bb4fae779a23",
+  "screenshots": [],
+  "summary": {
+    "overallStatus": "FAIL",
+    "exitCode": 1,
+    "total": 3,
+    "passed": 2,
+    "failed": 1,
+    "notRun": 0,
+    "mandatoryTotal": 3,
+    "mandatoryPassed": 2,
+    "mandatoryFailed": 1,
+    "mandatoryNotRun": 0
+  },
+  "assertions": [
+    {
+      "id": "setup_failure_injected",
+      "name": "Injeksi kegagalan saat setup untuk menguji rollback resource",
+      "isOptional": false,
+      "status": "FAIL",
+      "expected": "Kegagalan saat setup memicu rollback di catch/finally",
+      "actual": "Simulated setup failure after user creation"
+    },
+    {
+      "id": "teardown_user_deleted",
+      "name": "User staf terisolasi berhasil dihapus saat rollback setup failure",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": "User staf terhapus dari auth",
+      "actual": "User staf test-staff-setup-fail-f8581666@example.test berhasil dihapus"
+    },
+    {
+      "id": "runner_cleanup_and_teardown",
+      "name": "Pembersihan proses, user staf, dan fixture pengujian selesai tanpa residu atau kegagalan",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": "Cleanup selesai tanpa error dan 0 residu",
+      "actual": "Semua proses dihentikan, user dihapus, fixture dibersihkan, residu = 0"
+    }
+  ],
+  "cleanupErrors": [],
+  "cleanupSummary": {
+    "initialCleanupError": null,
+    "totalCleanupErrors": 0,
+    "residualVerification": "0 residu (conversations=0, messages=0, identities=0)"
+  }
+}

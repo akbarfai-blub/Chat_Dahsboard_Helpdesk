@@ -1,0 +1,56 @@
+{
+  "timestamp": "2026-10-06T21:40:28.616Z",
+  "runId": "9489f201",
+  "mode": "setup_failure",
+  "codeRevisions": {
+    "tests/interactive/verify-p26-inbox.mjs": "12cd2f1e3db45eae",
+    "components/inbox/inbox-conversation-panel.tsx": "85d47b36a2918c74",
+    "components/inbox/inbox-dashboard.tsx": "308417cfb315def6",
+    "components/inbox/inbox-conversation-list.tsx": "37ef98a5530afdea",
+    "lib/supabase/auth-config.ts": "7ba80cf0a5bc0a16"
+  },
+  "summary": {
+    "overallStatus": "FAIL",
+    "exitCode": 1,
+    "total": 3,
+    "passed": 2,
+    "failed": 1,
+    "notRun": 0,
+    "mandatoryTotal": 3,
+    "mandatoryPassed": 2,
+    "mandatoryFailed": 1,
+    "mandatoryNotRun": 0
+  },
+  "assertions": [
+    {
+      "id": "setup_failure_injected",
+      "name": "Injeksi kegagalan saat setup untuk menguji rollback resource",
+      "isOptional": false,
+      "status": "FAIL",
+      "expected": "Kegagalan saat setup memicu rollback di catch/finally",
+      "actual": "Simulated setup failure after user creation"
+    },
+    {
+      "id": "teardown_user_deleted",
+      "name": "User staf terisolasi berhasil dihapus saat rollback setup failure",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": "User staf terhapus dari auth",
+      "actual": "User staf test-staff-9489f201@example.test berhasil dihapus"
+    },
+    {
+      "id": "runner_cleanup_and_teardown",
+      "name": "Pembersihan proses, user staf, dan fixture pengujian selesai tanpa residu atau kegagalan",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": "Cleanup selesai tanpa error dan 0 residu",
+      "actual": "Semua proses dihentikan, user dihapus, fixture dibersihkan, residu = 0"
+    }
+  ],
+  "cleanupErrors": [],
+  "cleanupSummary": {
+    "initialCleanupError": null,
+    "totalCleanupErrors": 0,
+    "residualVerification": "0 residu (conversations=0, messages=0, identities=0)"
+  }
+}

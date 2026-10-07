@@ -1,0 +1,65 @@
+{
+  "updatedAt": "2026-10-07T08:48:29.369Z",
+  "modes": {
+    "guard_rejection": {
+      "runId": "guard-316b9a84",
+      "evidenceDir": "docs/evidence/P2_6/guard-316b9a84",
+      "evidencePath": "docs/evidence/P2_6/guard-316b9a84/evidence.json",
+      "timestamp": "2026-10-07T08:13:05.468Z",
+      "overallStatus": "PASS",
+      "expectedExitCode": 0,
+      "calculatedExitCode": 0,
+      "buildId": "I0LId5PqSH7QOBl8HCYN4",
+      "runnerRevisionSha256": "b945740e749ce38735c159e2bd4273d068dce74fe4d51612c0d1bb4fae779a23",
+      "screenshotsCount": 0
+    },
+    "setup_failure": {
+      "runId": "setup-fail-f8581666",
+      "evidenceDir": "docs/evidence/P2_6/setup-fail-f8581666",
+      "evidencePath": "docs/evidence/P2_6/setup-fail-f8581666/evidence.json",
+      "timestamp": "2026-10-07T08:13:10.586Z",
+      "overallStatus": "FAIL",
+      "expectedExitCode": 1,
+      "calculatedExitCode": 1,
+      "buildId": "I0LId5PqSH7QOBl8HCYN4",
+      "runnerRevisionSha256": "b945740e749ce38735c159e2bd4273d068dce74fe4d51612c0d1bb4fae779a23",
+      "screenshotsCount": 0
+    },
+    "midrun_failure": {
+      "runId": "midrun-fail-a783dbf9",
+      "evidenceDir": "docs/evidence/P2_6/midrun-fail-a783dbf9",
+      "evidencePath": "docs/evidence/P2_6/midrun-fail-a783dbf9/evidence.json",
+      "timestamp": "2026-10-07T08:13:27.493Z",
+      "overallStatus": "FAIL",
+      "expectedExitCode": 1,
+      "calculatedExitCode": 1,
+      "buildId": "I0LId5PqSH7QOBl8HCYN4",
+      "runnerRevisionSha256": "b945740e749ce38735c159e2bd4273d068dce74fe4d51612c0d1bb4fae779a23",
+      "screenshotsCount": 1
+    },
+    "cleanup_failure": {
+      "runId": "cleanup-fail-fc83f2bc",
+      "evidenceDir": "docs/evidence/P2_6/cleanup-fail-fc83f2bc",
+      "evidencePath": "docs/evidence/P2_6/cleanup-fail-fc83f2bc/evidence.json",
+      "timestamp": "2026-10-07T08:14:30.301Z",
+      "overallStatus": "FAIL",
+      "expectedExitCode": 1,
+      "calculatedExitCode": 1,
+      "buildId": "I0LId5PqSH7QOBl8HCYN4",
+      "runnerRevisionSha256": "b945740e749ce38735c159e2bd4273d068dce74fe4d51612c0d1bb4fae779a23",
+      "screenshotsCount": 7
+    },
+    "live_browser_normal": {
+      "runId": "run-7fc817aa",
+      "evidenceDir": "docs/evidence/P2_6/run-7fc817aa",
+      "evidencePath": "docs/evidence/P2_6/run-7fc817aa/evidence.json",
+      "timestamp": "2026-10-07T08:48:29.368Z",
+      "overallStatus": "PASS",
+      "expectedExitCode": 0,
+      "calculatedExitCode": 0,
+      "buildId": "F-DKJqKQFwVIN2WjYeN-h",
+      "runnerRevisionSha256": "981bed57424824f3c5fd000301eda833efef56eaecea9a3a9645c45471393525",
+      "screenshotsCount": 7
+    }
+  }
+}
