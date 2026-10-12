@@ -286,6 +286,66 @@ function createMockHashes(prefix = "hash_") {
   );
 }
 
+// --------------------------------------------------------------------------
+// Kasus Tambahan: Mode foreign failure (foreign_check_failure & foreign_delete_failure) -> NOT_APPLICABLE
+// --------------------------------------------------------------------------
+{
+  const chkValidation = validateBuildMetadata({
+    manifest: null,
+    currentBuildId: null,
+    launchHashes: null,
+    finalizeHashes: null,
+    mode: "foreign_check_failure",
+  });
+  const chkPass =
+    chkValidation.isValid === true &&
+    chkValidation.isApplicable === false &&
+    chkValidation.status === "NOT_APPLICABLE";
+
+  assertTest(
+    "Kasus Tambahan: Mode foreign_check_failure berstatus NOT_APPLICABLE tanpa memaksakan sinkronisasi",
+    chkPass,
+    { validationStatus: chkValidation.status, isApplicable: chkValidation.isApplicable }
+  );
+
+  const delValidation = validateBuildMetadata({
+    manifest: null,
+    currentBuildId: null,
+    launchHashes: null,
+    finalizeHashes: null,
+    mode: "foreign_delete_failure",
+  });
+  const delPass =
+    delValidation.isValid === true &&
+    delValidation.isApplicable === false &&
+    delValidation.status === "NOT_APPLICABLE";
+
+  assertTest(
+    "Kasus Tambahan: Mode foreign_delete_failure berstatus NOT_APPLICABLE tanpa memaksakan sinkronisasi",
+    delPass,
+    { validationStatus: delValidation.status, isApplicable: delValidation.isApplicable }
+  );
+
+  // Unknown mode: strictly treated as application mode, requiring valid manifest
+  const unknownValidation = validateBuildMetadata({
+    manifest: null,
+    currentBuildId: null,
+    launchHashes: null,
+    finalizeHashes: null,
+    mode: "unknown_custom_mode",
+  });
+  const unknownPass =
+    unknownValidation.isValid === false &&
+    unknownValidation.isApplicable === true &&
+    unknownValidation.status === "MISSING_OR_INVALID_MANIFEST";
+
+  assertTest(
+    "Kasus Tambahan: Mode tidak dikenal tetap dikenakan validasi ketat dan ditolak jika manifest absen",
+    unknownPass,
+    { validationStatus: unknownValidation.status, isApplicable: unknownValidation.isApplicable }
+  );
+}
+
 console.log("\n========================================================");
 const passedCount = testResults.filter((r) => r.pass).length;
 const totalCount = testResults.length;

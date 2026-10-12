@@ -1,0 +1,27 @@
+{
+  "updatedAt": "2026-10-12T00:17:18.815Z",
+  "modes": {
+    "live_browser_normal": {
+      "runId": "p28-75081ab2",
+      "evidenceDir": "docs/evidence/P2_8/p28-75081ab2",
+      "evidencePath": "docs/evidence/P2_8/p28-75081ab2/evidence.json",
+      "timestamp": "2026-10-12T00:01:59.014Z",
+      "overallStatus": "PASS",
+      "expectedExitCode": 0,
+      "calculatedExitCode": 0,
+      "buildId": "iOA-WRCicCUpodwhhbh-Q",
+      "screenshotsCount": 8
+    },
+    "targeted_mobile": {
+      "runId": "p28-554dc41a",
+      "evidenceDir": "docs/evidence/P2_8/p28-554dc41a",
+      "evidencePath": "docs/evidence/P2_8/p28-554dc41a/evidence.json",
+      "timestamp": "2026-10-12T00:17:18.813Z",
+      "overallStatus": "PASS",
+      "expectedExitCode": 0,
+      "calculatedExitCode": 0,
+      "buildId": "iOA-WRCicCUpodwhhbh-Q",
+      "screenshotsCount": 1
+    }
+  }
+}

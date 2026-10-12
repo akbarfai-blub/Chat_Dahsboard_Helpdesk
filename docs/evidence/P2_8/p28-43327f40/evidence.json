@@ -1,0 +1,32 @@
+{
+  "runId": "p28-43327f40",
+  "timestamp": "2026-10-11T19:07:30.324Z",
+  "overallStatus": "FAIL",
+  "expectedExitCode": 1,
+  "calculatedExitCode": 1,
+  "totalAssertions": 2,
+  "passedAssertions": 1,
+  "failedAssertions": 1,
+  "screenshots": [],
+  "assertions": [
+    {
+      "id": "build_source_binding_verification",
+      "name": "Pengikatan build-to-source valid dan BUILD_ID tersinkronisasi",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": "SYNCHRONIZED",
+      "actual": "SYNCHRONIZED"
+    },
+    {
+      "id": "runner_cleanup_and_teardown",
+      "name": "Pembersihan proses Chrome/Next.js, user staf, dan fixture database selesai tanpa residu",
+      "isOptional": false,
+      "status": "FAIL",
+      "expected": "cleanupErrors.length === 0",
+      "actual": "column \"direction\" of relation \"messages\" does not exist"
+    }
+  ],
+  "cleanupErrors": [
+    "column \"direction\" of relation \"messages\" does not exist"
+  ]
+}

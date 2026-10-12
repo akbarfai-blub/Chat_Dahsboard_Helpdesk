@@ -65,3 +65,16 @@ Baca [docs/PRD.md](docs/PRD.md) sebelum implementasi dan [docs/DESIGN_SYSTEM.md]
 - Jika fakta vendor belum diketahui, gunakan interface/mock dan tandai OPEN ITEM. Jika bukti jaringan tidak cukup, jangan klaim gangguan terkonfirmasi; gunakan generic/manual sesuai PRD.
 
 
+## Review Policy — Risk-Tiered (hemat token)
+
+Saat mereview hasil kerja agent eksekutor (Antigravity/Gemini) terhadap suatu task, tentukan tier risikonya dulu sebelum memutuskan kedalaman review:
+
+- TIER RENDAH (UI/styling, layout, copy teks, token design system): cukup baca ringkasan perubahan + diff stat (jumlah file/baris). JANGAN baca full file kecuali ada tanda mencurigakan di ringkasan.
+- TIER MENENGAH (business logic, transformasi data, validasi form): review `git diff` saja, JANGAN baca ulang seluruh file/codebase. Fokus cek logika sesuai Acceptance Criteria di PRD, bukan gaya kode.
+- TIER TINGGI (auth, RLS/akses database, apa pun yang menyentuh decision-log locked terkait akses data D66/D70, logika transaksi/klaim, migrasi schema): WAJIB review dalam (baca file terkait penuh) DAN minta bukti test eksplisit sebelum menandai "Done".
+
+Untuk testing: JANGAN jalankan ulang test sendiri. Minta ringkasan hasil test dari eksekutor (jumlah passed/failed + assertion kunci), lalu audit apakah ringkasan itu benar-benar menutup Acceptance Criteria — bukan re-eksekusi test.
+
+Default status kalau tidak ada bukti verifikasi konkret: "In Progress", bukan "Done", terlepas dari tier.
+
+

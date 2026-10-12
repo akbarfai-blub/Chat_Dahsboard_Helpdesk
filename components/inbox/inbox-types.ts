@@ -10,6 +10,13 @@ import type {
   InboxEpisodeStatusFilter,
   MarkConversationReadCommand,
   MarkConversationReadResult,
+  InboxConversationTopology,
+  InboxHistoricalAssessmentEvidence,
+  InboxHistoricalAssessment,
+  InboxActiveIncidentSummary,
+  InboxConversationContext,
+  InboxNetworkCheckResult,
+  InboxStaffClassification,
 } from "@/lib/application/inbox-contracts";
 
 export type {
@@ -24,6 +31,13 @@ export type {
   InboxEpisodeStatusFilter,
   MarkConversationReadCommand,
   MarkConversationReadResult,
+  InboxConversationTopology,
+  InboxHistoricalAssessmentEvidence,
+  InboxHistoricalAssessment,
+  InboxActiveIncidentSummary,
+  InboxConversationContext,
+  InboxNetworkCheckResult,
+  InboxStaffClassification,
 };
 
 export interface InboxFilterState {

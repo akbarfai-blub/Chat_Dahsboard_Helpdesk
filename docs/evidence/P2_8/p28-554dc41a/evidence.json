@@ -1,0 +1,48 @@
+{
+  "runId": "p28-554dc41a",
+  "timestamp": "2026-10-12T00:17:18.813Z",
+  "overallStatus": "PASS",
+  "expectedExitCode": 0,
+  "calculatedExitCode": 0,
+  "totalAssertions": 4,
+  "passedAssertions": 4,
+  "failedAssertions": 0,
+  "screenshots": [
+    "06_mobile_confirmation_error.png"
+  ],
+  "assertions": [
+    {
+      "id": "build_source_binding_verification",
+      "name": "Pengikatan build-to-source valid dan BUILD_ID tersinkronisasi",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": "SYNCHRONIZED",
+      "actual": "SYNCHRONIZED"
+    },
+    {
+      "id": "auth_setup",
+      "name": "Autentikasi sesi staf pada aplikasi Next.js asli (/login -> /dashboard)",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": "/dashboard",
+      "actual": "/dashboard"
+    },
+    {
+      "id": "responsive_mobile_viewport_and_touch_target",
+      "name": "Responsivitas mobile (375px) & ukuran touch target: tanpa overflow, kontrol form dan error banner >= 40px terukur",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": "hasHorizontalOverflow=false, all controls (form & error banner) width and height >= 40px, no button overlap",
+      "actual": "overflow=false, editBtn=85x44px, cancelBtn=56x44px, saveBtn=110x44px, optionCard=253x44px, retryBtn=80x44px, dismissBtn=57x44px, noOverlap=true"
+    },
+    {
+      "id": "runner_cleanup_and_teardown",
+      "name": "Pembersihan proses Chrome/Next.js, user staf, dan fixture database selesai tanpa residu",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": "cleanupErrors.length === 0",
+      "actual": "Clean teardown"
+    }
+  ],
+  "cleanupErrors": []
+}

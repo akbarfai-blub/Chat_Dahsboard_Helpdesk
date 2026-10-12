@@ -1,0 +1,89 @@
+{
+  "updatedAt": "2026-10-10T19:02:30.723Z",
+  "modes": {
+    "live_interactive_and_semantics": {
+      "runId": "run-e305b850",
+      "evidenceDir": "docs/evidence/P2_7/run-e305b850",
+      "evidencePath": "docs/evidence/P2_7/run-e305b850/evidence.json",
+      "timestamp": "2026-10-09T11:32:56.916Z",
+      "overallStatus": "PASS",
+      "expectedExitCode": 0,
+      "calculatedExitCode": 0,
+      "buildId": "jVgf1Z3Yt4RV7Ebye5QRN",
+      "runnerRevisionSha256": "9525de7b81e2ec0641118e193ab67644dd1f2b9b5f9ab8c76b3be50b3a96dc00",
+      "screenshotsCount": 5
+    },
+    "guard_rejection": {
+      "runId": "guard-fa9f950b",
+      "evidenceDir": "docs/evidence/P2_7/guard-fa9f950b",
+      "evidencePath": "docs/evidence/P2_7/guard-fa9f950b/evidence.json",
+      "timestamp": "2026-10-10T17:35:00.577Z",
+      "overallStatus": "PASS",
+      "expectedExitCode": 0,
+      "calculatedExitCode": 0,
+      "buildId": "T03sqBYh5cjVTfuKOsPAB",
+      "runnerRevisionSha256": "bf7f65153b5a536788145500f31278d4b588b4d206e02a7c4b0eeaa7b600e496",
+      "screenshotsCount": 0
+    },
+    "setup_failure": {
+      "runId": "setup-fail-2252d1db",
+      "evidenceDir": "docs/evidence/P2_7/setup-fail-2252d1db",
+      "evidencePath": "docs/evidence/P2_7/setup-fail-2252d1db/evidence.json",
+      "timestamp": "2026-10-10T13:56:30.239Z",
+      "overallStatus": "FAIL",
+      "expectedExitCode": 1,
+      "calculatedExitCode": 1,
+      "buildId": "T03sqBYh5cjVTfuKOsPAB",
+      "runnerRevisionSha256": "d22a22f9e0a63b369cf7ffa0bbc532f28a7c66ee4b5de50f9377ab12e5241294",
+      "screenshotsCount": 0
+    },
+    "live_browser_normal": {
+      "runId": "run-0efe31f6",
+      "evidenceDir": "docs/evidence/P2_7/run-0efe31f6",
+      "evidencePath": "docs/evidence/P2_7/run-0efe31f6/evidence.json",
+      "timestamp": "2026-10-10T17:36:19.212Z",
+      "overallStatus": "PASS",
+      "expectedExitCode": 0,
+      "calculatedExitCode": 0,
+      "buildId": "T03sqBYh5cjVTfuKOsPAB",
+      "runnerRevisionSha256": "bf7f65153b5a536788145500f31278d4b588b4d206e02a7c4b0eeaa7b600e496",
+      "screenshotsCount": 9
+    },
+    "cleanup_failure": {
+      "runId": "cleanup-fail-e3658802",
+      "evidenceDir": "docs/evidence/P2_7/cleanup-fail-e3658802",
+      "evidencePath": "docs/evidence/P2_7/cleanup-fail-e3658802/evidence.json",
+      "timestamp": "2026-10-10T13:56:33.819Z",
+      "overallStatus": "FAIL",
+      "expectedExitCode": 1,
+      "calculatedExitCode": 1,
+      "buildId": "T03sqBYh5cjVTfuKOsPAB",
+      "runnerRevisionSha256": "d22a22f9e0a63b369cf7ffa0bbc532f28a7c66ee4b5de50f9377ab12e5241294",
+      "screenshotsCount": 0
+    },
+    "foreign_check_failure": {
+      "runId": "foreign-chk-fail-4dc15a98",
+      "evidenceDir": "docs/evidence/P2_7/foreign-chk-fail-4dc15a98",
+      "evidencePath": "docs/evidence/P2_7/foreign-chk-fail-4dc15a98/evidence.json",
+      "timestamp": "2026-10-10T19:02:19.993Z",
+      "overallStatus": "FAIL",
+      "expectedExitCode": 1,
+      "calculatedExitCode": 1,
+      "buildId": "T03sqBYh5cjVTfuKOsPAB",
+      "runnerRevisionSha256": "37180bcb4858abab10d1c04f2f16f21a06a06aceebabcbd3e535264d3d5be339",
+      "screenshotsCount": 0
+    },
+    "foreign_delete_failure": {
+      "runId": "foreign-del-fail-7b2c2a72",
+      "evidenceDir": "docs/evidence/P2_7/foreign-del-fail-7b2c2a72",
+      "evidencePath": "docs/evidence/P2_7/foreign-del-fail-7b2c2a72/evidence.json",
+      "timestamp": "2026-10-10T19:02:30.721Z",
+      "overallStatus": "FAIL",
+      "expectedExitCode": 1,
+      "calculatedExitCode": 1,
+      "buildId": "T03sqBYh5cjVTfuKOsPAB",
+      "runnerRevisionSha256": "37180bcb4858abab10d1c04f2f16f21a06a06aceebabcbd3e535264d3d5be339",
+      "screenshotsCount": 0
+    }
+  }
+}

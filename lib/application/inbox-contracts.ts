@@ -100,6 +100,29 @@ export interface InboxTriageAssessmentSummary {
   };
 }
 
+export interface InboxStaffClassification {
+  readonly labeledCategory: "connection_complaint" | "other" | "review";
+  readonly status: "confirmed" | "corrected";
+  readonly notes: string | null;
+  readonly staffId: string;
+  readonly staffEmail?: string | null;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+}
+
+export interface SaveStaffClassificationParams {
+  readonly conversationId: string;
+  readonly messageId: string;
+  readonly category: "connection_complaint" | "other" | "review";
+  readonly notes?: string | null;
+}
+
+export interface SaveStaffClassificationResult {
+  readonly saved: boolean;
+  readonly isIdempotent: boolean;
+  readonly classification: InboxStaffClassification;
+}
+
 export interface InboxMessageDetail {
   readonly id: string;
   readonly conversationId: string;
@@ -121,6 +144,7 @@ export interface InboxMessageDetail {
   readonly reviewReason: string | null;
   readonly complaintId: string | null;
   readonly triageAssessment: InboxTriageAssessmentSummary | null;
+  readonly staffClassification: InboxStaffClassification | null;
   readonly isRead: boolean;
 }
 
@@ -283,3 +307,137 @@ export function parseInboxListQuery(
     },
   };
 }
+
+export interface InboxConversationTopology {
+  readonly odpId: string;
+  readonly odpCode: string;
+  readonly odcId: string;
+  readonly odcCode: string;
+  readonly mappingVersion: number;
+  readonly source: string;
+  readonly validFrom: string;
+}
+
+export interface InboxHistoricalAssessmentEvidence {
+  readonly kind: "onu" | "upstream" | "area" | "mapping" | "incident";
+  readonly summary: string;
+  readonly details: Record<string, unknown>;
+}
+
+export interface InboxHistoricalAssessment {
+  readonly messageId: string;
+  readonly evaluatedAt: string;
+  readonly ruleVersion: string;
+  readonly outcome: "candidate" | "review";
+  readonly reason: string;
+  readonly candidateTemplateKey: string | null;
+  readonly effectiveTemplateKey: string | null;
+  readonly incidentId: string | null;
+  readonly eventIds: readonly string[];
+  readonly notes: readonly string[];
+  readonly automation: {
+    readonly mode: string | null;
+    readonly disposition: string;
+    readonly blockedReasons: readonly string[];
+  };
+  readonly evidence: readonly InboxHistoricalAssessmentEvidence[];
+  readonly providerQuality: Record<string, unknown> | null;
+}
+
+export interface InboxActiveIncidentSummary {
+  readonly id: string;
+  readonly type: "GENERAL" | "AREA_SPECIFIC";
+  readonly status: "ACTIVE";
+  readonly odpIds: readonly string[];
+  readonly odcIds: readonly string[];
+  readonly version: number;
+}
+
+export interface InboxConversationContext {
+  readonly conversationId: string;
+  readonly sender: {
+    readonly id: string;
+    readonly senderExternalId: string;
+    readonly displayName: string | null;
+    readonly verificationStatus: "unverified" | "verified";
+    readonly verifiedAt: string | null;
+  };
+  readonly identityResolution: {
+    readonly outcome: "resolved" | "manual";
+    readonly reason: string;
+    readonly ruleVersion: string;
+  };
+  readonly customer: {
+    readonly id: string;
+    readonly displayName: string | null;
+    readonly status: string;
+  } | null;
+  readonly service: {
+    readonly id: string;
+    readonly serviceCode: string;
+    readonly status: string;
+  } | null;
+  readonly candidateServices: readonly {
+    readonly id: string;
+    readonly serviceCode: string;
+    readonly status: string;
+  }[];
+  readonly topology: InboxConversationTopology | null;
+  readonly latestEpisode: InboxEpisodeSummary | null;
+  readonly historicalAssessment: InboxHistoricalAssessment | null;
+  readonly activeIncident: InboxActiveIncidentSummary | null;
+}
+
+export interface InboxNetworkCheckResult {
+  readonly outcome: "ok" | "not_found" | "error" | "unresolved";
+  readonly reason: string | null;
+  readonly source: "MOCK";
+  readonly scenarioId: string;
+  readonly customerId?: string | null;
+  readonly serviceId?: string | null;
+  readonly checkedAt: string;
+  readonly onu: {
+    readonly status: "LOS" | "online" | "unknown";
+    readonly reportedStatus: "LOS" | "online" | "unknown" | null;
+    readonly quality: string;
+    readonly observedAt: string | null;
+    readonly eventId: string | null;
+    readonly source: "MOCK";
+  };
+  readonly upstream: readonly {
+    readonly linkId: string;
+    readonly mappingVersion: number;
+    readonly observation: {
+      readonly status: "up" | "down" | "unknown";
+      readonly reportedStatus: "up" | "down" | "unknown" | null;
+      readonly quality: string;
+      readonly observedAt: string | null;
+      readonly eventId: string | null;
+    };
+  }[];
+  readonly upstreamQuality: string;
+  readonly areas: readonly {
+    readonly scope: "ODP" | "ODC";
+    readonly scopeId: string;
+    readonly state: "indicated" | "no_indication" | "unknown";
+    readonly total: number;
+    readonly valid: number;
+    readonly los: number;
+    readonly coverage: number;
+    readonly losRatio: number;
+    readonly thresholdVersion: string;
+    readonly observedAt: string | null;
+  }[];
+  readonly indicatedArea: { readonly scope: "ODP" | "ODC"; readonly scopeId: string } | null;
+  readonly mapping: {
+    readonly serviceId: string;
+    readonly version: number;
+    readonly odpId: string;
+    readonly odpCode: string;
+    readonly odcId: string;
+    readonly odcCode: string;
+    readonly source: string;
+    readonly validFrom: string;
+  } | null;
+}
+

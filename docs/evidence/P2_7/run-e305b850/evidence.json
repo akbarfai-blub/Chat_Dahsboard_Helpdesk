@@ -1,0 +1,273 @@
+{
+  "timestamp": "2026-10-09T11:32:56.916Z",
+  "runId": "run-e305b850",
+  "mode": "live_interactive_and_semantics",
+  "expectedExitCode": 0,
+  "calculatedExitCode": 0,
+  "buildIdentity": {
+    "status": "SYNCHRONIZED",
+    "buildId": "jVgf1Z3Yt4RV7Ebye5QRN",
+    "scope": "p27_inbox_and_evidence",
+    "scopeDescription": "Subkelompok berkas UI Inbox, panel evidence, routing context/check, dan semantics P2.7",
+    "trackedFiles": [
+      "components/inbox/inbox-conversation-panel.tsx",
+      "components/inbox/inbox-dashboard.tsx",
+      "components/inbox/inbox-evidence-panel.tsx",
+      "components/inbox/inbox-conversation-list.tsx",
+      "components/inbox/inbox-filter-bar.tsx",
+      "components/inbox/inbox-pagination.tsx",
+      "components/inbox/inbox-status-badge.tsx",
+      "components/inbox/inbox-status-banner.tsx",
+      "components/inbox/inbox-types.ts",
+      "components/layout/dashboard-shell.tsx",
+      "app/dashboard/page.tsx",
+      "app/dashboard/complaints/page.tsx",
+      "app/api/inbox/conversations/[id]/context/route.ts",
+      "app/api/inbox/conversations/[id]/network-check/route.ts",
+      "lib/supabase/auth-config.ts",
+      "lib/supabase/server.ts",
+      "lib/application/inbox-contracts.ts",
+      "lib/application/inbox-service.server.ts",
+      "lib/application/inbox-service.ts",
+      "lib/application/origin-validator.ts",
+      "lib/domain/evidence-semantics.ts",
+      "lib/utils/format-date.ts"
+    ]
+  },
+  "runnerRevisionSha256": "9525de7b81e2ec0641118e193ab67644dd1f2b9b5f9ab8c76b3be50b3a96dc00",
+  "summary": {
+    "total": 19,
+    "passed": 19,
+    "failed": 0,
+    "overallStatus": "PASS",
+    "exitCode": 0
+  },
+  "screenshots": [
+    {
+      "name": "desktop_wide_three_columns.png",
+      "path": "D:\\Web Dev\\Chat_Automation_Helpdesk\\docs\\evidence\\P2_7\\run-e305b850\\screenshots\\desktop_wide_three_columns.png",
+      "relativePath": "docs/evidence/P2_7/run-e305b850/screenshots/desktop_wide_three_columns.png",
+      "sizeBytes": 48951
+    },
+    {
+      "name": "desktop_drawer_closed.png",
+      "path": "D:\\Web Dev\\Chat_Automation_Helpdesk\\docs\\evidence\\P2_7\\run-e305b850\\screenshots\\desktop_drawer_closed.png",
+      "relativePath": "docs/evidence/P2_7/run-e305b850/screenshots/desktop_drawer_closed.png",
+      "sizeBytes": 23619
+    },
+    {
+      "name": "desktop_drawer_open.png",
+      "path": "D:\\Web Dev\\Chat_Automation_Helpdesk\\docs\\evidence\\P2_7\\run-e305b850\\screenshots\\desktop_drawer_open.png",
+      "relativePath": "docs/evidence/P2_7/run-e305b850/screenshots/desktop_drawer_open.png",
+      "sizeBytes": 31227
+    },
+    {
+      "name": "mobile_messages_tab.png",
+      "path": "D:\\Web Dev\\Chat_Automation_Helpdesk\\docs\\evidence\\P2_7\\run-e305b850\\screenshots\\mobile_messages_tab.png",
+      "relativePath": "docs/evidence/P2_7/run-e305b850/screenshots/mobile_messages_tab.png",
+      "sizeBytes": 19784
+    },
+    {
+      "name": "mobile_context_tab.png",
+      "path": "D:\\Web Dev\\Chat_Automation_Helpdesk\\docs\\evidence\\P2_7\\run-e305b850\\screenshots\\mobile_context_tab.png",
+      "relativePath": "docs/evidence/P2_7/run-e305b850/screenshots/mobile_context_tab.png",
+      "sizeBytes": 17827
+    }
+  ],
+  "assertions": [
+    {
+      "id": "build_source_binding_verification",
+      "name": "Validasi pengikatan BUILD_ID dan source hashes terhadap manifest build P2.7",
+      "status": "PASS",
+      "pass": true,
+      "expected": "SYNCHRONIZED dengan 22 berkas terdaftar dan BUILD_ID identik",
+      "actual": "SYNCHRONIZED: BUILD_ID dan seluruh source hashes cocok dengan manifest build",
+      "details": {
+        "buildId": "jVgf1Z3Yt4RV7Ebye5QRN",
+        "scope": "p27_inbox_and_evidence",
+        "trackedFilesCount": 22
+      },
+      "timestamp": "2026-10-09T11:32:53.580Z"
+    },
+    {
+      "id": "proof_age_dynamic_staleness_calculation",
+      "name": "Perhitungan dinamis usia bukti: fresh (<5 mnt), stale (>=5 mnt), masa depan/null invalid",
+      "status": "PASS",
+      "pass": true,
+      "expected": "fresh=false stale, stale=true stale, future/null=null",
+      "actual": "fresh.isStaleNow=false, stale.isStaleNow=true, future=null",
+      "details": null,
+      "timestamp": "2026-10-09T11:32:53.581Z"
+    },
+    {
+      "id": "evidence_semantics_onu_online_not_wifi_normal",
+      "name": "Semantik ONU online: secara eksplisit menegaskan bukan bukti internet/Wi-Fi normal",
+      "status": "PASS",
+      "pass": true,
+      "expected": "Catatan semantik menyertakan 'bukan bukti koneksi internet atau Wi-Fi normal'",
+      "actual": "Perangkat terhubung ke OLT. Perangkat online bukan bukti koneksi internet atau Wi-Fi normal.",
+      "details": null,
+      "timestamp": "2026-10-09T11:32:53.581Z"
+    },
+    {
+      "id": "evidence_semantics_los_not_physical_cut",
+      "name": "Semantik LOS: secara eksplisit menegaskan bukan bukti kabel fisik tertentu putus",
+      "status": "PASS",
+      "pass": true,
+      "expected": "Catatan semantik menyertakan 'bukan bukti kabel fisik tertentu putus'",
+      "actual": "Loss of Signal terdeteksi pada optik ONU. Sinyal hilang bukan bukti kabel fisik tertentu putus.",
+      "details": null,
+      "timestamp": "2026-10-09T11:32:53.581Z"
+    },
+    {
+      "id": "evidence_semantics_provider_error_not_down",
+      "name": "Semantik Timeout & Gangguan Monitor: bukan bukti jaringan pelanggan down",
+      "status": "PASS",
+      "pass": true,
+      "expected": "Keterangan timeout dan provider_error menegaskan bukan bukti down",
+      "actual": "timeout: Pemeriksaan melampaui batas waktu 2 detik (bukan bukti jaringan down)., provider_error: Terjadi kesalahan internal pada provider (bukan bukti jaringan down).",
+      "details": null,
+      "timestamp": "2026-10-09T11:32:53.581Z"
+    },
+    {
+      "id": "network_check_distinct_upstream_evidence",
+      "name": "Status upstream sebagai sumber bukti independen dari perangkat pelanggan",
+      "status": "PASS",
+      "pass": true,
+      "expected": "Upstream up=success, down=danger dan dievaluasi independen",
+      "actual": "up=success, down=danger",
+      "details": null,
+      "timestamp": "2026-10-09T11:32:53.581Z"
+    },
+    {
+      "id": "network_check_area_coverage_denominators",
+      "name": "Coverage area mempertahankan penyebut eksak (LOS / valid / total) dan rasio cakupan",
+      "status": "PASS",
+      "pass": true,
+      "expected": "4 LOS / 8 valid / 10 total (80% cakupan)",
+      "actual": "4 LOS / 8 valid / 10 total (80% cakupan)",
+      "details": null,
+      "timestamp": "2026-10-09T11:32:53.581Z"
+    },
+    {
+      "id": "triage_historical_assessment_fidelity",
+      "name": "Penjelasan alasan triage historis memetakan seluruh kode domain ke bahasa operasional",
+      "status": "PASS",
+      "pass": true,
+      "expected": "Title dan rekomendasi operasional terdefinisi",
+      "actual": "los_area: Indikasi Gangguan Area (LOS Area), general: Incident Umum Aktif (Override)",
+      "details": null,
+      "timestamp": "2026-10-09T11:32:53.581Z"
+    },
+    {
+      "id": "identity_context_verified_resolution",
+      "name": "Pengirim terverifikasi meresolusi pelanggan, layanan tunggal, dan status aktif",
+      "status": "PASS",
+      "pass": true,
+      "expected": "Customer dan service ID tervalidasi server",
+      "actual": "customer=cust-1, service=SRV-TEST-001",
+      "details": null,
+      "timestamp": "2026-10-09T11:32:53.581Z"
+    },
+    {
+      "id": "identity_context_unverified_safe_degradation",
+      "name": "Pengirim belum terverifikasi tidak membocorkan detail pelanggan/layanan (fail-closed)",
+      "status": "PASS",
+      "pass": true,
+      "expected": "customer=null dan service=null",
+      "actual": "customer=null, service=null",
+      "details": null,
+      "timestamp": "2026-10-09T11:32:53.581Z"
+    },
+    {
+      "id": "identity_context_topology_odp_odc",
+      "name": "Topologi ODP/ODC dan versi mapping tersedia untuk layanan terverifikasi",
+      "status": "PASS",
+      "pass": true,
+      "expected": "ODP-DUMMY-01, ODC-DUMMY-01, v1",
+      "actual": "ODP-DUMMY-01, v1",
+      "details": null,
+      "timestamp": "2026-10-09T11:32:53.581Z"
+    },
+    {
+      "id": "network_check_unresolved_safety",
+      "name": "Pemeriksaan jaringan pada pengirim belum terverifikasi mengembalikan outcome unresolved tanpa akses provider",
+      "status": "PASS",
+      "pass": true,
+      "expected": "outcome=unresolved, 0 provider lookup",
+      "actual": "outcome=unresolved (sender_identity_unresolved_or_unverified)",
+      "details": null,
+      "timestamp": "2026-10-09T11:32:53.581Z"
+    },
+    {
+      "id": "network_check_distinct_onu_evidence",
+      "name": "Hasil pemeriksaan jaringan melaporkan status ONU (online/LOS) beserta event ID dan reported status",
+      "status": "PASS",
+      "pass": true,
+      "expected": "Status ONU, reportedStatus, dan eventId tercatat",
+      "actual": "Status ONU online, reportedStatus online, eventId EVT-ONU-01",
+      "details": null,
+      "timestamp": "2026-10-09T11:32:53.581Z"
+    },
+    {
+      "id": "desktop_wide_three_column_layout",
+      "name": "Layar lebar (>= 1440px) menampilkan layout 3-kolom berdampingan tanpa drawer",
+      "status": "PASS",
+      "pass": true,
+      "expected": "Evidence panel tampil permanen berdampingan (width > 300px)",
+      "actual": "list=380px, chat=680px, evidence=380px",
+      "details": null,
+      "timestamp": "2026-10-09T11:32:54.591Z"
+    },
+    {
+      "id": "desktop_medium_drawer_slide_over",
+      "name": "Layar sedang (1024-1439px) membuka panel evidence melalui drawer dengan focus trap awal",
+      "status": "PASS",
+      "pass": true,
+      "expected": "Drawer terbuka, aria-expanded=true, fokus diarahkan ke tombol tutup",
+      "actual": "isOpen=true, focus=close-drawer-btn",
+      "details": null,
+      "timestamp": "2026-10-09T11:32:55.285Z"
+    },
+    {
+      "id": "desktop_medium_drawer_keyboard_escape",
+      "name": "Tombol Escape menutup drawer dan mengembalikan fokus keyboard ke tombol pemicu",
+      "status": "PASS",
+      "pass": true,
+      "expected": "Drawer tertutup dan fokus kembali ke toggle-evidence-drawer-btn",
+      "actual": "isOpen=false, focus=toggle-evidence-drawer-btn",
+      "details": null,
+      "timestamp": "2026-10-09T11:32:55.595Z"
+    },
+    {
+      "id": "mobile_subnav_tabs_switching",
+      "name": "Layar mobile (< 1024px) beralih mulus antara tab Percakapan dan tab Konteks & Bukti Jaringan",
+      "status": "PASS",
+      "pass": true,
+      "expected": "Tab Konteks aktif, container pesan disembunyikan, evidence ditampilkan",
+      "actual": "tabSelected=true, msgsDisplay=none, ctxDisplay=block",
+      "details": null,
+      "timestamp": "2026-10-09T11:32:56.333Z"
+    },
+    {
+      "id": "mobile_hidden_tab_read_suppression",
+      "name": "Pesan tersembunyi di balik tab Konteks disupresi dari penandaan baca (read-ack tidak aktif)",
+      "status": "PASS",
+      "pass": true,
+      "expected": "activeMobileTab === 'context' memblokir IntersectionObserver / read-ack",
+      "actual": "Supresi read-ack aktif saat tab konteks dibuka",
+      "details": null,
+      "timestamp": "2026-10-09T11:32:56.333Z"
+    },
+    {
+      "id": "runner_cleanup_and_teardown",
+      "name": "Pembersihan proses, server harness, dan port uji selesai tanpa residu",
+      "status": "PASS",
+      "pass": true,
+      "expected": "Proses berhenti, port dibebaskan, residu 0",
+      "actual": "Semua proses dihentikan dan port dilepaskan bersih",
+      "details": null,
+      "timestamp": "2026-10-09T11:32:56.915Z"
+    }
+  ]
+}

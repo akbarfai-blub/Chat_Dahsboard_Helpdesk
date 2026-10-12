@@ -1,0 +1,315 @@
+{
+  "timestamp": "2026-10-09T18:37:19.947Z",
+  "runId": "run-6de37674",
+  "mode": "live_browser_normal",
+  "runnerRevisionSha256": "32b0aaad57c51dd7a316d01292f24e3d8a1072e695c481a2dfc1ab48fd441faa",
+  "expectedExitCode": 0,
+  "calculatedExitCode": 0,
+  "buildIdentity": {
+    "status": "SYNCHRONIZED",
+    "isApplicable": true,
+    "isValid": true,
+    "buildId": "Jl0Rd3ZKQUNrwBojD4gWJ",
+    "manifestBuildId": "Jl0Rd3ZKQUNrwBojD4gWJ",
+    "scope": "p27_inbox_and_evidence",
+    "scopeDescription": "Subkelompok berkas UI Inbox, panel evidence, routing context/check, dan semantics P2.7",
+    "trackedFiles": [
+      "components/inbox/inbox-conversation-panel.tsx",
+      "components/inbox/inbox-dashboard.tsx",
+      "components/inbox/inbox-evidence-panel.tsx",
+      "components/inbox/inbox-conversation-list.tsx",
+      "components/inbox/inbox-filter-bar.tsx",
+      "components/inbox/inbox-pagination.tsx",
+      "components/inbox/inbox-status-badge.tsx",
+      "components/inbox/inbox-status-banner.tsx",
+      "components/inbox/inbox-types.ts",
+      "components/layout/dashboard-shell.tsx",
+      "app/dashboard/page.tsx",
+      "app/dashboard/complaints/page.tsx",
+      "app/api/inbox/conversations/[id]/context/route.ts",
+      "app/api/inbox/conversations/[id]/network-check/route.ts",
+      "lib/supabase/auth-config.ts",
+      "lib/supabase/server.ts",
+      "lib/application/inbox-contracts.ts",
+      "lib/application/inbox-service.server.ts",
+      "lib/application/inbox-service.ts",
+      "lib/application/origin-validator.ts",
+      "lib/domain/evidence-semantics.ts",
+      "lib/utils/format-date.ts",
+      "app/globals.css"
+    ],
+    "sourceHashesAtBuild": {
+      "components/inbox/inbox-conversation-panel.tsx": "429c42df4bfc4e13ceef2e4a89f93830a060d1ddcc5f363362b75eb22e8379ad",
+      "components/inbox/inbox-dashboard.tsx": "34aec11d4a896fbe5ab91dc05f823d8666b99994291d99aba78fdb41c466f0ed",
+      "components/inbox/inbox-evidence-panel.tsx": "a0f068681bee456f0aea3a90ca2aaa0a0444a595d17b5e3a911fcce49edb63e8",
+      "components/inbox/inbox-conversation-list.tsx": "37ef98a5530afdeada7ebac486e384c3f0c002659cd852e71984ee884534a3a5",
+      "components/inbox/inbox-filter-bar.tsx": "a04ffd161867dca515fce0ec29385cbe8dc2cbdcb58d3c015445244434ecb6fb",
+      "components/inbox/inbox-pagination.tsx": "8c21fc06243d63d938a1240f7e4f02ff6273ce8a940e15c5a267747bb3c8be4f",
+      "components/inbox/inbox-status-badge.tsx": "cae837e2e7916275674f1c56c4ca5175984646a4783759fd784e13e4fbc3a494",
+      "components/inbox/inbox-status-banner.tsx": "ea86dc334dfa173d6eae6740dd2955afba051d6ac43b2639f2ff3ae187912fa6",
+      "components/inbox/inbox-types.ts": "0c61be15e04b541334edc2a919687077e55241856ddba22c95bb216d259e9947",
+      "components/layout/dashboard-shell.tsx": "e6834cf374d8c315b6fb2c439bfe28d0fe020f32d0e5e8dffcf0d64bc6e245ac",
+      "app/dashboard/page.tsx": "fafe3fb0e885294f256e1d717be27c7f64d0e5ef45b4ea9c83e700fe263e6d72",
+      "app/dashboard/complaints/page.tsx": "aed660a75c1cad40c85f7ee61a06fa39c818200b175b0c68d2022fc366536de7",
+      "app/api/inbox/conversations/[id]/context/route.ts": "eb13981e654bf089367e2285cc01cb101ca006082ef52fd2acb338f54005e67a",
+      "app/api/inbox/conversations/[id]/network-check/route.ts": "541c26468face198ee1775788b2511ac89590e2a17e544e95067250afab3819a",
+      "lib/supabase/auth-config.ts": "7ba80cf0a5bc0a16d473257c0e8a996151bdd35bf3c62b3c5ed8153312b4080d",
+      "lib/supabase/server.ts": "1a34658a36d1c89c772d92236943ccc6667517cc57d19d72cfe57ce29d01607b",
+      "lib/application/inbox-contracts.ts": "19d84b2d1b1894f11f11285885d7fb0afef02eb0b76926428be1f48f18c07baf",
+      "lib/application/inbox-service.server.ts": "e7ebad5efa656a6e10a19e4beea9c1e08ce51cbe9a8c0373db9e8af115eff3b2",
+      "lib/application/inbox-service.ts": "444eb71bb15632cb6b21ffcff1c1189b30dfadaceeac1bc6bf6bcbe5df9b8653",
+      "lib/application/origin-validator.ts": "d86014ec774013e5060a3a81137919071bbd134b2a04c7a56c7905cead6a1cb5",
+      "lib/domain/evidence-semantics.ts": "a3229422a466c69d29e0a92a9a37990096701a30fdacfd2332fdceefa8d6fad3",
+      "lib/utils/format-date.ts": "d9570454184cdd3edc7d56a9a3d140b188aa87be61fd81484fe3ad6397c92bb3",
+      "app/globals.css": "a615680d7bf87839856b80839a916bb11a3d3bf2a8a4650203e410b4377e46d6"
+    },
+    "sourceHashesAtLaunch": {
+      "components/inbox/inbox-conversation-panel.tsx": "429c42df4bfc4e13ceef2e4a89f93830a060d1ddcc5f363362b75eb22e8379ad",
+      "components/inbox/inbox-dashboard.tsx": "34aec11d4a896fbe5ab91dc05f823d8666b99994291d99aba78fdb41c466f0ed",
+      "components/inbox/inbox-evidence-panel.tsx": "a0f068681bee456f0aea3a90ca2aaa0a0444a595d17b5e3a911fcce49edb63e8",
+      "components/inbox/inbox-conversation-list.tsx": "37ef98a5530afdeada7ebac486e384c3f0c002659cd852e71984ee884534a3a5",
+      "components/inbox/inbox-filter-bar.tsx": "a04ffd161867dca515fce0ec29385cbe8dc2cbdcb58d3c015445244434ecb6fb",
+      "components/inbox/inbox-pagination.tsx": "8c21fc06243d63d938a1240f7e4f02ff6273ce8a940e15c5a267747bb3c8be4f",
+      "components/inbox/inbox-status-badge.tsx": "cae837e2e7916275674f1c56c4ca5175984646a4783759fd784e13e4fbc3a494",
+      "components/inbox/inbox-status-banner.tsx": "ea86dc334dfa173d6eae6740dd2955afba051d6ac43b2639f2ff3ae187912fa6",
+      "components/inbox/inbox-types.ts": "0c61be15e04b541334edc2a919687077e55241856ddba22c95bb216d259e9947",
+      "components/layout/dashboard-shell.tsx": "e6834cf374d8c315b6fb2c439bfe28d0fe020f32d0e5e8dffcf0d64bc6e245ac",
+      "app/dashboard/page.tsx": "fafe3fb0e885294f256e1d717be27c7f64d0e5ef45b4ea9c83e700fe263e6d72",
+      "app/dashboard/complaints/page.tsx": "aed660a75c1cad40c85f7ee61a06fa39c818200b175b0c68d2022fc366536de7",
+      "app/api/inbox/conversations/[id]/context/route.ts": "eb13981e654bf089367e2285cc01cb101ca006082ef52fd2acb338f54005e67a",
+      "app/api/inbox/conversations/[id]/network-check/route.ts": "541c26468face198ee1775788b2511ac89590e2a17e544e95067250afab3819a",
+      "lib/supabase/auth-config.ts": "7ba80cf0a5bc0a16d473257c0e8a996151bdd35bf3c62b3c5ed8153312b4080d",
+      "lib/supabase/server.ts": "1a34658a36d1c89c772d92236943ccc6667517cc57d19d72cfe57ce29d01607b",
+      "lib/application/inbox-contracts.ts": "19d84b2d1b1894f11f11285885d7fb0afef02eb0b76926428be1f48f18c07baf",
+      "lib/application/inbox-service.server.ts": "e7ebad5efa656a6e10a19e4beea9c1e08ce51cbe9a8c0373db9e8af115eff3b2",
+      "lib/application/inbox-service.ts": "444eb71bb15632cb6b21ffcff1c1189b30dfadaceeac1bc6bf6bcbe5df9b8653",
+      "lib/application/origin-validator.ts": "d86014ec774013e5060a3a81137919071bbd134b2a04c7a56c7905cead6a1cb5",
+      "lib/domain/evidence-semantics.ts": "a3229422a466c69d29e0a92a9a37990096701a30fdacfd2332fdceefa8d6fad3",
+      "lib/utils/format-date.ts": "d9570454184cdd3edc7d56a9a3d140b188aa87be61fd81484fe3ad6397c92bb3",
+      "app/globals.css": "a615680d7bf87839856b80839a916bb11a3d3bf2a8a4650203e410b4377e46d6"
+    },
+    "sourceHashesAtFinalize": {
+      "components/inbox/inbox-conversation-panel.tsx": "429c42df4bfc4e13ceef2e4a89f93830a060d1ddcc5f363362b75eb22e8379ad",
+      "components/inbox/inbox-dashboard.tsx": "34aec11d4a896fbe5ab91dc05f823d8666b99994291d99aba78fdb41c466f0ed",
+      "components/inbox/inbox-evidence-panel.tsx": "a0f068681bee456f0aea3a90ca2aaa0a0444a595d17b5e3a911fcce49edb63e8",
+      "components/inbox/inbox-conversation-list.tsx": "37ef98a5530afdeada7ebac486e384c3f0c002659cd852e71984ee884534a3a5",
+      "components/inbox/inbox-filter-bar.tsx": "a04ffd161867dca515fce0ec29385cbe8dc2cbdcb58d3c015445244434ecb6fb",
+      "components/inbox/inbox-pagination.tsx": "8c21fc06243d63d938a1240f7e4f02ff6273ce8a940e15c5a267747bb3c8be4f",
+      "components/inbox/inbox-status-badge.tsx": "cae837e2e7916275674f1c56c4ca5175984646a4783759fd784e13e4fbc3a494",
+      "components/inbox/inbox-status-banner.tsx": "ea86dc334dfa173d6eae6740dd2955afba051d6ac43b2639f2ff3ae187912fa6",
+      "components/inbox/inbox-types.ts": "0c61be15e04b541334edc2a919687077e55241856ddba22c95bb216d259e9947",
+      "components/layout/dashboard-shell.tsx": "e6834cf374d8c315b6fb2c439bfe28d0fe020f32d0e5e8dffcf0d64bc6e245ac",
+      "app/dashboard/page.tsx": "fafe3fb0e885294f256e1d717be27c7f64d0e5ef45b4ea9c83e700fe263e6d72",
+      "app/dashboard/complaints/page.tsx": "aed660a75c1cad40c85f7ee61a06fa39c818200b175b0c68d2022fc366536de7",
+      "app/api/inbox/conversations/[id]/context/route.ts": "eb13981e654bf089367e2285cc01cb101ca006082ef52fd2acb338f54005e67a",
+      "app/api/inbox/conversations/[id]/network-check/route.ts": "541c26468face198ee1775788b2511ac89590e2a17e544e95067250afab3819a",
+      "lib/supabase/auth-config.ts": "7ba80cf0a5bc0a16d473257c0e8a996151bdd35bf3c62b3c5ed8153312b4080d",
+      "lib/supabase/server.ts": "1a34658a36d1c89c772d92236943ccc6667517cc57d19d72cfe57ce29d01607b",
+      "lib/application/inbox-contracts.ts": "19d84b2d1b1894f11f11285885d7fb0afef02eb0b76926428be1f48f18c07baf",
+      "lib/application/inbox-service.server.ts": "e7ebad5efa656a6e10a19e4beea9c1e08ce51cbe9a8c0373db9e8af115eff3b2",
+      "lib/application/inbox-service.ts": "444eb71bb15632cb6b21ffcff1c1189b30dfadaceeac1bc6bf6bcbe5df9b8653",
+      "lib/application/origin-validator.ts": "d86014ec774013e5060a3a81137919071bbd134b2a04c7a56c7905cead6a1cb5",
+      "lib/domain/evidence-semantics.ts": "a3229422a466c69d29e0a92a9a37990096701a30fdacfd2332fdceefa8d6fad3",
+      "lib/utils/format-date.ts": "d9570454184cdd3edc7d56a9a3d140b188aa87be61fd81484fe3ad6397c92bb3",
+      "app/globals.css": "a615680d7bf87839856b80839a916bb11a3d3bf2a8a4650203e410b4377e46d6"
+    },
+    "checks": {
+      "manifestExists": true,
+      "buildIdMatch": true,
+      "launchSourceMatch": true,
+      "runtimeSourceMatch": true
+    },
+    "reason": "BUILD_ID dan seluruh source hashes cocok dengan manifest build"
+  },
+  "screenshots": [
+    "01_desktop_wide_1440.png",
+    "02_desktop_medium_drawer_closed.png",
+    "03_desktop_medium_drawer_open.png",
+    "04_mobile_context_tab.png",
+    "05_mobile_messages_tab.png",
+    "06_network_check_completed.png",
+    "07_unverified_safe_degradation.png",
+    "08_ambiguous_services_warning.png",
+    "09_dynamic_stale_downgrade.png"
+  ],
+  "summary": {
+    "overallStatus": "PASS",
+    "exitCode": 0,
+    "total": 21,
+    "passed": 21,
+    "failed": 0,
+    "notRun": 0
+  },
+  "assertions": [
+    {
+      "id": "build_source_binding_verification",
+      "name": "Pengikatan build-to-source valid dan BUILD_ID tersinkronisasi",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": "SYNCHRONIZED",
+      "actual": "SYNCHRONIZED"
+    },
+    {
+      "id": "auth_setup",
+      "name": "Autentikasi sesi staf pada aplikasi Next.js asli (/login -> /dashboard)",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": "/dashboard",
+      "actual": "/dashboard"
+    },
+    {
+      "id": "desktop_wide_three_column_layout",
+      "name": "Desktop lebar (1440px): 3 kolom permanen berdampingan (list=300px, chat>=420px, evidence=280px) tanpa overflow",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": "list=300px, evidence=280px, conversation>=420px, overflow=false, drawerBtnVisible=false",
+      "actual": "list=300px, evidence=280px, conversation=629px, overflow=false, drawerBtnVisible=false"
+    },
+    {
+      "id": "identity_context_verified_resolution",
+      "name": "Pengirim terverifikasi meresolusi pelanggan dan layanan aktif tunggal",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": "Pelanggan Alpha, Terverifikasi, SRV-P27-run-6de37674",
+      "actual": "cust=true, verif=true, srv=true"
+    },
+    {
+      "id": "identity_context_topology_odp_odc",
+      "name": "Topologi ODP dan ODC ditampilkan secara tepat untuk layanan aktif",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": "ODP-P27-run-6de37674 dan ODC-P27-run-6de37674",
+      "actual": "odp=true, odc=true"
+    },
+    {
+      "id": "operational_context_active_incident",
+      "name": "Incident aktif saat ini ditampilkan dalam bagian konteks operasional aktif",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": "Incident Aktif Saat Ini dengan ID c851aa21-c3a2-4af4-9ec4-acd65e7237ab",
+      "actual": "hasActiveIncident=true"
+    },
+    {
+      "id": "triage_historical_assessment_fidelity",
+      "name": "Keputusan triage historis menampilkan alasan, template, dan incident historis tersimpan",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": "Keputusan los_area dan incident historis tersimpan",
+      "actual": "histAssessment=true, histInc=true"
+    },
+    {
+      "id": "desktop_medium_drawer_slide_over",
+      "name": "Desktop sedang (1280px): tombol drawer memunculkan dialog slide-over konteks bukti",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": "drawerBtnVisible=true, dialogFound=true",
+      "actual": "drawerBtnVisible=true, dialogFound=true"
+    },
+    {
+      "id": "desktop_medium_drawer_focus_trap_and_escape",
+      "name": "Focus trap aktif saat drawer terbuka, tombol Escape menutup drawer dan mengembalikan fokus",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": "focusInside=true, dialogClosed=true",
+      "actual": "focusInside=true, dialogClosed=true"
+    },
+    {
+      "id": "drawer_read_ack_suppression",
+      "name": "Supresi read-ack saat drawer terbuka dan konfirmasi baca tercatat di DB setelah ditutup",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": "beforeClose=0, afterClose>0",
+      "actual": "beforeClose=0, afterClose=1"
+    },
+    {
+      "id": "mobile_subnav_tabs_and_read_suppression",
+      "name": "Tampilan mobile (375px) dengan tab konteks menyupresi read-ack, memulihkannya saat resize desktop, menyupresinya lagi saat kembali ke mobile, dan menandai baca di tab pesan",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": "mobileContext=0, resizeDesktop>0, returnMobile=0, switchMessagesTab>0",
+      "actual": "mobileContext=0, resizeDesktop=1, returnMobile=0, switchMessagesTab=1"
+    },
+    {
+      "id": "network_check_on_demand_execution",
+      "name": "Eksekusi pemeriksaan on-demand ('Cek Ulang') memperbarui bukti jaringan secara langsung",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": "outcome=ok, onuBox=true",
+      "actual": "outcome=true, onuBox=true"
+    },
+    {
+      "id": "network_check_distinct_onu_evidence",
+      "name": "Bukti status ONU ditampilkan terpisah dengan catatan semantik operasional",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": "Status ONU box visible",
+      "actual": "true"
+    },
+    {
+      "id": "network_check_distinct_upstream_evidence",
+      "name": "Status tautan upstream independen dengan detail kualitas observasi dan sumber MOCK",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": "Upstream box visible",
+      "actual": "true"
+    },
+    {
+      "id": "network_check_area_coverage_denominators",
+      "name": "Cakupan area mempertahankan penyebut eksak (LOS / valid / total) dan rasio cakupan",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": "0 LOS / 1 valid / 1 total (100% cakupan)",
+      "actual": "coverage=true, exactRatioFound=true"
+    },
+    {
+      "id": "network_check_zero_side_effects",
+      "name": "Pemeriksaan on-demand tidak memicu outbound, tidak membuat klaim, dan tidak mengubah status episode",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": "outbound=0, claims=0, episode=IN_PROGRESS",
+      "actual": "outbound=0, claims=0, episode=IN_PROGRESS"
+    },
+    {
+      "id": "network_check_unresolved_safety",
+      "name": "Pemeriksaan pada pengirim belum terverifikasi mengembalikan outcome=unresolved tanpa akses provider",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": "outcome=unresolved",
+      "actual": "outcome=unresolved"
+    },
+    {
+      "id": "identity_context_ambiguous_services_warning",
+      "name": "Pelanggan dengan multi-layanan menampilkan peringatan ambigu dan tidak memilih layanan sembarang",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": "Peringatan Ambigu visible",
+      "actual": "true"
+    },
+    {
+      "id": "evidence_semantics_dynamic_freshness_downgrade",
+      "name": "Aturan semantik domain dan transisi UI dinamis: bukti kedaluwarsa (>5 menit) menurunkan status ke peringatan tidak pasti",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": "preTick=Data Baru (Fresh), postTick=Status Belum Pasti (Data Basi) & Data Basi (Stale) tanpa label Fresh tertinggal",
+      "actual": "preOnline=true, preFresh=true, postBasi=true, postStaleQuality=true, remainingFresh=false"
+    },
+    {
+      "id": "foreign_fixture_isolation_intact",
+      "name": "Fixture pembanding milik harness di luar kepemilikan run tetap utuh 100% setelah teardown",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": "cust=1, srv=1, odc=1, odp=1, link=1",
+      "actual": "cust=1, srv=1, odc=1, odp=1, link=1"
+    },
+    {
+      "id": "runner_cleanup_and_teardown",
+      "name": "Pembersihan proses, user staf, dan fixture pengujian selesai tanpa residu atau kegagalan",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": "Cleanup berhasil tanpa error dan 0 residu",
+      "actual": "0 residu, proses dihentikan, user dihapus"
+    }
+  ],
+  "cleanupErrors": [],
+  "teardownRecovery": null
+}

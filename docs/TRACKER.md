@@ -569,10 +569,10 @@ Hasil tersedia melalui API; panel evidence dashboard mengikuti P2.7.
 | [P2.4](#task-p2-4)   | Orkestrasi inbound ke assessment SHADOW               | ✅ Done        | P2.2, P2.3, P1.4.2, P1.5.2         | D65, D67, D68, D77, D87, D88, D89, D90, D91, D92 |
 | [P2.5](#task-p2-5)   | Worker pemrosesan job dengan lease dan attempt        | ✅ Done        | P2.4                               | D68, D93, D94, D95, D96, D97, D98, D99, D100 |
 | [P2.6](#task-p2-6)   | Inbox/antrean sebagai landing dashboard               | ✅ Done        | P0.11, P0.6, P2.3, P2.4            | D65, D69, D71, D78, D101, D102, D103, D104, D105, D106, D107, D108, D109, D110, D111, D112, D113, D114, D115, D116, D117, D118, D119, D120, D121, D122, D123 |
-| [P2.7](#task-p2-7)   | Panel konteks identitas dan evidence jaringan         | ⬜ Not Started | P2.6, P1.5.3                       | D69, D71, D72       |
-| [P2.8](#task-p2-8)   | Label dan koreksi klasifikasi oleh staf               | ⬜ Not Started | P2.6, P1.1.2                       | D65, D66, D69       |
+| [P2.7](#task-p2-7)   | Panel konteks identitas dan evidence jaringan         | ✅ Done        | P2.6, P1.5.3                       | D69, D71, D72, D124, D125, D126, D127, D128, D129, D130, D131, D132, D133, D134, D135 |
+| [P2.8](#task-p2-8)   | Label dan koreksi klasifikasi oleh staf               | ✅ Done        | P2.6, P1.1.2                       | D65, D66, D69, D136, D137, D138, D139, D140, D141, D142 |
 | [P2.9](#task-p2-9)   | Direktori pelanggan pendukung yang read-only          | ✅ Done        | P0.6, P0.8, P0.9                   | D70, D71            |
-| [P2.10](#task-p2-10) | Konfigurasi dan deployment prototype SHADOW           | ⬜ Not Started | P0.2, P0.4, P0.5, P2.2, P2.5, P2.6 | D50, D67, D68       |
+| [P2.10](#task-p2-10) | Konfigurasi dan deployment prototype SHADOW           | 🟡 In Progress | P0.2, P0.4, P0.5, P2.2, P2.5, P2.6 | D50, D67, D68, D143 |
 | [P2.11](#task-p2-11) | Verifikasi vertical slice SHADOW end-to-end           | ⬜ Not Started | P2.7, P2.8, P2.10                  | D65, D67, D68       |
 
 ### Detail task
@@ -961,15 +961,57 @@ P2.6 selesai penuh (**✅ Done**). Seluruh acceptance criteria P2.6 Tahap 1 (fon
 
 **Acceptance Criteria**
 
-Staf melihat layanan/topologi, source, observed_at, checked_at, freshness, coverage, alasan keputusan, dan unknown/stale; waktu tampil WIB; detail internal tidak masuk teks pelanggan.
+Staf dapat melihat konteks lengkap percakapan aktif: identitas pengirim, status verifikasi (`verified` vs `unverified`), relasi pelanggan & layanan tunggal tervalidasi server (fail-closed untuk unverified/manual tanpa fallback service ID acak), topologi ODP/ODC mapping v1; pemeriksaan jaringan on-demand ("Cek Ulang") tanpa mutasi episode/claim/outbound dengan pembatalan request in-flight dan parsing safe error envelope; pemisahan independen antara bukti status ONU dan tautan upstream (termasuk waktu observasi, kualitas, sumber, event ID); penyebut coverage eksak (`los LOS / valid valid / total total`); semantik jujur (area unknown = "Belum Dapat Ditentukan", no_indication = "Tidak Memenuhi Indikasi Area", online != internet normal, LOS != kabel fisik putus, timeout/error != down); dynamic proof age dengan penurunan kualitas/status otomatis pada data usang (> 5 menit); penjelasan alasan triage operasional Indonesia; pemisahan insiden aktif lapangan (Seksi 1) dari triage historis tersimpan (Seksi 3); serta layout responsif adaptif (>= 1440px 3 kolom permanen `min-[1440px]:flex`, 1024–1439px drawer slide-over dengan focus trap, keyboard Escape, & focus restoration, < 1024px sub-nav tabs dengan supresi read-ack saat drawer terbuka atau tab konteks aktif yang pulih saat ditutup/beralih ke pesan).
 
 **Bukti/Verifikasi**
 
-—
+`components/inbox/inbox-evidence-panel.tsx`, `components/inbox/inbox-conversation-panel.tsx`, `components/inbox/inbox-dashboard.tsx`, `lib/domain/evidence-semantics.ts`, `lib/application/inbox-service.ts`, `app/api/inbox/conversations/[id]/context/route.ts`, `app/api/inbox/conversations/[id]/network-check/route.ts`, `tests/domain/evidence-semantics.test.ts`, `tests/application/inbox-context-service.test.ts`, `tests/domain/build-manifest-validation.test.ts`, `tests/interactive/verify-p27-evidence.mjs`, `tests/interactive/verify-p27-ui-lifecycle.mjs`, `tests/interactive/verify-request-correlator.test.mjs`, `tests/interactive/verify-finalization-handler.test.mjs`, `tests/interactive/verify-build-metadata.test.mjs`, `docs/P2_7_REVIEW.md`, decision log D124–D135:
+- **Pengamanan Error Asynchronous Menjelang Finalisasi & Freeze Guard (`drainInFlightHandlers`, `TeardownCancellationError`, & `--test-finalization-async-failure`)**:
+  - `CDPClient` menolak pekerjaan pengujian baru (`stopAcceptingNewEvents`) saat memasuki finalisasi sambil mempertahankan penyelesaian frame command (`msg.id`) untuk mencegah deadlock.
+  - Seluruh Promise handler in-flight ditunggu secara tuntas sebelum hasil dibekukan via `drainInFlightHandlers(5000)`. Timeout drain menghasilkan kegagalan fatal tercatat.
+  - Membedakan pembatalan teardown yang disengaja (`TeardownCancellationError`) dari kegagalan pengujian sebenarnya, sehingga penutupan koneksi tidak memicu false fail namun error terlambat tetap dicatat dan tidak disamarkan.
+  - Hasil akhir mengevaluasi `effectiveFatalError = runnerFatalError || asyncControllerError || drainError`, memastikan error asynchronous terlambat pada controller menggagalkan run (exit code 1) meskipun seluruh assertion skenario sebelumnya PASS.
+  - Freeze guard (`isTestPhaseFinalized` & `isArtifactFinalized`) mencegah modifikasi assertion atau bukti pasca-finalisasi.
+  - Terbukti lewat pengujian unit deterministik (`tests/interactive/verify-finalization-handler.test.mjs`, **11/11 PASS, exit code 0**): memvalidasi batas logika spesifik (penghentian event baru via flag `isFinalizing`, drain timeout, late rejection capture, pembedaan `TeardownCancellationError`, dan fungsi tiruan freeze guard) sebagai komplemen deterministik pembuktian run nyata `final-fail-0d71a4ac`.
+  - Mode harness kegagalan finalisasi `--test-finalization-async-failure` (`final-fail-0d71a4ac`): **Exit code 1 (kegagalan terkendali terbukti)**, `effectiveFatalError` dan `asyncFailureError` tercatat menggagalkan keseluruhan run meskipun delapan assertion (6 skenario UI + 1 validasi build + 1 cleanup) bernilai PASS secara individual, teardown bersih via `taskkill`/PID (0 residu), 0 unhandled rejection.
+- **Korelasi Request Jaringan Deterministik (`NetworkRequestCorrelator` & `tests/interactive/verify-request-correlator.test.mjs`)**:
+  - Seluruh fallback berbasis URL dihapus permanen. Korelasi request Fetch, respons CDP Network, dan event penyelesaian (`loadingFinished`/`loadingFailed`) dikaitkan strictly menggunakan identitas unik `fetchParams.networkId`.
+  - Jika `networkId` tidak tersedia, kosong, atau ambigu, pemeriksaan digagalkan seketika dengan error eksplisit.
+  - Entri respons dan penyelesaian dihapus deterministik begitu dikonsumsi, mencegah penggunaan ulang bukti historis.
+  - Terbukti lewat pengujian unit deterministik (`tests/interactive/verify-request-correlator.test.mjs`, **8/8 PASS, exit code 0**).
+- **Suite Pengujian Lifecycle UI Terpadu Normal (`tests/interactive/verify-p27-ui-lifecycle.mjs`)**:
+  - Dieksekusi live terhadap Next.js server produksi lokal dan basis data tes terisolasi via Chrome CDP Native Fetch Interceptor dan Network Correlator.
+  - Menguji dan membuktikan 6 skenario siklus hidup DOM secara presisi:
+    1. *Stale Context Reordering*: Membuktikan penolakan konteks basi pada kunjungan yang sama (request lama A_old ditahan, polling terbaru A_new diselesaikan duluan dan diverifikasi di DOM, A_old dilepas setelahnya dan diverifikasi ditolak).
+    2. *Slow Foreground & Polling Resilience with Strict Isolated Retry*: Menangkap 2 request berbeda (foreground ditahan dan background polling). Polling gagal 500 saat foreground in-flight memicu banner "Pembaruan terhenti"; background polling diisolasi via `document.hidden = true`; memverifikasi ketersediaan tombol retry `[role="alert"] button`; klik nyata mengeksekusi rangkaian pemulihan list (`/api/inbox/conversations`) diikuti detail (`/api/inbox/conversations/:id`); respons 200 dipenuhi dan membuktikan banner hilang, loading selesai, konteks konsisten, serta polling otomatis dipulihkan.
+    3. *Delayed Network Check Rejection (A $\to$ B dan A $\to$ B $\to$ A murni)*: Membuktikan transisi A $\to$ B $\to$ A tanpa request pengganti sebelum respons A awal dilepas. Pemeriksaan A awal ditahan, beralih ke B (tampil di DOM), kembali ke A (tampil di DOM), respons A awal baru dilepas dengan marker `STALE-CHECK-SNAPSHOT-ABA`, marker ditolak, konteks A utuh, diikuti kontrol positif pemeriksaan sah dengan marker `LEGIT-POSITIVE-CONTROL` tampil di DOM. Skenario A $\to$ B tetap dipertahankan.
+    4. *Assessment Sync Non-Reason Terisolasi dari Baseline API Aktual & Pergantian Layanan*: Baseline detail & context diambil langsung dari respons API aktual (mempertahankan classification lengkap dengan `ruleVersion: "unknown"`, `lastActivityAt`, pesan, urutan, sender, customer, service); mutasi HANYA pada field assessment yang sah (`triageAssessment.decision.mode = "FULL"` pada detail summary, `historicalAssessment.incidentId` pada context); diverifikasi DOM terbarui via polling dengan perbandingan data aktual sebelum/sesudah. Kasus pergantian Service ID nyata (4b) tetap diuji secara terpisah.
+    5. *Preservasi Unresolved pada 3 Putaran Polling Riil dengan Korelasi NetworkId Eksak*: Memastikan `outcome=unresolved` tampil di DOM awal; memonitor penyelesaian jaringan nyata (HTTP 200 + `loadingFinished`) untuk pasangan detail dan context pada setiap putaran dengan `networkId` unik tanpa fallback URL; memverifikasi preservasi `outcome=unresolved` dan status Belum Terverifikasi di DOM setelah SETIAP putaran selesai (3 putaran penuh terbukti dengan 6 request HTTP 200 terdata); rincian putaran tersimpan lengkap dalam artefak `evidence.json`.
+    6. *Safe Partial Non-2xx Snapshot & Penolakan Respons Kedaluwarsa Ketat*: Seluruh pola `if (heldRequest)` dihapus; request yang ditahan wajib tertangkap, transisi ke konteks aktif terverifikasi di DOM sebelum pelepasan lama, respons dilepas tanpa syarat, dan DOM membuktikan marker/error lama tidak menimpa konteks aktif.
+  - Artefak Terkini D134: `docs/evidence/P2_7/lifecycle-2ec3deb5/evidence.json` (**8 dari 8 assertion PASS [komposisi: 6 skenario UI + 1 validasi build + 1 assertion cleanup], exit code 0, 6 screenshot PNG, BUILD_ID: T03sqBYh5cjVTfuKOsPAB, mode: ui_lifecycle, runner hash: `365c381e5f7d0a641125b6a74233773f74ac27dc37356ba64eb509dc9afb0ad8`, SYNCHRONIZED, proses dihentikan bersih via taskkill/PID, 0 residu, 0 unhandled rejection**).
+  - 8 Assertion Eksak: `build_source_binding_verification`, `ui_lifecycle_stale_context_rejected_a_b_a`, `ui_lifecycle_slow_foreground_with_polling_consistent`, `ui_lifecycle_delayed_network_check_rejected_on_service_change`, `ui_lifecycle_assessment_and_service_change_syncs_context`, `ui_lifecycle_noop_polling_preserves_unresolved`, `ui_lifecycle_partial_non_2xx_accepted_and_stale_rejected`, `runner_cleanup_and_teardown`.
+  - 6 Screenshot Eksak: `01_ui_lifecycle_reordered_context.png`, `02_ui_lifecycle_slow_fg_polling.png`, `03_ui_lifecycle_delayed_check_rejected.png`, `04_ui_lifecycle_assessment_service_sync.png`, `05_ui_lifecycle_polling_preserves_unresolved.png`, `06_ui_lifecycle_partial_non2xx_and_expired.png`.
+  - Artefak Historis: `lifecycle-c911ebbb` (D133), `async-fail-c017efb5` (D133), `guard-reject-cb6843c8` (D133), `lifecycle-7961395d` (D132), `guard-reject-529b65bc` (D132), `lifecycle-ff68345d` (D131), `guard-reject-cd367f97` (D131), `lifecycle-4dd925d8` (D130), `lifecycle-7de3ac68`, dan `guard-reject-919966bb` disimpan sebagai arsip historis tanpa diulang pada revisi runner terbaru.
+- **Proteksi Runner & Pembuktian Guard Rejection Melalui Jalur Setup**:
+  - `executeRunnerSetupPipeline` digunakan bersama oleh runner normal dan mode negatif. Pembuktian penolakan database workspace aktif (54322), Supabase API aktif (54321), dan marker token mismatch diverifikasi menghentikan proses sebelum mutasi (mutation spy calls = 0), dengan audit residu komprehensif lintas resource API (`listUsers()`) dan database (`customers`, `conversations`).
+  - Teardown memeriksa `{ error }` dari `deleteUser()`, wait loop terminasi proses, verifikasi residu DB, dan pelaporan cleanup error tanpa catch kosong.
+- **Penyatuan Implementasi Fixture Pembanding & Serialisasi Metrik Finalizer (`tests/interactive/verify-p27-evidence.mjs`)**:
+  - Menggunakan fungsi bersama `seedForeignComparisonFixture`, `checkForeignComparisonFixture`, `cleanupForeignComparisonFixture`, dan `queryForeignComparisonResiduals`.
+  - Fault injection langsung pada kueri DB nyata yang dipanggil implementasi bersama.
+  - Finalizer menserialisasi `operationsAttempted`, `operationsSucceeded`, `recoveryCompleted`, `residualBreakdown`, `residualsRemaining`, `expectedInjectedFailuresCount`, dan `unexpectedFailuresCount` ke dalam JSON bukti.
+  - Mode negatif harness terverifikasi (`foreign-chk-fail-4dc15a98`, `foreign-del-fail-7b2c2a72`).
+- **Pengujian Browser Interaktif Real Next.js (`tests/interactive/verify-p27-evidence.mjs`)**:
+  - Live normal browser run `run-0efe31f6`: **21 dari 21 assertion wajib PASS (exit code 0)** pada build `BUILD_ID: T03sqBYh5cjVTfuKOsPAB`.
+  - Residu database nol, user staf dihapus, proses Next.js dan Chrome diterminasi bersih via `taskkill` dan verifikasi keberadaan PID.
+- **Regresi Suite Lulus Penuh**:
+  - `npm test`: 277 unit, application, & domain tests passed (3 suites, 0 fail, exit code 0).
+  - `node tests/interactive/verify-build-metadata.test.mjs`: 9 kontrak build metadata passed (0 fail, exit code 0).
+  - `node tests/interactive/verify-request-correlator.test.mjs`: 8 kontrak correlator passed (0 fail, exit code 0).
+  - `node tests/interactive/verify-finalization-handler.test.mjs`: 11 kontrak finalization handler passed (0 fail, exit code 0).
 
 **Catatan/Blocker**
 
-API pemeriksaan mock sudah tersedia; README menyatakan UI evidence belum dibuat.
+P2.7 selesai penuh (**✅ Done**). Seluruh acceptance criteria panel konteks identitas dan evidence jaringan, semantik jujur, layout adaptif, supresi read-ack, proteksi race-condition A→B→A, korelasi request deterministik berbasis `networkId`, serta penutupan celah error asynchronous pada batas finalisasi runner telah diverifikasi secara empiris dan diterima secara resmi pada review penutup (**D135**). Bukti konkret aktual (`lifecycle-2ec3deb5` 8/8 PASS, `final-fail-0d71a4ac` exit code 1 dengan clean teardown, `verify-finalization-handler.test.mjs` 11/11 PASS, `verify-request-correlator.test.mjs` 8/8 PASS, `run-0efe31f6` 21/21 PASS, build `T03sqBYh5cjVTfuKOsPAB` SYNCHRONIZED, 0 residu, 0 unhandled rejection). Validasi penutupan dilakukan murni melalui pemeriksaan dokumen dan artefak bukti tanpa menjalankan ulang pengujian. Pipeline berikutnya adalah [P2.8](#task-p2-8) (Label dan koreksi klasifikasi oleh staf). P2.8 tetap berstatus ⬜ Not Started. Tiket Custpanel dan delegasi teknisi tetap berada di Custpanel.
 
 </details>
 
@@ -980,15 +1022,28 @@ API pemeriksaan mock sudah tersedia; README menyatakan UI evidence belum dibuat.
 
 **Acceptance Criteria**
 
-Staf dapat menyimpan label/koreksi bersama aktor dan waktu; hasil rule asli dan versinya tetap tersimpan; data dapat digunakan untuk evaluasi klasifikasi PRD §13.
+Staf dapat menyimpan label/koreksi bersama aktor dan waktu; hasil rule asli dan versinya tetap tersimpan; data dapat digunakan untuk evaluasi klasifikasi PRD §13; seluruh alur keyboard nyata terbukti tanpa manipulasi buatan; episode, claim, dan debounce terbukti utuh sebelum vs sesudah; serialisasi konkuren dua staf konsisten; dan tombol error banner pada mobile 375px terukur $\ge 40$px tanpa overflow.
 
 **Bukti/Verifikasi**
 
-—
+- Migration `20261012100000_create_staff_classification_labels.sql`: tabel `public.staff_message_classifications` dan riwayat `public.staff_message_classification_history` persisten di PostgreSQL.
+- Domain & Service: `lib/domain/staff-classification.ts` (sanitasi batas maks 1000 karakter, penolakan kelebihan panjang dengan error) dan `lib/application/inbox-service.ts` (resolusi atribusi pemilik asli record pada simpan idempoten antar-staf via `auth.users`).
+- Unit & Service Tests: `npm test` meluluskan 305/305 tests (0 fail, exit code 0), termasuk suite domain dan multi-staff idempotent attribution.
+- API Route: `app/api/inbox/conversations/[id]/messages/[messageId]/classification/route.ts` menegakkan sesi server dan menolak pemalsuan aktor payload.
+- UI Inbox: `components/inbox/inbox-message-classification.tsx` (pemisahan detail label tersimpan dari draft form edit, rekonsiliasi respons simpan terhadap versi server terkini via `latestStaffClassificationRef` dan `onClassificationSaved` tanpa stale closure, preservasi draft dan in-flight request status saat polling, notifikasi pembaruan konkuren `concurrent-update-notice`, banner error mandiri dengan `role="alert"` & `aria-live="polite"` pada konfirmasi langsung, isolasi error dari polling background, tombol "Coba lagi", keyboard handlers Space/Enter, focus management terpadu dengan pemulihan fokus otomatis ke tombol trigger, touch target $\ge 40$px) dan `inbox-dashboard.tsx` (rekonsiliasi simpan dan polling berbasis timestamp server `updatedAt` konsisten, isolasi perpindahan percakapan A→B dan A→B→A via visit token, penanda polling deterministik `data-detail-poll-count`, kepatuhan terhadap jeda polling `__TEST_PAUSE_POLLING`).
+- Pengujian Integrasi DB: `npm run test:classification:local` meluluskan 11/11 subtests (0 fail, exit code 0), membuktikan persistensi, idempotensi atribusi multi-staf, serialisasi simpan konkuren via `inHelpdeskTransaction` (`pg_advisory_xact_lock(20260922, 14)` + `FOR UPDATE`), validasi dua urutan serial sah ($A \to B$ atau $B \to A$), penolakan otorisasi role `anon`/`authenticated` (SQLSTATE `42501`), proteksi pemalsuan aktor, dan zero operational side effects dengan perbandingan snapshot terisolasi (seluruh field operasional `complaints`, `reply_claims` dengan `owner_id` dan scope episode `scope_kind = 'episode'`, serta `outbound_intents` 100% identik sebelum vs sesudah, preservasi guard debounce terbukti melalui klaim episode yang utuh).
+- Verifikasi Browser Chrome Nyata: `node tests/interactive/verify-p28-classification.mjs` (run `p28-75081ab2`, BUILD_ID `iOA-WRCicCUpodwhhbh-Q`, status `SYNCHRONIZED`) meluluskan 15/15 assertion (0 fail, exit code 0) dengan tangkapan layar PNG di `docs/evidence/P2_8/p28-75081ab2/screenshots/`:
+  1. Alur keyboard lengkap murni via CDP `Input.dispatchKeyEvent`: Tab mencapai tombol edit, Enter membuka form, radio auto-focus, Tab ke Batal, Enter batal dan tutup form, focus restoration kembali ke tombol edit, Enter buka kembali, ArrowRight & ArrowLeft mengubah kategori radio, Tab ke textarea, typing catatan nyata tanpa setter value, Tab & Shift-Tab bolak-balik antara Batal dan Simpan, serta Enter simpan yang menutup form dan memperbarui UI.
+  2. Preservasi draft editor Staf A saat Staf B menyimpan pembaruan via backend aplikasi dan diterima polling A, serta resiliensi in-flight loading request saat polling.
+  3. Pengujian retensi error konfirmasi langsung bertahan melintasi 2 siklus polling deterministik berturut-turut tanpa interaksi staf, tombol coba lagi berhasil menyimpan dan menghapus error, tombol dismiss 'Tutup' bekerja, serta isolasi switch percakapan bersih.
+  4. Penolakan respons simpan terlambat Staf A terhadap Versi B Staf B dengan korelasi deterministik `NetworkRequestCorrelator` (menyimpan Fetch `requestId` dan Network `networkId`), sinkronisasi event handler UI (`test:classification-response-handled`), penjagaan jeda polling background (`window.__TEST_PAUSE_POLLING = true`), verifikasi DB record aktif dan seluruh 5 baris riwayat audit runtut termasuk field `notes`, penolakan Bearer token tidak valid (401 tanpa mutasi), bukti negatif penolakan korelasi timeout, serta kasus kontrol Versi C baru diterapkan langsung dengan menutup editor.
+  5. Pengukuran aktual touch target mobile 375px: `retry-confirm-btn` (80×44px) dan `dismiss-error-btn` (57×44px) terukur $\ge 40$px tanpa tumpang tindih (`noOverlap = true`) dan tanpa overflow horizontal (`hasHorizontalOverflow = false`); screenshot banner error diambil saat viewport 375px dan tersimpan unik sebagai `06_mobile_confirmation_error.png` tanpa tertimpa desktop (diverifikasi pada run terarah `p28-554dc41a`).
+  6. Murni anotasi evaluasi: 0 outbound intents dikirim, 0 klaim dispatch teknisi, snapshot komplain dan debounce utuh.
+- Dokumentasi lengkap di `docs/P2_8_REVIEW.md` dan keputusan teknis di `docs/decision-log.md` (D136, D137, D138, D139, D140, D141, D142).
 
 **Catatan/Blocker**
 
-Hasil klasifikasi berversi sudah ada, tetapi penyimpanan label koreksi dan UI belum tersedia.
+P2.8 berstatus ✅ **Done** (D136, D137, D138, D139, D140, D141, D142). Seluruh acceptance criteria PRD §13, seluruh penutupan kekurangan bukti empiris, dan dua catatan review terakhir telah terpenuhi secara konkret dan terverifikasi penuh. P2.7 dan P2.9 tetap Done. Tiket Custpanel dan delegasi teknisi tetap berada di Custpanel. Pipeline berikutnya sesuai urutan dan dependensi TRACKER.md adalah [P2.10](#task-p2-10) (Konfigurasi dan deployment prototype SHADOW) dan [P2.11](#task-p2-11) (Verifikasi vertical slice SHADOW end-to-end).
 
 </details>
 
@@ -1022,11 +1077,17 @@ Supabase prototype, Vercel env, bot token/secret, dan tester IDs terkonfigurasi;
 
 **Bukti/Verifikasi**
 
-—
+- Build produksi Next.js terverifikasi: `npm run build` sukses (exit code 0), `BUILD_ID: uCRy779fnf8FFKoi4n9bz`, manifest 26 berkas valid (`scripts/build-source-manifest.mjs`).
+- Bot Telegram live terverifikasi via Bot API: ID `8892832714`, username `@upaznet_helpdesk_proto_bot`, account ID `upaznet_helpdesk_bot`, allowlist tester `6727338166` (`scripts/manage-telegram-webhook.mjs status`).
+- Runner migrasi idempoten `scripts/apply-prototype-migrations.mjs` terverifikasi: mengaplikasikan 13 berkas migrasi resmi `supabase/migrations/` ke database target secara atomik dengan pelacakan `supabase_migrations.schema_migrations`.
+- Seeder idempoten `scripts/apply-prototype-seed.mjs` terverifikasi: menerapkan `seed.sql` & `fixtures/network.sql`, mengonfirmasi `mode = 'SHADOW'`, dan mendaftarkan tester `6727338166`.
+- Pengelola webhook `scripts/manage-telegram-webhook.mjs` terverifikasi: mendukung `status`, `set` HTTPS dengan `drop_pending_updates: false`, dan `restore` tanpa mengekspos token/secret.
+- Runner automated smoke test `scripts/smoke-test-deployment.mjs` siap memvalidasi HTTPS, proteksi endpoint unauthenticated, penolakan secret salah/hilang (zero mutation), dan penerimaan pesan dummy tester di mode SHADOW tanpa outbound atau claim.
+- Dokumentasi panduan lengkap disusun di `docs/DEPLOYMENT.md` dan review di `docs/P2_10_REVIEW.md` (D143).
 
 **Catatan/Blocker**
 
-README menyatakan deployment belum diverifikasi; belum ditemukan konfigurasi/hasil deployment yang membuktikan task ini telah dikerjakan.
+Menunggu penyambungan target remote Supabase & Vercel pengguna (`npx vercel link` / deployment environment) agar smoke test live dapat dijalankan pada domain produksi aktual tanpa meminta secret di chat. Sesuai AGENTS.md, status P2.10 dipertahankan In Progress sampai deployment live dan bukti pengujian aktual tercatat lengkap.
 
 </details>
 

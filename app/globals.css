@@ -387,3 +387,16 @@ body {
   }
 }
 
+/* --------------------------------------------------------------------------
+   RESPONSIVE INBOX LAYOUT (P2.7 & DESIGN_SYSTEM)
+   - >= 1440px: Left pane selebar 300px, evidence column selebar 280px
+   -------------------------------------------------------------------------- */
+@media (min-width: 1440px) {
+  .inbox-list-pane {
+    width: 300px !important;
+  }
+  .inbox-evidence-column {
+    width: 280px !important;
+  }
+}
+

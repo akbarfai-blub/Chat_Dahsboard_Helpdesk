@@ -1,0 +1,59 @@
+{
+  "runId": "p28-6564967b",
+  "timestamp": "2026-10-11T20:04:34.983Z",
+  "overallStatus": "FAIL",
+  "expectedExitCode": 1,
+  "calculatedExitCode": 1,
+  "totalAssertions": 5,
+  "passedAssertions": 3,
+  "failedAssertions": 2,
+  "screenshots": [
+    "01_unlabeled_state.png",
+    "01b_direct_confirm_error.png"
+  ],
+  "assertions": [
+    {
+      "id": "build_source_binding_verification",
+      "name": "Pengikatan build-to-source valid dan BUILD_ID tersinkronisasi",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": "SYNCHRONIZED",
+      "actual": "SYNCHRONIZED"
+    },
+    {
+      "id": "auth_setup",
+      "name": "Autentikasi sesi staf pada aplikasi Next.js asli (/login -> /dashboard)",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": "/dashboard",
+      "actual": "/dashboard"
+    },
+    {
+      "id": "unlabeled_message_ui_state",
+      "name": "Tampilan pesan belum dilabeli: badge 'Belum Dilabeli', kategori rule asli, tombol konfirmasi & koreksi",
+      "isOptional": false,
+      "status": "FAIL",
+      "expected": "badge=Belum Dilabeli, rule=connection_complaint, confirmBtn=Konfirmasi Benar",
+      "actual": "badge=Belum Dilabeli, rule=other, confirmBtn=Konfirmasi Benar"
+    },
+    {
+      "id": "direct_confirmation_failure_display_and_accessibility",
+      "name": "Kegagalan konfirmasi langsung: error alert role='alert' aria-live='polite', tombol retry & dismiss aktif, loading berhenti",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": "errorVisible=true, role=alert, ariaLive=polite, retryBtn=true, isSubmittingStopped=true",
+      "actual": "errorVisible=true, role=alert, retryBtn=true"
+    },
+    {
+      "id": "runner_cleanup_and_teardown",
+      "name": "Pembersihan proses Chrome/Next.js, user staf, dan fixture database selesai tanpa residu",
+      "isOptional": false,
+      "status": "FAIL",
+      "expected": "cleanupErrors.length === 0",
+      "actual": "cdp.removeAllListeners is not a function"
+    }
+  ],
+  "cleanupErrors": [
+    "cdp.removeAllListeners is not a function"
+  ]
+}

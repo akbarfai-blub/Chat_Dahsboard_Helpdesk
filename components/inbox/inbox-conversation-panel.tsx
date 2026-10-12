@@ -1,7 +1,14 @@
 import React, { useEffect, useRef, useState, useCallback } from "react";
-import type { InboxConversationDetail } from "./inbox-types";
+import type {
+  InboxConversationDetail,
+  InboxConversationContext,
+  InboxNetworkCheckResult,
+  InboxStaffClassification,
+} from "./inbox-types";
 import { InboxStatusBadge } from "./inbox-status-badge";
 import { formatAbsoluteDate, formatTimeOnly } from "@/lib/utils/format-date";
+import { InboxEvidencePanel } from "./inbox-evidence-panel";
+import { InboxMessageClassification } from "./inbox-message-classification";
 
 interface InboxConversationPanelProps {
   selectedId: string | null;
@@ -13,6 +20,23 @@ interface InboxConversationPanelProps {
   onVisibleMessagesChange?: (visibleUnreadIds: readonly string[]) => void;
   markReadFailed?: boolean;
   onRetryMarkRead?: () => void;
+  // P2.7 additions
+  onToggleEvidenceDrawer?: () => void;
+  isEvidenceDrawerOpen?: boolean;
+  activeMobileTab?: "messages" | "context";
+  onMobileTabChange?: (tab: "messages" | "context") => void;
+  drawerTriggerRef?: React.RefObject<HTMLButtonElement | null>;
+  context?: InboxConversationContext | null;
+  isLoadingContext?: boolean;
+  contextError?: string | null;
+  onRetryContext?: () => void;
+  latestCheck?: InboxNetworkCheckResult | null;
+  isLoadingCheck?: boolean;
+  checkError?: string | null;
+  onRunCheck?: () => void;
+  // P2.8 additions
+  visitToken?: number;
+  onClassificationSaved?: (conversationId: string, messageId: string, result: InboxStaffClassification, visitToken?: number) => boolean | void;
 }
 
 export function InboxConversationPanel({
@@ -25,12 +49,37 @@ export function InboxConversationPanel({
   onVisibleMessagesChange,
   markReadFailed,
   onRetryMarkRead,
+  onToggleEvidenceDrawer,
+  isEvidenceDrawerOpen = false,
+  activeMobileTab = "messages",
+  onMobileTabChange,
+  drawerTriggerRef,
+  context,
+  isLoadingContext = false,
+  contextError = null,
+  onRetryContext,
+  latestCheck,
+  isLoadingCheck = false,
+  checkError = null,
+  onRunCheck,
+  visitToken,
+  onClassificationSaved,
 }: InboxConversationPanelProps) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const messageRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const [hasScrolledUp, setHasScrolledUp] = useState(false);
   const [showScrollBottomBtn, setShowScrollBottomBtn] = useState(false);
   const prevMessagesCountRef = useRef<number>(0);
+
+  const handleMessageClassificationSaved = useCallback(
+    (messageId: string, saved: InboxStaffClassification, savedVisitToken?: number): boolean => {
+      if (conversation) {
+        return Boolean(onClassificationSaved?.(conversation.id, messageId, saved, savedVisitToken));
+      }
+      return false;
+    },
+    [conversation, onClassificationSaved]
+  );
 
   // Auto-scroll to bottom only if user hasn't scrolled up
   const scrollToBottom = useCallback((smooth = true) => {
@@ -89,7 +138,28 @@ export function InboxConversationPanel({
     prevMessagesCountRef.current = currentCount;
   }, [conversation, hasScrolledUp, scrollToBottom]);
 
+  // When switching from context tab back to messages tab on mobile, ensure scroll is at bottom so latest messages are visible
+  useEffect(() => {
+    if (activeMobileTab === "messages") {
+      requestAnimationFrame(() => {
+        scrollToBottom(false);
+      });
+    }
+  }, [activeMobileTab, scrollToBottom]);
+
   const isCurrentConversation = Boolean(selectedId && conversation && conversation.id === selectedId);
+
+  const [windowWidth, setWindowWidth] = useState<number>(() =>
+    typeof window !== "undefined" ? window.innerWidth : 1024
+  );
+
+  useEffect(() => {
+    const handleResize = () => {
+      setWindowWidth(window.innerWidth);
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   const [prevSelectedId, setPrevSelectedId] = useState(selectedId);
   if (prevSelectedId !== selectedId) {
@@ -107,6 +177,15 @@ export function InboxConversationPanel({
   useEffect(() => {
     if (!isCurrentConversation || !conversation || !onVisibleMessagesChange || isLoading) return;
 
+    // Suppression 1: Drawer open modal covers conversation
+    if (isEvidenceDrawerOpen) return;
+
+    // Suppression 2: Mobile subnav active tab is 'context' (< 1024px)
+    const isMobile = windowWidth < 1024;
+    if (isMobile && activeMobileTab === "context") {
+      return;
+    }
+
     const container = scrollContainerRef.current;
     if (!container) return;
 
@@ -121,6 +200,10 @@ export function InboxConversationPanel({
 
     const checkVisibility = () => {
       if (typeof document !== "undefined" && document.hidden) return;
+      if (isEvidenceDrawerOpen) return;
+      const currentWidth = typeof window !== "undefined" ? window.innerWidth : windowWidth;
+      if (currentWidth < 1024 && activeMobileTab === "context") return;
+
       const containerRect = container.getBoundingClientRect();
 
       unreadMessages.forEach((msg) => {
@@ -149,6 +232,10 @@ export function InboxConversationPanel({
       observer = new IntersectionObserver(
         (entries) => {
           if (typeof document !== "undefined" && document.hidden) return;
+          if (isEvidenceDrawerOpen) return;
+          const currentWidth = typeof window !== "undefined" ? window.innerWidth : windowWidth;
+          if (currentWidth < 1024 && activeMobileTab === "context") return;
+
           entries.forEach((entry) => {
             const messageId = entry.target.getAttribute("data-message-id");
             if (messageId && entry.isIntersecting) {
@@ -169,24 +256,38 @@ export function InboxConversationPanel({
         const el = messageRefs.current.get(msg.id);
         if (el) observer?.observe(el);
       });
-    } else {
-      // Fallback check
-      checkVisibility();
     }
 
-    // Also listen to visibility change
+    // Always run an immediate check on setup (covers initial desktop mount and resize to desktop)
+    checkVisibility();
+
+    // Also listen to visibility change and resize
     const handleVisibilityChange = () => {
       if (typeof document !== "undefined" && !document.hidden) {
         checkVisibility();
       }
     };
+    const handleResize = () => {
+      checkVisibility();
+    };
+
     document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("resize", handleResize);
 
     return () => {
       observer?.disconnect();
       document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("resize", handleResize);
     };
-  }, [isCurrentConversation, conversation, onVisibleMessagesChange, isLoading]);
+  }, [
+    isCurrentConversation,
+    conversation,
+    onVisibleMessagesChange,
+    isLoading,
+    activeMobileTab,
+    isEvidenceDrawerOpen,
+    windowWidth,
+  ]);
 
   if (!selectedId) {
     return (
@@ -336,6 +437,23 @@ export function InboxConversationPanel({
 
           {/* Right badges: on mobile placed with neat alignment, on sm aligned to right */}
           <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 flex-wrap sm:justify-end pl-[calc(var(--control-height-touch)+0.5rem)] lg:pl-0 sm:pl-0 pt-0.5 sm:pt-0">
+            {/* Drawer trigger button on medium screens (1024-1439px) */}
+            {onToggleEvidenceDrawer && (
+              <button
+                type="button"
+                ref={drawerTriggerRef}
+                onClick={onToggleEvidenceDrawer}
+                data-testid="toggle-evidence-drawer-btn"
+                aria-expanded={isEvidenceDrawerOpen}
+                aria-label="Buka panel bukti jaringan"
+                className="hidden lg:inline-flex min-[1440px]:!hidden items-center gap-1.5 min-h-[40px] px-3 py-1.5 text-xs font-semibold rounded-[var(--radius-control)] border border-[var(--border-control)] bg-[var(--bg-surface)] text-[var(--text-primary)] hover:bg-[var(--bg-rail)] focus-visible:outline-2 focus-visible:outline-[var(--focus-ring-color)]"
+              >
+                <svg className="w-3.5 h-3.5 text-[var(--text-secondary)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+                <span>Bukti Jaringan</span>
+              </button>
+            )}
             <InboxStatusBadge type="conversation" status={conversation.status} />
             {conversation.latestEpisode ? (
               <InboxStatusBadge type="episode" status={conversation.latestEpisode.status} />
@@ -382,6 +500,58 @@ export function InboxConversationPanel({
         )}
       </header>
 
+      {/* Mobile View Tab Switcher (< 1024px) */}
+      <div
+        className="flex lg:hidden border-b border-[var(--border-subtle)] bg-[var(--bg-surface)] px-3 pt-1 gap-2 shrink-0"
+        role="tablist"
+        aria-label="Tampilan percakapan dan bukti"
+      >
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeMobileTab === "messages"}
+          onClick={() => onMobileTabChange?.("messages")}
+          data-testid="tab-messages"
+          className={`px-3 py-1.5 text-xs font-semibold border-b-2 transition-colors ${
+            activeMobileTab === "messages"
+              ? "border-[var(--brand-primary)] text-[var(--brand-primary)]"
+              : "border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+          }`}
+        >
+          Percakapan
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeMobileTab === "context"}
+          onClick={() => onMobileTabChange?.("context")}
+          data-testid="tab-context"
+          className={`px-3 py-1.5 text-xs font-semibold border-b-2 transition-colors ${
+            activeMobileTab === "context"
+              ? "border-[var(--brand-primary)] text-[var(--brand-primary)]"
+              : "border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+          }`}
+        >
+          Konteks & Bukti Jaringan
+        </button>
+      </div>
+
+      {/* Mobile Context Panel Container */}
+      <div className={`flex-1 overflow-y-auto lg:hidden ${activeMobileTab === "context" ? "block" : "hidden"}`}>
+        <InboxEvidencePanel
+          conversationId={selectedId}
+          context={context || null}
+          isLoadingContext={isLoadingContext}
+          contextError={contextError}
+          onRetryContext={onRetryContext || (() => {})}
+          latestCheck={latestCheck || null}
+          isLoadingCheck={isLoadingCheck}
+          checkError={checkError}
+          onRunCheck={onRunCheck || (() => {})}
+          isDrawer={false}
+        />
+      </div>
+
       {/* Messages Scroll Area */}
       <div
         id="conversation-messages-scroll-container"
@@ -389,7 +559,9 @@ export function InboxConversationPanel({
         onScroll={handleScroll}
         aria-label="Riwayat percakapan kronologis"
         tabIndex={0}
-        className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 focus:outline-none"
+        className={`flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 focus:outline-none ${
+          activeMobileTab === "context" ? "hidden lg:block" : "block"
+        }`}
       >
         {conversation.messages.length === 0 ? (
           <div className="text-center py-12 text-xs text-[var(--text-muted)]">
@@ -470,31 +642,17 @@ export function InboxConversationPanel({
                     </div>
                   )}
 
-                  {/* Factual Classification Box (Only if category exists) */}
-                  {message.classification && message.classification.category !== "unknown" && (
-                    <div className="mt-2.5 pt-2 border-t border-[var(--border-subtle)] text-[11px] space-y-1">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-semibold text-[var(--text-secondary)]">Klasifikasi:</span>
-                        <span className="rounded bg-[var(--bg-rail)] px-1.5 py-0.5 font-mono text-[var(--text-primary)]">
-                          {message.classification.category}
-                        </span>
-                        <span className="text-[var(--text-muted)]">({message.classification.reason})</span>
-                      </div>
-
-                      {message.classification.matchedKeywords && message.classification.matchedKeywords.length > 0 && (
-                        <div className="flex items-center gap-1 flex-wrap pt-0.5">
-                          <span className="text-[var(--text-muted)]">Kata kunci:</span>
-                          {message.classification.matchedKeywords.map((kw, idx) => (
-                            <span
-                              key={idx}
-                              className="rounded-sm bg-[var(--status-info-bg)] text-[var(--status-info-text)] border border-[var(--status-info-border)] px-1.5 py-0.2 text-[10px] font-mono"
-                            >
-                              {kw}
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                    </div>
+                  {/* P2.8 Staff Classification Controls & Automatic Rule Details */}
+                  {isInbound && conversation && (
+                    <InboxMessageClassification
+                      conversationId={conversation.id}
+                      visitToken={visitToken}
+                      message={message}
+                      staffClassification={message.staffClassification}
+                      onClassificationSaved={(saved, savedVisitToken) =>
+                        handleMessageClassificationSaved(message.id, saved, savedVisitToken)
+                      }
+                    />
                   )}
 
                   {/* Factual Triage Assessment (Only if present in backend) */}
@@ -536,7 +694,9 @@ export function InboxConversationPanel({
       )}
 
       {/* Footer Informasional (Fase P3 Notice) */}
-      <footer className="border-t border-[var(--border-subtle)] bg-[var(--bg-surface)] p-3 sm:p-4 shrink-0">
+      <footer className={`border-t border-[var(--border-subtle)] bg-[var(--bg-surface)] p-3 sm:p-4 shrink-0 ${
+        activeMobileTab === "context" ? "hidden lg:block" : "block"
+      }`}>
         <div
           data-testid="p3-composer-notice"
           className="rounded-[var(--radius-control)] bg-[var(--bg-field)] p-3 border border-[var(--border-subtle)] flex items-start gap-2.5"

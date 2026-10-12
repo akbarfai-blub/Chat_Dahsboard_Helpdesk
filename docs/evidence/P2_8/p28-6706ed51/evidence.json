@@ -1,0 +1,134 @@
+{
+  "runId": "p28-6706ed51",
+  "timestamp": "2026-10-11T21:44:44.125Z",
+  "overallStatus": "FAIL",
+  "expectedExitCode": 1,
+  "calculatedExitCode": 1,
+  "totalAssertions": 14,
+  "passedAssertions": 13,
+  "failedAssertions": 1,
+  "screenshots": [
+    "01_unlabeled_state.png",
+    "01b_direct_confirm_error.png",
+    "02_confirmed_state.png",
+    "03_corrected_state.png",
+    "04_reloaded_persistence.png",
+    "05_error_draft_preserved.png",
+    "06_mobile_viewport.png"
+  ],
+  "assertions": [
+    {
+      "id": "build_source_binding_verification",
+      "name": "Pengikatan build-to-source valid dan BUILD_ID tersinkronisasi",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": "SYNCHRONIZED",
+      "actual": "SYNCHRONIZED"
+    },
+    {
+      "id": "auth_setup",
+      "name": "Autentikasi sesi staf pada aplikasi Next.js asli (/login -> /dashboard)",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": "/dashboard",
+      "actual": "/dashboard"
+    },
+    {
+      "id": "unlabeled_message_ui_state",
+      "name": "Tampilan pesan belum dilabeli: badge 'Belum Dilabeli', kategori rule asli, tombol konfirmasi & koreksi",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": "badge=Belum Dilabeli, rule=connection_complaint, confirmBtn=Konfirmasi Benar",
+      "actual": "badge=Belum Dilabeli, rule=connection_complaint, confirmBtn=Konfirmasi Benar"
+    },
+    {
+      "id": "one_click_confirmation_and_rule_preservation",
+      "name": "Konfirmasi 1-klik tersimpan: status 'confirmed', aktor sesi server, rule asli di messages tetap utuh",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": "UI: Terkonfirmasi & Komplain Koneksi; DB: status=confirmed, actor=staffUserId, rule_preserved=true",
+      "actual": "UI badge=Terkonfirmasi, DB status=confirmed, actor=e481885b-970b-46e8-b7c7-ff57db4b71d0, rule_cat=connection_complaint"
+    },
+    {
+      "id": "direct_confirmation_failure_display_and_accessibility",
+      "name": "Kegagalan konfirmasi langsung: error alert role='alert' aria-live='polite', tahan 2x polling, retry sukses, dismiss 'Tutup', switch bersih",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": "errorVisible=true, role=alert, 2x polling survive=true, retrySuccess=true, dismiss=true, switchIsolation=true",
+      "actual": "pollingSurvive=true, retrySuccess=true, dismiss=true, switchIsolation=true"
+    },
+    {
+      "id": "idempotent_repeated_save_behavior",
+      "name": "Penyimpanan berulang dengan nilai identik bersifat idempoten tanpa duplikasi history",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": "history_count = 1",
+      "actual": "history_count = 1"
+    },
+    {
+      "id": "staff_correction_with_traceable_history",
+      "name": "Koreksi klasifikasi tersimpan: badge 'Dikoreksi', label 'Bukan Komplain', catatan tersimpan, riwayat terlacak",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": "UI: Dikoreksi & Bukan Komplain; DB history count=2 (confirmed -> corrected)",
+      "actual": "UI badge=Dikoreksi, staffVal=Bukan Komplain, DB history count=2"
+    },
+    {
+      "id": "server_polling_reconciliation_and_race_prevention",
+      "name": "Rekonsiliasi server: respons simpan lama ditolak, Versi B polling bertahan, kontrol versi baru C diterapkan, switch bersih",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": "staffACommitted=true, versionBVisible=true, immediateKept=true, subsequentKept=true, dbConsistent=true, controlCApplied=true, conv2Clean=true",
+      "actual": "immediateKept=true, subsequentKept=true, controlCApplied=true, conv2Clean=true"
+    },
+    {
+      "id": "keyboard_navigation_operability",
+      "name": "Aksesibilitas keyboard: kontrol form dapat difokuskan dan dioperasikan via keyboard (Tab / Enter / Space)",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": "formOpenedAndClosed=true",
+      "actual": "opened=true, closed=true"
+    },
+    {
+      "id": "reload_persistence_from_database",
+      "name": "Persistensi setelah reload: status 'Dikoreksi', label 'Bukan Komplain' tetap utuh dari DB",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": "badge=Dikoreksi, label=Bukan Komplain",
+      "actual": "badge=Dikoreksi, label=Bukan Komplain"
+    },
+    {
+      "id": "error_handling_and_draft_preservation",
+      "name": "Penanganan error & preservasi draft: banner error tampil, pilihan kategori & catatan draft tidak hilang",
+      "isOptional": false,
+      "status": "FAIL",
+      "expected": "errorVisible=true, reviewChecked=true, notes preserved",
+      "actual": "errorVisible=true, reviewChecked=false, notesMatch=false"
+    },
+    {
+      "id": "responsive_mobile_viewport_and_touch_target",
+      "name": "Responsivitas mobile (375px) & ukuran touch target: tanpa overflow, seluruh kontrol >= 40px terukur",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": "hasHorizontalOverflow=false, all controls height >= 40px and width >= 40px",
+      "actual": "overflow=false, editBtn=85x44px, cancelBtn=56x44px, saveBtn=110x44px, optionCard=253x44px"
+    },
+    {
+      "id": "zero_operational_side_effects",
+      "name": "Murni anotasi evaluasi: 0 outbound intents dikirim, 0 klaim dispatch, 0 mutasi complaint/lifecycle",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": "outbound_count=0, complaints=0",
+      "actual": "outbound_count=0, complaints=0"
+    },
+    {
+      "id": "runner_cleanup_and_teardown",
+      "name": "Pembersihan proses Chrome/Next.js, user staf, dan fixture database selesai tanpa residu",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": "cleanupErrors.length === 0",
+      "actual": "Clean teardown"
+    }
+  ],
+  "cleanupErrors": []
+}

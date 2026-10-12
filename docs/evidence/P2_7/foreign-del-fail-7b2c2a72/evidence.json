@@ -1,0 +1,142 @@
+{
+  "timestamp": "2026-10-10T19:02:30.721Z",
+  "runId": "foreign-del-fail-7b2c2a72",
+  "mode": "foreign_delete_failure",
+  "runnerRevisionSha256": "37180bcb4858abab10d1c04f2f16f21a06a06aceebabcbd3e535264d3d5be339",
+  "expectedExitCode": 1,
+  "calculatedExitCode": 1,
+  "buildIdentity": {
+    "status": "NOT_APPLICABLE",
+    "isApplicable": false,
+    "isValid": true,
+    "buildId": "T03sqBYh5cjVTfuKOsPAB",
+    "manifestBuildId": "T03sqBYh5cjVTfuKOsPAB",
+    "scope": "p27_inbox_and_evidence",
+    "scopeDescription": "Subkelompok berkas UI Inbox, panel evidence, routing context/check, dan semantics P2.7",
+    "trackedFiles": [
+      "components/inbox/inbox-conversation-panel.tsx",
+      "components/inbox/inbox-dashboard.tsx",
+      "components/inbox/inbox-evidence-panel.tsx",
+      "components/inbox/inbox-conversation-list.tsx",
+      "components/inbox/inbox-filter-bar.tsx",
+      "components/inbox/inbox-pagination.tsx",
+      "components/inbox/inbox-status-badge.tsx",
+      "components/inbox/inbox-status-banner.tsx",
+      "components/inbox/inbox-types.ts",
+      "components/layout/dashboard-shell.tsx",
+      "app/dashboard/page.tsx",
+      "app/dashboard/complaints/page.tsx",
+      "app/api/inbox/conversations/[id]/context/route.ts",
+      "app/api/inbox/conversations/[id]/network-check/route.ts",
+      "lib/supabase/auth-config.ts",
+      "lib/supabase/server.ts",
+      "lib/application/inbox-contracts.ts",
+      "lib/application/inbox-service.server.ts",
+      "lib/application/inbox-service.ts",
+      "lib/application/origin-validator.ts",
+      "lib/domain/evidence-semantics.ts",
+      "lib/utils/format-date.ts",
+      "app/globals.css"
+    ],
+    "sourceHashesAtBuild": {
+      "components/inbox/inbox-conversation-panel.tsx": "0e8d1d0dcc9015fbe36943862556f2470bda3041a230775e4da316f92f57fa7b",
+      "components/inbox/inbox-dashboard.tsx": "631c66fdf40eebabcbccccadf9cfbac7f9a018caa1384e94913cfc542424440d",
+      "components/inbox/inbox-evidence-panel.tsx": "a0f068681bee456f0aea3a90ca2aaa0a0444a595d17b5e3a911fcce49edb63e8",
+      "components/inbox/inbox-conversation-list.tsx": "37ef98a5530afdeada7ebac486e384c3f0c002659cd852e71984ee884534a3a5",
+      "components/inbox/inbox-filter-bar.tsx": "a04ffd161867dca515fce0ec29385cbe8dc2cbdcb58d3c015445244434ecb6fb",
+      "components/inbox/inbox-pagination.tsx": "8c21fc06243d63d938a1240f7e4f02ff6273ce8a940e15c5a267747bb3c8be4f",
+      "components/inbox/inbox-status-badge.tsx": "cae837e2e7916275674f1c56c4ca5175984646a4783759fd784e13e4fbc3a494",
+      "components/inbox/inbox-status-banner.tsx": "ea86dc334dfa173d6eae6740dd2955afba051d6ac43b2639f2ff3ae187912fa6",
+      "components/inbox/inbox-types.ts": "0c61be15e04b541334edc2a919687077e55241856ddba22c95bb216d259e9947",
+      "components/layout/dashboard-shell.tsx": "e6834cf374d8c315b6fb2c439bfe28d0fe020f32d0e5e8dffcf0d64bc6e245ac",
+      "app/dashboard/page.tsx": "fafe3fb0e885294f256e1d717be27c7f64d0e5ef45b4ea9c83e700fe263e6d72",
+      "app/dashboard/complaints/page.tsx": "aed660a75c1cad40c85f7ee61a06fa39c818200b175b0c68d2022fc366536de7",
+      "app/api/inbox/conversations/[id]/context/route.ts": "eb13981e654bf089367e2285cc01cb101ca006082ef52fd2acb338f54005e67a",
+      "app/api/inbox/conversations/[id]/network-check/route.ts": "541c26468face198ee1775788b2511ac89590e2a17e544e95067250afab3819a",
+      "lib/supabase/auth-config.ts": "7ba80cf0a5bc0a16d473257c0e8a996151bdd35bf3c62b3c5ed8153312b4080d",
+      "lib/supabase/server.ts": "1a34658a36d1c89c772d92236943ccc6667517cc57d19d72cfe57ce29d01607b",
+      "lib/application/inbox-contracts.ts": "19d84b2d1b1894f11f11285885d7fb0afef02eb0b76926428be1f48f18c07baf",
+      "lib/application/inbox-service.server.ts": "e7ebad5efa656a6e10a19e4beea9c1e08ce51cbe9a8c0373db9e8af115eff3b2",
+      "lib/application/inbox-service.ts": "444eb71bb15632cb6b21ffcff1c1189b30dfadaceeac1bc6bf6bcbe5df9b8653",
+      "lib/application/origin-validator.ts": "d86014ec774013e5060a3a81137919071bbd134b2a04c7a56c7905cead6a1cb5",
+      "lib/domain/evidence-semantics.ts": "a3229422a466c69d29e0a92a9a37990096701a30fdacfd2332fdceefa8d6fad3",
+      "lib/utils/format-date.ts": "d9570454184cdd3edc7d56a9a3d140b188aa87be61fd81484fe3ad6397c92bb3",
+      "app/globals.css": "a615680d7bf87839856b80839a916bb11a3d3bf2a8a4650203e410b4377e46d6"
+    },
+    "sourceHashesAtLaunch": null,
+    "sourceHashesAtFinalize": null,
+    "checks": {
+      "manifestExists": true,
+      "buildIdMatch": "NOT_APPLICABLE",
+      "launchSourceMatch": "NOT_APPLICABLE",
+      "runtimeSourceMatch": "NOT_APPLICABLE"
+    },
+    "reason": "Mode tidak menjalankan build atau server aplikasi Next.js"
+  },
+  "screenshots": [],
+  "summary": {
+    "overallStatus": "FAIL",
+    "exitCode": 1,
+    "total": 3,
+    "passed": 2,
+    "failed": 1,
+    "notRun": 0
+  },
+  "assertions": [
+    {
+      "id": "foreign_delete_fault_injected",
+      "name": "Injeksi kegagalan salah satu langkah penghapusan pembanding tertangkap tanpa menghentikan runner",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": "Foreign delete query fault caught, recorded, and no unexpected errors",
+      "actual": "Injected delete fault caught (expected: 1, unexpected: 0)"
+    },
+    {
+      "id": "subsequent_cleanup_attempted",
+      "name": "Langkah penghapusan pembanding berikutnya tetap dicoba dan pool ditutup meski langkah sebelumnya gagal",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": "subsequentStepsAttempted=true (5/6 succeeded initially), recoveryCompleted=true, residuals=0",
+      "actual": "attempted=true (succeeded initially: 5/6), recoveryCompleted=true, residuals=0"
+    },
+    {
+      "id": "runner_cleanup_and_teardown",
+      "name": "Pembersihan proses, user staf, dan fixture pengujian selesai tanpa residu atau kegagalan",
+      "isOptional": false,
+      "status": "FAIL",
+      "expected": "Cleanup selesai tanpa error dan 0 residu",
+      "actual": "Injected fault on foreign delete step (mock_upstream_status): simulated foreign key or table lock exception"
+    }
+  ],
+  "cleanupErrors": [
+    "Injected fault on foreign delete step (mock_upstream_status): simulated foreign key or table lock exception"
+  ],
+  "teardownRecovery": null,
+  "operationsAttempted": [
+    "mock_upstream_status",
+    "service_topology",
+    "odps",
+    "odcs",
+    "services",
+    "customers"
+  ],
+  "operationsSucceeded": [
+    "service_topology",
+    "odps",
+    "odcs",
+    "services",
+    "customers"
+  ],
+  "recoveryAttempted": null,
+  "recoveryCompleted": true,
+  "residualsRemaining": 0,
+  "residualBreakdown": {
+    "customers": 0,
+    "services": 0,
+    "odcs": 0,
+    "odps": 0,
+    "mock_upstream_status": 0
+  },
+  "expectedInjectedFailuresCount": 1,
+  "unexpectedFailuresCount": 0
+}

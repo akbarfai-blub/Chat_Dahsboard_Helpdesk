@@ -15,13 +15,15 @@ import crypto from "node:crypto";
 import { spawnSync } from "node:child_process";
 import { pathToFileURL } from "node:url";
 
-export const TRACKED_FILE_SCOPE = "p26_inbox_and_auth";
+export const TRACKED_FILE_SCOPE = "p27_inbox_and_evidence";
 export const TRACKED_FILE_DESCRIPTION =
-  "Subkelompok berkas UI Inbox, layout shell, routing, auth configuration, format helper, dan service server/kontrak P2.6";
+  "Subkelompok berkas UI Inbox, panel evidence, routing context/check, dan semantics P2.7";
 
 export const TRACKED_SOURCE_FILES = [
   "components/inbox/inbox-conversation-panel.tsx",
   "components/inbox/inbox-dashboard.tsx",
+  "components/inbox/inbox-evidence-panel.tsx",
+  "components/inbox/inbox-message-classification.tsx",
   "components/inbox/inbox-conversation-list.tsx",
   "components/inbox/inbox-filter-bar.tsx",
   "components/inbox/inbox-pagination.tsx",
@@ -31,13 +33,19 @@ export const TRACKED_SOURCE_FILES = [
   "components/layout/dashboard-shell.tsx",
   "app/dashboard/page.tsx",
   "app/dashboard/complaints/page.tsx",
+  "app/api/inbox/conversations/[id]/context/route.ts",
+  "app/api/inbox/conversations/[id]/network-check/route.ts",
+  "app/api/inbox/conversations/[id]/messages/[messageId]/classification/route.ts",
   "lib/supabase/auth-config.ts",
   "lib/supabase/server.ts",
   "lib/application/inbox-contracts.ts",
   "lib/application/inbox-service.server.ts",
   "lib/application/inbox-service.ts",
   "lib/application/origin-validator.ts",
+  "lib/domain/evidence-semantics.ts",
+  "lib/domain/staff-classification.ts",
   "lib/utils/format-date.ts",
+  "app/globals.css",
 ];
 
 export function computeSourceHashes(fileList = TRACKED_SOURCE_FILES, baseDir = process.cwd()) {
@@ -116,7 +124,7 @@ export function saveBuildManifest(
   manifest,
   targetPaths = [
     path.resolve(".next/build-source-manifest.json"),
-    path.resolve("docs/evidence/P2_6/build-source-manifest.json"),
+    path.resolve("docs/evidence/P2_7/build-source-manifest.json"),
   ]
 ) {
   const jsonContent = JSON.stringify(manifest, null, 2);
@@ -133,7 +141,7 @@ export function saveBuildManifest(
 export function cleanBuildManifest(
   targetPaths = [
     path.resolve(".next/build-source-manifest.json"),
-    path.resolve("docs/evidence/P2_6/build-source-manifest.json"),
+    path.resolve("docs/evidence/P2_7/build-source-manifest.json"),
   ]
 ) {
   for (const targetPath of targetPaths) {
@@ -165,7 +173,13 @@ export function validateBuildMetadata({
   mode = "live_browser_normal",
 }) {
   // 1. Modes that do not start Next.js or run the built application
-  if (mode === "guard_rejection" || mode === "setup_failure") {
+  if (
+    mode === "guard_rejection" ||
+    mode === "setup_failure" ||
+    mode === "cleanup_failure" ||
+    mode === "foreign_check_failure" ||
+    mode === "foreign_delete_failure"
+  ) {
     return {
       isValid: true,
       isApplicable: false,

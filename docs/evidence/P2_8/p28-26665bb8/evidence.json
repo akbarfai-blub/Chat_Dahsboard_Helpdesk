@@ -1,0 +1,85 @@
+{
+  "runId": "p28-26665bb8",
+  "timestamp": "2026-10-11T21:39:33.445Z",
+  "overallStatus": "FAIL",
+  "expectedExitCode": 1,
+  "calculatedExitCode": 1,
+  "totalAssertions": 8,
+  "passedAssertions": 7,
+  "failedAssertions": 1,
+  "screenshots": [
+    "01_unlabeled_state.png",
+    "01b_direct_confirm_error.png",
+    "02_confirmed_state.png",
+    "03_corrected_state.png"
+  ],
+  "assertions": [
+    {
+      "id": "build_source_binding_verification",
+      "name": "Pengikatan build-to-source valid dan BUILD_ID tersinkronisasi",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": "SYNCHRONIZED",
+      "actual": "SYNCHRONIZED"
+    },
+    {
+      "id": "auth_setup",
+      "name": "Autentikasi sesi staf pada aplikasi Next.js asli (/login -> /dashboard)",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": "/dashboard",
+      "actual": "/dashboard"
+    },
+    {
+      "id": "unlabeled_message_ui_state",
+      "name": "Tampilan pesan belum dilabeli: badge 'Belum Dilabeli', kategori rule asli, tombol konfirmasi & koreksi",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": "badge=Belum Dilabeli, rule=connection_complaint, confirmBtn=Konfirmasi Benar",
+      "actual": "badge=Belum Dilabeli, rule=connection_complaint, confirmBtn=Konfirmasi Benar"
+    },
+    {
+      "id": "one_click_confirmation_and_rule_preservation",
+      "name": "Konfirmasi 1-klik tersimpan: status 'confirmed', aktor sesi server, rule asli di messages tetap utuh",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": "UI: Terkonfirmasi & Komplain Koneksi; DB: status=confirmed, actor=staffUserId, rule_preserved=true",
+      "actual": "UI badge=Terkonfirmasi, DB status=confirmed, actor=9ecbe10b-3df3-432c-9963-e828bd7a4993, rule_cat=connection_complaint"
+    },
+    {
+      "id": "direct_confirmation_failure_display_and_accessibility",
+      "name": "Kegagalan konfirmasi langsung: error alert role='alert' aria-live='polite', tahan 2x polling, retry sukses, dismiss 'Tutup', switch bersih",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": "errorVisible=true, role=alert, 2x polling survive=true, retrySuccess=true, dismiss=true, switchIsolation=true",
+      "actual": "pollingSurvive=true, retrySuccess=true, dismiss=true, switchIsolation=true"
+    },
+    {
+      "id": "idempotent_repeated_save_behavior",
+      "name": "Penyimpanan berulang dengan nilai identik bersifat idempoten tanpa duplikasi history",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": "history_count = 1",
+      "actual": "history_count = 1"
+    },
+    {
+      "id": "staff_correction_with_traceable_history",
+      "name": "Koreksi klasifikasi tersimpan: badge 'Dikoreksi', label 'Bukan Komplain', catatan tersimpan, riwayat terlacak",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": "UI: Dikoreksi & Bukan Komplain; DB history count=2 (confirmed -> corrected)",
+      "actual": "UI badge=Dikoreksi, staffVal=Bukan Komplain, DB history count=2"
+    },
+    {
+      "id": "runner_cleanup_and_teardown",
+      "name": "Pembersihan proses Chrome/Next.js, user staf, dan fixture database selesai tanpa residu",
+      "isOptional": false,
+      "status": "FAIL",
+      "expected": "cleanupErrors.length === 0",
+      "actual": "Cannot read properties of undefined (reading 'hasOldClassification')"
+    }
+  ],
+  "cleanupErrors": [
+    "Cannot read properties of undefined (reading 'hasOldClassification')"
+  ]
+}

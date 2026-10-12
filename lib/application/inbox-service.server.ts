@@ -5,6 +5,8 @@ import {
   listInboxConversations,
   getInboxConversationDetail,
   markConversationRead,
+  getInboxConversationContext,
+  executeInboxNetworkCheck,
   InboxError,
 } from "./inbox-service";
 import type {
@@ -35,3 +37,15 @@ export async function updateConversationReadStatus(command: MarkConversationRead
   const staffId = await sessionStaffId();
   return markConversationRead(getHelpdeskPool(), staffId, command);
 }
+
+export async function fetchInboxConversationContext(conversationId: string) {
+  const staffId = await sessionStaffId();
+  return getInboxConversationContext(getHelpdeskPool(), staffId, conversationId);
+}
+
+export async function runInboxNetworkCheck(conversationId: string, scenarioId?: string) {
+  const staffId = await sessionStaffId();
+  const auth = await createClient();
+  return executeInboxNetworkCheck(auth, getHelpdeskPool(), staffId, conversationId, scenarioId);
+}
+

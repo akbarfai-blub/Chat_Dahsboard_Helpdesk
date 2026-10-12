@@ -1,0 +1,56 @@
+{
+  "timestamp": "2026-10-10T18:47:35.160Z",
+  "runId": "guard-reject-4d82fbf0",
+  "mode": "guard_rejection",
+  "runnerRevisionSha256": "7a1dc6bb3ced2a392e64f3a841c9fd85579af5dadf940f86f6109e5243eeaa19",
+  "expectedExitCode": 0,
+  "calculatedExitCode": 0,
+  "buildIdentity": {
+    "status": "NOT_APPLICABLE",
+    "isApplicable": false,
+    "isValid": true,
+    "reason": "Mode guard rejection tidak menjalankan server Next.js"
+  },
+  "summary": {
+    "overallStatus": "PASS",
+    "exitCode": 0,
+    "total": 4,
+    "passed": 4,
+    "failed": 0
+  },
+  "assertions": [
+    {
+      "id": "guard_active_db_rejection",
+      "name": "Penolakan fail-closed terhadap database workspace pengguna aktif (port 54322)",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": "Error penolakan default user workspace database",
+      "actual": "FAIL-CLOSED: Target is the default user workspace database. Rejecting execution to protect user data."
+    },
+    {
+      "id": "guard_active_api_rejection",
+      "name": "Penolakan fail-closed terhadap Supabase API workspace pengguna aktif (port 54321)",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": "Error penolakan target API port 54321",
+      "actual": "FAIL-CLOSED: Target API is the default user workspace Supabase API (port 54321). Rejecting execution to protect user data."
+    },
+    {
+      "id": "guard_marker_mismatch_rejection",
+      "name": "Penolakan fail-closed saat marker token PostgreSQL dan Supabase API tidak cocok",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": "Error penolakan marker token mismatch",
+      "actual": "FAIL-CLOSED: Target mismatch: PostgreSQL and Supabase API returned different marker tokens. The two connections are accessing different databases!"
+    },
+    {
+      "id": "guard_zero_mutations_on_rejection",
+      "name": "Pembuktian terarah: penolakan guard mencegah pembuatan user dan fixture di database",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": "leakedUsers=0",
+      "actual": "leakedUsers=0"
+    }
+  ],
+  "cleanupErrors": []
+}

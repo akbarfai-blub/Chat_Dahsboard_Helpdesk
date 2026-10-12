@@ -1,0 +1,56 @@
+{
+  "timestamp": "2026-10-11T05:53:19.332Z",
+  "runId": "guard-reject-6a610147",
+  "mode": "guard_rejection",
+  "runnerRevisionSha256": "a160a850071686f050fdaf0e16f28f8789f51ec7f3ddeb276bfc2ae0d8317b85",
+  "expectedExitCode": 0,
+  "calculatedExitCode": 0,
+  "buildIdentity": {
+    "status": "NOT_APPLICABLE",
+    "isApplicable": false,
+    "isValid": true,
+    "reason": "Mode guard rejection tidak menjalankan server Next.js"
+  },
+  "summary": {
+    "overallStatus": "PASS",
+    "exitCode": 0,
+    "total": 4,
+    "passed": 4,
+    "failed": 0
+  },
+  "assertions": [
+    {
+      "id": "guard_active_db_rejection",
+      "name": "Jalur setup runner menolak database workspace pengguna aktif (port 54322) sebelum pembuatan user & fixture",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": "Error penolakan database 54322 & userCalls=0 & fixtureCalls=0",
+      "actual": "FAIL-CLOSED: Target is the default user workspace database. Rejecting execution to protect user data. (userCalls=0, fixtureCalls=0)"
+    },
+    {
+      "id": "guard_active_api_rejection",
+      "name": "Jalur setup runner menolak Supabase API workspace pengguna aktif (port 54321) sebelum pembuatan user & fixture",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": "Error target API port 54321 & userCalls=0 & fixtureCalls=0",
+      "actual": "FAIL-CLOSED: Target API is the default user workspace Supabase API (port 54321). Rejecting execution to protect user data. (userCalls=0, fixtureCalls=0)"
+    },
+    {
+      "id": "guard_marker_mismatch_rejection",
+      "name": "Jalur setup runner menolak marker token mismatch antara PG dan Supabase API sebelum pembuatan user & fixture",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": "Error marker token mismatch & userCalls=0 & fixtureCalls=0",
+      "actual": "FAIL-CLOSED: Target mismatch: PostgreSQL and Supabase API returned different marker tokens. The two connections are accessing different databases! (userCalls=0, fixtureCalls=0)"
+    },
+    {
+      "id": "guard_zero_mutations_on_rejection",
+      "name": "Verifikasi nol mutasi dan bebas residu lintas resource (Auth API, Customers, Conversations) pada penolakan guard setup",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": "leakedUsers=0, leakedCustomers=0, leakedConversations=0",
+      "actual": "leakedUsers=0, leakedCustomers=0, leakedConversations=0"
+    }
+  ],
+  "cleanupErrors": []
+}

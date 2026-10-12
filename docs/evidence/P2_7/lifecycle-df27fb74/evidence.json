@@ -1,0 +1,81 @@
+{
+  "timestamp": "2026-10-10T17:24:11.237Z",
+  "runId": "lifecycle-df27fb74",
+  "mode": "ui_lifecycle",
+  "expectedExitCode": 0,
+  "calculatedExitCode": 1,
+  "summary": {
+    "overallStatus": "FAIL",
+    "exitCode": 1,
+    "total": 7,
+    "passed": 5,
+    "failed": 2
+  },
+  "assertions": [
+    {
+      "id": "ui_lifecycle_stale_context_rejected_a_b_a",
+      "name": "Respons konteks lama tidak menimpa konteks terbaru (A -> B -> A reordering)",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": "bDidNotLeak=true, a1StaleRejected=true, a2LatestRendered=true",
+      "actual": "bDidNotLeak=true, a1StaleRejected=true, a2LatestRendered=true"
+    },
+    {
+      "id": "ui_lifecycle_slow_foreground_with_polling_consistent",
+      "name": "Foreground lambat + polling menghasilkan konteks konsisten, loading tuntas, dan error dapat dipulihkan",
+      "isOptional": false,
+      "status": "FAIL",
+      "expected": "foregroundBusy=true, pollResolved=true, errorDisplayed=true, recovered=true",
+      "actual": "foregroundBusy=false, pollResolved=true, errorDisplayed=false, recovered=true"
+    },
+    {
+      "id": "ui_lifecycle_delayed_network_check_rejected_on_service_change",
+      "name": "Pemeriksaan jaringan tertunda ditolak ketika layanan/percakapan berubah",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": "checkRejected=true (hasil cek layanan lama tidak menempel pada layanan baru)",
+      "actual": "checkRejected=true"
+    },
+    {
+      "id": "ui_lifecycle_assessment_and_service_change_syncs_context",
+      "name": "Assessment berubah dan layanan berubah tetap memperbarui konteks tanpa pertambahan pesan",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": "contextSyncFired=true, domUpdated=true",
+      "actual": "contextSyncFired=true, domUpdated=true"
+    },
+    {
+      "id": "ui_lifecycle_noop_polling_preserves_unresolved",
+      "name": "Polling tanpa perubahan mempertahankan hasil relevan (outcome=unresolved tetap utuh)",
+      "isOptional": false,
+      "status": "FAIL",
+      "expected": "before=true, after=true (tidak ter-reset saat polling)",
+      "actual": "before=false, after=true"
+    },
+    {
+      "id": "ui_lifecycle_partial_non_2xx_accepted_and_stale_rejected",
+      "name": "Respons parsial non-2xx untuk konteks aktif ditangani dengan benar; respons kedaluwarsa ditolak",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": "partialPreserved=true, expiredRejected=true",
+      "actual": "partialPreserved=true, expiredRejected=true"
+    },
+    {
+      "id": "runner_cleanup_and_teardown",
+      "name": "Pembersihan proses, user staf, dan fixture pengujian selesai tanpa residu atau kegagalan",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": "cleanupErrors=0, residualsRemaining=0",
+      "actual": "cleanupErrors=0, residualsRemaining=0"
+    }
+  ],
+  "screenshots": [
+    "01_ui_lifecycle_reordered_context_a_b_a.png",
+    "02_ui_lifecycle_slow_fg_polling_recovery.png",
+    "03_ui_lifecycle_delayed_check_rejected.png",
+    "04_ui_lifecycle_assessment_service_sync.png",
+    "05_ui_lifecycle_polling_preserves_unresolved.png",
+    "06_ui_lifecycle_partial_non2xx_and_expired.png"
+  ],
+  "cleanupErrors": []
+}

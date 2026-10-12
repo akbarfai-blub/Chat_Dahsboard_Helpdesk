@@ -1,0 +1,28 @@
+{
+  "timestamp": "2026-10-10T17:12:09.242Z",
+  "runId": "lifecycle-820b1957",
+  "mode": "ui_lifecycle",
+  "expectedExitCode": 0,
+  "calculatedExitCode": 1,
+  "summary": {
+    "overallStatus": "FAIL",
+    "exitCode": 1,
+    "total": 1,
+    "passed": 0,
+    "failed": 1
+  },
+  "assertions": [
+    {
+      "id": "runner_cleanup_and_teardown",
+      "name": "Pembersihan proses, user staf, dan fixture pengujian selesai tanpa residu atau kegagalan",
+      "isOptional": false,
+      "status": "FAIL",
+      "expected": "cleanupErrors=0, residualsRemaining=0",
+      "actual": "cleanupErrors=1, residualsRemaining=0"
+    }
+  ],
+  "screenshots": [],
+  "cleanupErrors": [
+    "'Page.enable' wasn't found"
+  ]
+}

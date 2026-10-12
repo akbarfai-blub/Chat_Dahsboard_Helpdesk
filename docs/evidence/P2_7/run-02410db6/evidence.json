@@ -1,0 +1,253 @@
+{
+  "timestamp": "2026-10-09T12:11:28.651Z",
+  "runId": "run-02410db6",
+  "mode": "live_browser_normal",
+  "expectedExitCode": 1,
+  "calculatedExitCode": 1,
+  "buildIdentity": {
+    "status": "LAUNCH_HASHES_MISSING",
+    "isApplicable": true,
+    "isValid": false,
+    "buildId": "l9_H39CJa5hpBilr9UZGR",
+    "manifestBuildId": "l9_H39CJa5hpBilr9UZGR",
+    "scope": "p27_inbox_and_evidence",
+    "scopeDescription": "Subkelompok berkas UI Inbox, panel evidence, routing context/check, dan semantics P2.7",
+    "trackedFiles": [
+      "components/inbox/inbox-conversation-panel.tsx",
+      "components/inbox/inbox-dashboard.tsx",
+      "components/inbox/inbox-evidence-panel.tsx",
+      "components/inbox/inbox-conversation-list.tsx",
+      "components/inbox/inbox-filter-bar.tsx",
+      "components/inbox/inbox-pagination.tsx",
+      "components/inbox/inbox-status-badge.tsx",
+      "components/inbox/inbox-status-banner.tsx",
+      "components/inbox/inbox-types.ts",
+      "components/layout/dashboard-shell.tsx",
+      "app/dashboard/page.tsx",
+      "app/dashboard/complaints/page.tsx",
+      "app/api/inbox/conversations/[id]/context/route.ts",
+      "app/api/inbox/conversations/[id]/network-check/route.ts",
+      "lib/supabase/auth-config.ts",
+      "lib/supabase/server.ts",
+      "lib/application/inbox-contracts.ts",
+      "lib/application/inbox-service.server.ts",
+      "lib/application/inbox-service.ts",
+      "lib/application/origin-validator.ts",
+      "lib/domain/evidence-semantics.ts",
+      "lib/utils/format-date.ts"
+    ],
+    "sourceHashesAtBuild": {
+      "components/inbox/inbox-conversation-panel.tsx": "e55f5d65f88eafbf2d853e2f400aebd5c6d5171afebdc2b9c284990a320ca72b",
+      "components/inbox/inbox-dashboard.tsx": "2c2321eabd9f5446bad35940c1b43b3b1066625b941832180edf6ba06e681786",
+      "components/inbox/inbox-evidence-panel.tsx": "3599b12944f2683d19d4e1135aba81a81a940f887663dcc9d595de3901e37e0f",
+      "components/inbox/inbox-conversation-list.tsx": "37ef98a5530afdeada7ebac486e384c3f0c002659cd852e71984ee884534a3a5",
+      "components/inbox/inbox-filter-bar.tsx": "a04ffd161867dca515fce0ec29385cbe8dc2cbdcb58d3c015445244434ecb6fb",
+      "components/inbox/inbox-pagination.tsx": "8c21fc06243d63d938a1240f7e4f02ff6273ce8a940e15c5a267747bb3c8be4f",
+      "components/inbox/inbox-status-badge.tsx": "cae837e2e7916275674f1c56c4ca5175984646a4783759fd784e13e4fbc3a494",
+      "components/inbox/inbox-status-banner.tsx": "ea86dc334dfa173d6eae6740dd2955afba051d6ac43b2639f2ff3ae187912fa6",
+      "components/inbox/inbox-types.ts": "0c61be15e04b541334edc2a919687077e55241856ddba22c95bb216d259e9947",
+      "components/layout/dashboard-shell.tsx": "e6834cf374d8c315b6fb2c439bfe28d0fe020f32d0e5e8dffcf0d64bc6e245ac",
+      "app/dashboard/page.tsx": "fafe3fb0e885294f256e1d717be27c7f64d0e5ef45b4ea9c83e700fe263e6d72",
+      "app/dashboard/complaints/page.tsx": "aed660a75c1cad40c85f7ee61a06fa39c818200b175b0c68d2022fc366536de7",
+      "app/api/inbox/conversations/[id]/context/route.ts": "eb13981e654bf089367e2285cc01cb101ca006082ef52fd2acb338f54005e67a",
+      "app/api/inbox/conversations/[id]/network-check/route.ts": "1ffd198d2ee54e11a7f9535c26ad08c12dc532d7ccfa982e492d8812e9b8954b",
+      "lib/supabase/auth-config.ts": "7ba80cf0a5bc0a16d473257c0e8a996151bdd35bf3c62b3c5ed8153312b4080d",
+      "lib/supabase/server.ts": "1a34658a36d1c89c772d92236943ccc6667517cc57d19d72cfe57ce29d01607b",
+      "lib/application/inbox-contracts.ts": "bd2f4da8f6838b3450fc08127a71b63670d82df351e99e2dc4593ec657e36404",
+      "lib/application/inbox-service.server.ts": "e7ebad5efa656a6e10a19e4beea9c1e08ce51cbe9a8c0373db9e8af115eff3b2",
+      "lib/application/inbox-service.ts": "7b69b5ed23d3ec25d1e3cfb33b1e78e0d9fdeddbdb6db7b34008e09d75e6c554",
+      "lib/application/origin-validator.ts": "d86014ec774013e5060a3a81137919071bbd134b2a04c7a56c7905cead6a1cb5",
+      "lib/domain/evidence-semantics.ts": "b30a1e3553f65f73fee4b5208cb19ce5101f56b67b42bf139e4908ace4ce153c",
+      "lib/utils/format-date.ts": "d9570454184cdd3edc7d56a9a3d140b188aa87be61fd81484fe3ad6397c92bb3"
+    },
+    "sourceHashesAtLaunch": null,
+    "sourceHashesAtFinalize": {
+      "components/inbox/inbox-conversation-panel.tsx": "e55f5d65f88eafbf2d853e2f400aebd5c6d5171afebdc2b9c284990a320ca72b",
+      "components/inbox/inbox-dashboard.tsx": "2c2321eabd9f5446bad35940c1b43b3b1066625b941832180edf6ba06e681786",
+      "components/inbox/inbox-evidence-panel.tsx": "3599b12944f2683d19d4e1135aba81a81a940f887663dcc9d595de3901e37e0f",
+      "components/inbox/inbox-conversation-list.tsx": "37ef98a5530afdeada7ebac486e384c3f0c002659cd852e71984ee884534a3a5",
+      "components/inbox/inbox-filter-bar.tsx": "a04ffd161867dca515fce0ec29385cbe8dc2cbdcb58d3c015445244434ecb6fb",
+      "components/inbox/inbox-pagination.tsx": "8c21fc06243d63d938a1240f7e4f02ff6273ce8a940e15c5a267747bb3c8be4f",
+      "components/inbox/inbox-status-badge.tsx": "cae837e2e7916275674f1c56c4ca5175984646a4783759fd784e13e4fbc3a494",
+      "components/inbox/inbox-status-banner.tsx": "ea86dc334dfa173d6eae6740dd2955afba051d6ac43b2639f2ff3ae187912fa6",
+      "components/inbox/inbox-types.ts": "0c61be15e04b541334edc2a919687077e55241856ddba22c95bb216d259e9947",
+      "components/layout/dashboard-shell.tsx": "e6834cf374d8c315b6fb2c439bfe28d0fe020f32d0e5e8dffcf0d64bc6e245ac",
+      "app/dashboard/page.tsx": "fafe3fb0e885294f256e1d717be27c7f64d0e5ef45b4ea9c83e700fe263e6d72",
+      "app/dashboard/complaints/page.tsx": "aed660a75c1cad40c85f7ee61a06fa39c818200b175b0c68d2022fc366536de7",
+      "app/api/inbox/conversations/[id]/context/route.ts": "eb13981e654bf089367e2285cc01cb101ca006082ef52fd2acb338f54005e67a",
+      "app/api/inbox/conversations/[id]/network-check/route.ts": "1ffd198d2ee54e11a7f9535c26ad08c12dc532d7ccfa982e492d8812e9b8954b",
+      "lib/supabase/auth-config.ts": "7ba80cf0a5bc0a16d473257c0e8a996151bdd35bf3c62b3c5ed8153312b4080d",
+      "lib/supabase/server.ts": "1a34658a36d1c89c772d92236943ccc6667517cc57d19d72cfe57ce29d01607b",
+      "lib/application/inbox-contracts.ts": "bd2f4da8f6838b3450fc08127a71b63670d82df351e99e2dc4593ec657e36404",
+      "lib/application/inbox-service.server.ts": "e7ebad5efa656a6e10a19e4beea9c1e08ce51cbe9a8c0373db9e8af115eff3b2",
+      "lib/application/inbox-service.ts": "7b69b5ed23d3ec25d1e3cfb33b1e78e0d9fdeddbdb6db7b34008e09d75e6c554",
+      "lib/application/origin-validator.ts": "d86014ec774013e5060a3a81137919071bbd134b2a04c7a56c7905cead6a1cb5",
+      "lib/domain/evidence-semantics.ts": "b30a1e3553f65f73fee4b5208cb19ce5101f56b67b42bf139e4908ace4ce153c",
+      "lib/utils/format-date.ts": "d9570454184cdd3edc7d56a9a3d140b188aa87be61fd81484fe3ad6397c92bb3"
+    },
+    "checks": {
+      "manifestExists": true,
+      "buildIdMatch": true,
+      "launchSourceMatch": false,
+      "runtimeSourceMatch": false
+    },
+    "reason": "Hash source pada saat runner launch tidak tersedia"
+  },
+  "screenshots": [],
+  "summary": {
+    "overallStatus": "FAIL",
+    "exitCode": 1,
+    "total": 20,
+    "passed": 1,
+    "failed": 1,
+    "notRun": 18
+  },
+  "assertions": [
+    {
+      "id": "build_source_binding_verification",
+      "name": "Pengikatan build-to-source valid dan BUILD_ID tersinkronisasi",
+      "isOptional": false,
+      "status": "PASS",
+      "expected": "SYNCHRONIZED",
+      "actual": "SYNCHRONIZED"
+    },
+    {
+      "id": "runner_cleanup_and_teardown",
+      "name": "Pembersihan proses, user staf, dan fixture pengujian selesai tanpa residu atau kegagalan",
+      "isOptional": false,
+      "status": "FAIL",
+      "expected": "Cleanup selesai tanpa error dan 0 residu",
+      "actual": "tracker.recordUser is not a function; tracker.cleanup is not a function"
+    },
+    {
+      "id": "auth_setup",
+      "name": "Assertion wajib mode (auth_setup)",
+      "isOptional": false,
+      "status": "NOT_RUN",
+      "reason": "Assertion wajib 'auth_setup' terdaftar pada mode registry namun tidak dijalankan oleh runner"
+    },
+    {
+      "id": "desktop_wide_three_column_layout",
+      "name": "Assertion wajib mode (desktop_wide_three_column_layout)",
+      "isOptional": false,
+      "status": "NOT_RUN",
+      "reason": "Assertion wajib 'desktop_wide_three_column_layout' terdaftar pada mode registry namun tidak dijalankan oleh runner"
+    },
+    {
+      "id": "identity_context_verified_resolution",
+      "name": "Assertion wajib mode (identity_context_verified_resolution)",
+      "isOptional": false,
+      "status": "NOT_RUN",
+      "reason": "Assertion wajib 'identity_context_verified_resolution' terdaftar pada mode registry namun tidak dijalankan oleh runner"
+    },
+    {
+      "id": "identity_context_topology_odp_odc",
+      "name": "Assertion wajib mode (identity_context_topology_odp_odc)",
+      "isOptional": false,
+      "status": "NOT_RUN",
+      "reason": "Assertion wajib 'identity_context_topology_odp_odc' terdaftar pada mode registry namun tidak dijalankan oleh runner"
+    },
+    {
+      "id": "operational_context_active_incident",
+      "name": "Assertion wajib mode (operational_context_active_incident)",
+      "isOptional": false,
+      "status": "NOT_RUN",
+      "reason": "Assertion wajib 'operational_context_active_incident' terdaftar pada mode registry namun tidak dijalankan oleh runner"
+    },
+    {
+      "id": "triage_historical_assessment_fidelity",
+      "name": "Assertion wajib mode (triage_historical_assessment_fidelity)",
+      "isOptional": false,
+      "status": "NOT_RUN",
+      "reason": "Assertion wajib 'triage_historical_assessment_fidelity' terdaftar pada mode registry namun tidak dijalankan oleh runner"
+    },
+    {
+      "id": "desktop_medium_drawer_slide_over",
+      "name": "Assertion wajib mode (desktop_medium_drawer_slide_over)",
+      "isOptional": false,
+      "status": "NOT_RUN",
+      "reason": "Assertion wajib 'desktop_medium_drawer_slide_over' terdaftar pada mode registry namun tidak dijalankan oleh runner"
+    },
+    {
+      "id": "desktop_medium_drawer_focus_trap_and_escape",
+      "name": "Assertion wajib mode (desktop_medium_drawer_focus_trap_and_escape)",
+      "isOptional": false,
+      "status": "NOT_RUN",
+      "reason": "Assertion wajib 'desktop_medium_drawer_focus_trap_and_escape' terdaftar pada mode registry namun tidak dijalankan oleh runner"
+    },
+    {
+      "id": "drawer_read_ack_suppression",
+      "name": "Assertion wajib mode (drawer_read_ack_suppression)",
+      "isOptional": false,
+      "status": "NOT_RUN",
+      "reason": "Assertion wajib 'drawer_read_ack_suppression' terdaftar pada mode registry namun tidak dijalankan oleh runner"
+    },
+    {
+      "id": "mobile_subnav_tabs_and_read_suppression",
+      "name": "Assertion wajib mode (mobile_subnav_tabs_and_read_suppression)",
+      "isOptional": false,
+      "status": "NOT_RUN",
+      "reason": "Assertion wajib 'mobile_subnav_tabs_and_read_suppression' terdaftar pada mode registry namun tidak dijalankan oleh runner"
+    },
+    {
+      "id": "network_check_on_demand_execution",
+      "name": "Assertion wajib mode (network_check_on_demand_execution)",
+      "isOptional": false,
+      "status": "NOT_RUN",
+      "reason": "Assertion wajib 'network_check_on_demand_execution' terdaftar pada mode registry namun tidak dijalankan oleh runner"
+    },
+    {
+      "id": "network_check_distinct_onu_evidence",
+      "name": "Assertion wajib mode (network_check_distinct_onu_evidence)",
+      "isOptional": false,
+      "status": "NOT_RUN",
+      "reason": "Assertion wajib 'network_check_distinct_onu_evidence' terdaftar pada mode registry namun tidak dijalankan oleh runner"
+    },
+    {
+      "id": "network_check_distinct_upstream_evidence",
+      "name": "Assertion wajib mode (network_check_distinct_upstream_evidence)",
+      "isOptional": false,
+      "status": "NOT_RUN",
+      "reason": "Assertion wajib 'network_check_distinct_upstream_evidence' terdaftar pada mode registry namun tidak dijalankan oleh runner"
+    },
+    {
+      "id": "network_check_area_coverage_denominators",
+      "name": "Assertion wajib mode (network_check_area_coverage_denominators)",
+      "isOptional": false,
+      "status": "NOT_RUN",
+      "reason": "Assertion wajib 'network_check_area_coverage_denominators' terdaftar pada mode registry namun tidak dijalankan oleh runner"
+    },
+    {
+      "id": "network_check_zero_side_effects",
+      "name": "Assertion wajib mode (network_check_zero_side_effects)",
+      "isOptional": false,
+      "status": "NOT_RUN",
+      "reason": "Assertion wajib 'network_check_zero_side_effects' terdaftar pada mode registry namun tidak dijalankan oleh runner"
+    },
+    {
+      "id": "network_check_unresolved_safety",
+      "name": "Assertion wajib mode (network_check_unresolved_safety)",
+      "isOptional": false,
+      "status": "NOT_RUN",
+      "reason": "Assertion wajib 'network_check_unresolved_safety' terdaftar pada mode registry namun tidak dijalankan oleh runner"
+    },
+    {
+      "id": "identity_context_ambiguous_services_warning",
+      "name": "Assertion wajib mode (identity_context_ambiguous_services_warning)",
+      "isOptional": false,
+      "status": "NOT_RUN",
+      "reason": "Assertion wajib 'identity_context_ambiguous_services_warning' terdaftar pada mode registry namun tidak dijalankan oleh runner"
+    },
+    {
+      "id": "evidence_semantics_dynamic_freshness_downgrade",
+      "name": "Assertion wajib mode (evidence_semantics_dynamic_freshness_downgrade)",
+      "isOptional": false,
+      "status": "NOT_RUN",
+      "reason": "Assertion wajib 'evidence_semantics_dynamic_freshness_downgrade' terdaftar pada mode registry namun tidak dijalankan oleh runner"
+    }
+  ],
+  "cleanupErrors": [
+    "tracker.recordUser is not a function",
+    "tracker.cleanup is not a function"
+  ]
+}
