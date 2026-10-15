@@ -95,6 +95,19 @@ Pencegahan pencampuran mock client dengan runner mutasi nyata, penegakan injeksi
 | P1 | Preservasi client lokal pada verifier read-only | **Teratasi (PASS)** | `scripts/verify-prototype-schema.mjs` tetap mempertahankan dukungan `PROTOTYPE_TEST_CLIENT_MODULE` untuk pengujian CLI subprocess karena verifier beroperasi dalam transaksi `BEGIN READ ONLY` dan tidak memiliki efek samping mutasi. |
 | P1 | Bukti verifikasi remote aktual tertelusuri (task-554) | **Teratasi (PASS)** | Menjalankan satu eksekusi read-only terbaru via `scripts/verify-prototype-schema.mjs` dengan client `pg` nyata, `sslmode=verify-full`, dan `NODE_EXTRA_CA_CERTS=certs/prod-ca-2021.crt` pada 15 Oktober 2026, 22:52 WIB (task-554). Seluruh assertion lulus penuh, exit code 0, 0 mutasi database. Stdout/stderr disajikan murni tanpa teks rekonstruksi naratif dari log asli `task-554.log`. |
 
+## Status Resolusi Error 500 Inbox Vercel, CA Certificate & Pengalihan Halaman Awal (D153)
+
+Penyebab kegagalan Inbox pada deployment Vercel dan halaman awal statis telah diselesaikan dan diverifikasi penuh:
+
+| Prioritas | Bidang | Status | Perbaikan dan Bukti Verifikasi |
+|---|---|---|---|
+| P1 | Error 500 Inbox akibat kegagalan TLS CA pada driver `pg` | **Teratasi (PASS)** | `lib/postgres/server.ts`: Menambahkan `resolveDatabaseCaCertificate()` (env `HELPDESK_DB_CA`/`SUPABASE_DB_CA` → disk `certs/prod-ca-2021.crt` → bundled fallback `SUPABASE_ROOT_CA_2021`). Inisialisasi `new Pool` memisahkan parameter koneksi (`host`, `port`, `database`, `user`, `password`) dan menyuntikkan `ssl: { ca, rejectUnauthorized: true, servername: url.hostname }` secara eksplisit sehingga tidak ditimpa oleh parser `pg-connection-string`. Terbukti empiris menyelesaikan `SELF_SIGNED_CERT_IN_CHAIN` dan berhasil melakukan query ke Supabase Transaction Pooler remote. |
+| P1 | Pengalihan sesi server-side halaman awal `/` | **Teratasi (PASS)** | `app/page.tsx`: Mengganti "Hello world!" statis dengan Server Component dinamis yang memverifikasi sesi server-side via `@/lib/supabase/server` `createClient().auth.getUser()`. Mengalihkan staf dengan sesi valid ke `/dashboard` (307) dan pengunjung tanpa sesi ke `/login` (307) tanpa redirect loop atau naive cookie/localStorage check. Terbukti lulus kompilasi dinamis Next.js (`ƒ /`). |
+| P1 | Bundling sertifikat pada Next.js Serverless Functions | **Teratasi (PASS)** | `next.config.ts`: Menambahkan `outputFileTracingIncludes: { "/**": ["./certs/**/*"] }` untuk memastikan direktori `certs/` disertakan dalam bundle Serverless Functions Vercel. |
+| P2 | Diagnostik error server aman dan terbatas | **Teratasi (PASS)** | `app/api/inbox/conversations/route.ts` dan `[id]/route.ts`: Menambahkan safe diagnostic logging pada blok `catch (err)` yang mencatat nama, kode, dan pesan yang disanitasi (menghapus format password/URI) ke `console.error` tanpa membocorkan rahasia atau isi pesan pelanggan. |
+| P1 | Build produksi & regresi unit test | **Teratasi (PASS)** | `npm run build` sukses (exit code 0, `BUILD_ID: JTdS8Jb2coBKY5Q1yv8GA`, manifest 26 berkas valid); `npm test` 307/307 tests PASS (exit code 0); `eslint` 0 error/warning pada seluruh berkas yang dimodifikasi. |
+
+
 ## Batas bukti yang tersedia
 
 - **Pengujian Tooling Terisolasi**:

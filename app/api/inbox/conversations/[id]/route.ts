@@ -54,6 +54,15 @@ export async function GET(
     if (err instanceof InboxError) {
       return failure(err.status, err.code, err.message);
     }
+    const safeError =
+      err instanceof Error
+        ? {
+            name: err.name,
+            code: (err as { code?: string }).code,
+            message: err.message.replace(/:[^:@/]+@/g, ":***@"),
+          }
+        : { name: "UnknownError" };
+    console.error("[InboxConversationDetailRoute Error]", safeError);
     return failure(500, "INTERNAL_ERROR", "Terjadi kesalahan pada server saat memuat detail percakapan.");
   }
 }

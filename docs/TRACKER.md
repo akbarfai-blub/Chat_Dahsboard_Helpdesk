@@ -572,7 +572,7 @@ Hasil tersedia melalui API; panel evidence dashboard mengikuti P2.7.
 | [P2.7](#task-p2-7)   | Panel konteks identitas dan evidence jaringan         | ✅ Done        | P2.6, P1.5.3                       | D69, D71, D72, D124, D125, D126, D127, D128, D129, D130, D131, D132, D133, D134, D135 |
 | [P2.8](#task-p2-8)   | Label dan koreksi klasifikasi oleh staf               | ✅ Done        | P2.6, P1.1.2                       | D65, D66, D69, D136, D137, D138, D139, D140, D141, D142 |
 | [P2.9](#task-p2-9)   | Direktori pelanggan pendukung yang read-only          | ✅ Done        | P0.6, P0.8, P0.9                   | D70, D71            |
-| [P2.10](#task-p2-10) | Konfigurasi dan deployment prototype SHADOW           | 🟡 In Progress | P0.2, P0.4, P0.5, P2.2, P2.5, P2.6 | D50, D67, D68, D143, D144, D145, D146, D147, D148, D149, D150, D151, D152 |
+| [P2.10](#task-p2-10) | Konfigurasi dan deployment prototype SHADOW           | 🟡 In Progress | P0.2, P0.4, P0.5, P2.2, P2.5, P2.6 | D50, D67, D68, D143, D144, D145, D146, D147, D148, D149, D150, D151, D152, D153 |
 | [P2.11](#task-p2-11) | Verifikasi vertical slice SHADOW end-to-end           | ⬜ Not Started | P2.7, P2.8, P2.10                  | D65, D67, D68       |
 
 ### Detail task
@@ -1105,12 +1105,19 @@ Supabase prototype, Vercel env, bot token/secret, dan tester IDs terkonfigurasi;
   3. Verifier read-only (`scripts/verify-prototype-schema.mjs`) mempertahankan seam lokal untuk pengujian CLI tanpa risiko efek samping mutasi.
   4. Pengujian tooling lokal terisolasi `tests/tooling/pipeline-tooling.test.mjs`: **53 checks PASS** (terdiri dari 4 parent test suites dan 49 subtests: Suite 1 [8 subtests], Suite 2 [15 subtests], Suite 3 [19 subtests], Suite 4 [7 subtests]), 0 fail, exit code 0, durasi ~614ms.
   5. Verifikasi read-only aktual terhadap database remote Supabase Cloud (`saysxjdyalnbhxqqmytp`) dieksekusi via `scripts/verify-prototype-schema.mjs` (task-554): kueri dijalankan dalam transaksi `BEGIN READ ONLY` via Session pooler port 5432 dengan `NODE_EXTRA_CA_CERTS=certs/prod-ca-2021.crt`. Seluruh assertion lulus penuh: 13/13 migrasi applied, 22 tabel inti, seluruh fixture pelanggan/layanan/topologi/identitas lengkap, tester Telegram verified, fixture network 180 pasang ONU dan 16 pasang Upstream lengkap dengan stale preserved, mode SHADOW valid, exit code 0, dan 0 mutasi database (log asli tertelusuri langsung dari `task-554.log`).
+- **Resolusi Error 500 Inbox, Pengalihan Halaman Awal & Diagnostik Server (D153)**:
+  1. Root cause error 500 Inbox di Vercel terbukti secara empiris: `pg-connection-string` menimpa opsi SSL menjadi kosong `{}` saat mengurai connection string `sslmode=verify-full`, menyebabkan kegagalan handshake TLS `SELF_SIGNED_CERT_IN_CHAIN` karena CA Supabase tidak ada di trust store bawaan Node.js.
+  2. Perbaikan `lib/postgres/server.ts`: menambahkan `resolveDatabaseCaCertificate` dengan triple redundancy (env `HELPDESK_DB_CA`/`SUPABASE_DB_CA`, berkas `certs/prod-ca-2021.crt`, dan konstanta `SUPABASE_ROOT_CA_2021`). Inisialisasi pool remote mengoperasikan parameter terpisah dan `ssl: { ca, rejectUnauthorized: true, servername: url.hostname }` tanpa menggunakan connectionString mentah yang menimpa konfigurasi SSL. Validasi `sslmode=verify-full` tetap ditegakkan.
+  3. Konfigurasi `next.config.ts`: menyertakan `outputFileTracingIncludes` untuk `./certs/**/*` agar aset CA disertakan dalam bundle Serverless Functions Vercel.
+  4. Pengalihan sesi pada `/` (`app/page.tsx`): halaman statis "Hello world!" diganti Server Component dinamis yang memverifikasi sesi server-side via Supabase client; sesi valid dialihkan ke `/dashboard` (307) dan tanpa sesi dialihkan ke `/login` (307) tanpa redirect loop.
+  5. Diagnostik aman di route handler (`app/api/inbox/conversations/route.ts` dan `[id]/route.ts`): mencatat nama error, kode, dan pesan yang disanitasi tanpa password/token/cookie/connection string mentah.
+  6. Seluruh 307 unit test lulus (`npm test`), linter 0 error/warning, `npm run build` sukses (exit code 0, `BUILD_ID: JTdS8Jb2coBKY5Q1yv8GA`).
 
 **Catatan/Blocker**
 
 P2.10 tetap **In Progress**.
 - **Tahap Database Supabase Remote Selesai & Terverifikasi Read-Only**: Tahap database Supabase Cloud remote telah selesai penuh, termigrasi, terseed, dan terverifikasi read-only secara empiris (D149, D150, D151, D152).
-- **Langkah Tersisa untuk P2.10**: Penyiapan akun staf Auth pada Supabase remote (`STAFF_EMAIL`, `STAFF_PASSWORD`), linking target remote Vercel pengguna (`npx vercel link`), deployment Vercel, pengarahan webhook Telegram live via `manage-telegram-webhook.mjs set`, dan eksekusi smoke test remote nyata (`smoke-test-deployment.mjs`).
+- **Langkah Tersisa untuk P2.10**: Redeployment Vercel oleh pengguna untuk menerapkan perbaikan D153, pengarahan webhook Telegram live via `manage-telegram-webhook.mjs set`, dan eksekusi smoke test remote nyata (`smoke-test-deployment.mjs`).
 - **Kebijakan Klaim**: Status P2.10 tetap In Progress dan tidak dimajukan ke Done sebelum deployment remote dan smoke test remote nyata terverifikasi. Sesuai AGENTS.md, P2.7–P2.9 tetap Done dan P2.11 tetap Not Started.
 
 </details>

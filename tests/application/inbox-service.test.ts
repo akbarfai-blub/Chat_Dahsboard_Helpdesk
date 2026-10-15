@@ -17,6 +17,7 @@ import { GET as getConversationsRoute } from "../../app/api/inbox/conversations/
 import { GET as getConversationDetailRoute } from "../../app/api/inbox/conversations/[id]/route";
 import { POST as postConversationReadRoute } from "../../app/api/inbox/conversations/[id]/read/route";
 import { EnvRestorer } from "../utils/test-guard";
+import { resolveDatabaseCaCertificate } from "../../lib/postgres/server";
 
 test("Inbox pagination rejects unsafe numbers before database access", async (t) => {
   const lastSafePageAt25 = Math.floor(Number.MAX_SAFE_INTEGER / 25) + 1;
@@ -1078,6 +1079,71 @@ test("Koreksi B2: Route handlers direct invocation with Request/Response unit te
     const body = await res.json();
     assert.equal(body.success, false);
     assert.equal(body.error.code, "CONVERSATION_NOT_FOUND");
+  });
+
+  await t.test("GET /api/inbox/conversations catches unexpected errors, logs safe diagnostic, and returns 500 INTERNAL_ERROR", async () => {
+    const originalConsoleError = console.error;
+    const loggedErrors: unknown[] = [];
+    console.error = (...args: unknown[]) => {
+      loggedErrors.push(args);
+    };
+
+    try {
+      const req = new Request("http://localhost:3000/api/inbox/conversations");
+      const res = await getConversationsRoute(
+        req,
+        { params: Promise.resolve({}) },
+        {
+          getAuthClient: async () => ({
+            auth: {
+              getUser: async () => ({ data: { user: { id: fakeStaffId } }, error: null }),
+            },
+          }),
+          getPool: () => ({
+            query: async () => {
+              throw new Error("Connection failed: postgresql://postgres:supersecret@db.internal:5432/db");
+            },
+          }),
+        }
+      );
+
+      assert.equal(res.status, 500);
+      const body = await res.json();
+      assert.equal(body.success, false);
+      assert.equal(body.data, null);
+      assert.equal(body.error.code, "INTERNAL_ERROR");
+      assert.equal(body.error.message, "Terjadi kesalahan pada server saat memuat percakapan.");
+
+      // Verify safe logging occurred
+      assert.equal(loggedErrors.length, 1);
+      const loggedObj = (loggedErrors[0] as unknown[])[1] as { message?: string };
+      // Verify password was sanitized and not logged in plaintext
+      assert.ok(loggedObj.message);
+      assert.ok(!loggedObj.message.includes("supersecret"));
+      assert.ok(loggedObj.message.includes(":***@"));
+    } finally {
+      console.error = originalConsoleError;
+    }
+  });
+
+  await t.test("resolveDatabaseCaCertificate returns bundled fallback and respects env overrides", () => {
+    const defaultCa = resolveDatabaseCaCertificate();
+    assert.ok(defaultCa.includes("BEGIN CERTIFICATE"));
+    assert.ok(defaultCa.includes("Supabase Root 2021 CA") || defaultCa.includes("MIIDxDCCAqygAwIBAgIUbLxMod62P2ktCiAkxnKJwtE9VPYwDQYJKoZIhvcNAQEL"));
+
+    // Env override check
+    const originalEnv = process.env.HELPDESK_DB_CA;
+    try {
+      process.env.HELPDESK_DB_CA = "-----BEGIN CERTIFICATE-----\nMOCK_CA\n-----END CERTIFICATE-----";
+      const customCa = resolveDatabaseCaCertificate();
+      assert.equal(customCa, "-----BEGIN CERTIFICATE-----\nMOCK_CA\n-----END CERTIFICATE-----");
+    } finally {
+      if (originalEnv === undefined) {
+        delete process.env.HELPDESK_DB_CA;
+      } else {
+        process.env.HELPDESK_DB_CA = originalEnv;
+      }
+    }
   });
 });
 

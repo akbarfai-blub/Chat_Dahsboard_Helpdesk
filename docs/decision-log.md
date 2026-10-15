@@ -2143,4 +2143,44 @@ Evaluasi lanjutan terhadap pipeline deployment dan verifikasi P2.10:
    - Status P2.7–P2.9 tetap **Done**, P2.10 tetap **In Progress**, P2.11 tetap **Not Started**.
    - Tahap berikutnya adalah penyiapan akun staf Auth pada Supabase remote dan konfigurasi Vercel deployment.
 
+---
+
+### D153 — Resolusi Error 500 Inbox pada Vercel via Konfigurasi CA PostgreSQL Eksplisit, Pengalihan Sesi Halaman Awal, dan Pengerasan Diagnostik Server
+
+**Konteks**:
+Pada deployment Vercel prototype:
+1. Autentikasi staf, dashboard shell, dan direktori pelanggan (`/dashboard/customers`) berfungsi normal. Direktori pelanggan berjalan karena mengakses Supabase REST API via HTTPS publik (`supabase.co`) dengan sertifikat TLS publik web.
+2. Inbox (`/api/inbox/conversations`) mengalami HTTP 500 karena query aplikasi layer menggunakan driver PostgreSQL `pg` (`getHelpdeskPool()`) langsung ke Transaction Pooler (`aws-0-ap-southeast-2.pooler.supabase.com:6543`) dengan `sslmode=verify-full`. Modul `pg-connection-string` internal pg menimpa opsi `ssl` menjadi kosong `{}` saat mengurai string koneksi, sehingga driver `pg` memvalidasi TLS tanpa sertifikat CA Supabase dan gagal dengan `Error: SELF_SIGNED_CERT_IN_CHAIN self-signed certificate in certificate chain`. Error ini sebelumnya tertelan oleh blok `catch (err)` generik tanpa logging server.
+3. Halaman awal `/` masih berupa halaman statis "Hello world!" tanpa pengalihan otomatis berdasarkan status autentikasi staf.
+
+**Detail Keputusan & Perbaikan**:
+1. **Penyediaan dan Penegakan CA Sertifikat PostgreSQL (`lib/postgres/server.ts`)**:
+   - Menambahkan `resolveDatabaseCaCertificate()` dengan skema triple redundancy:
+     1. Membaca variabel lingkungan `HELPDESK_DB_CA` atau `SUPABASE_DB_CA` jika dikonfigurasi.
+     2. Membaca berkas sertifikat dari disk pada `certs/prod-ca-2021.crt`.
+     3. Fallback ke konstanta terikat `SUPABASE_ROOT_CA_2021` (Supabase Root 2021 CA).
+   - Mengonfigurasi `new Pool(...)` untuk host remote dengan parameter eksplisit (`host`, `port`, `database`, `user`, `password`) dan objek `ssl: { ca, rejectUnauthorized: true, servername: url.hostname }` tanpa mengoperasikan `connectionString` mentah yang menimpa konfigurasi SSL.
+   - Tetap menegakkan validasi `sslmode=verify-full` untuk remote host dan mempertahankan koneksi lokal tanpa SSL (`ssl: false`).
+2. **Bundling Aset Sertifikat di Vercel (`next.config.ts`)**:
+   - Menambahkan `outputFileTracingIncludes: { "/**": ["./certs/**/*"] }` untuk memastikan Next.js NFT menyertakan direktori `certs/` ke dalam bundle Serverless Functions di Vercel.
+3. **Pengalihan Sesi Server-Side pada Halaman Awal (`app/page.tsx`)**:
+   - Menghapus teks "Hello world!" dan mengubah halaman menjadi Server Component dinamis (`export const dynamic = "force-dynamic"`).
+   - Memeriksa sesi pengguna via `createClient().auth.getUser()`.
+   - Mengalihkan pengunjung tanpa sesi aktif atau sesi error langsung ke `/login` (redirect 307).
+   - Mengalihkan staf dengan sesi valid langsung ke `/dashboard` (redirect 307).
+   - Mencegah penggunaan localStorage atau keberadaan cookie saja; menghindari loop redirect; mempertahankan proteksi dashboard dan alur logout.
+4. **Diagnostik Server yang Aman dan Terbatas (`app/api/inbox/conversations/route.ts` & `[id]/route.ts`)**:
+   - Menambahkan logging aman pada blok `catch (err)` untuk mencatat `name`, `code`, dan sanitasi pesan error (menghapus format password/URI `:[^:@/]+@`) ke `console.error`.
+   - Menjamin tidak mencatat connection string mentah, token, cookie, password, maupun isi pesan pelanggan.
+   - Mempertahankan format envelope standar: kegagalan database tetap mengembalikan HTTP 500 `{ success: false, data: null, error: { code: "INTERNAL_ERROR", message } }` dan tidak disamarkan menjadi antrean kosong.
+
+**Bukti & Hasil Verifikasi**:
+- **Reproduksi Empiris**: Uji koneksi `pg` ke Transaction Pooler remote membuktikan kegagalan `SELF_SIGNED_CERT_IN_CHAIN` tanpa CA, dan berhasil terkoneksi (`Connected successfully!`, `Query result: [ { val: 1 } ]`) saat CA dipasangkan bersama `servername` dan `rejectUnauthorized: true`.
+- **Unit & Boundary Tests**: 307/307 checks lulus penuh pada `npm test` (0 fail, durasi ~560ms), mencakup assertion baru untuk `resolveDatabaseCaCertificate` (default & env override) dan route error handling (sanitasi pesan & safe diagnostic logging).
+- **Linter**: 0 error dan 0 warning pada berkas yang dimodifikasi (`npx eslint app/page.tsx lib/postgres/server.ts app/api/inbox/conversations/route.ts app/api/inbox/conversations/[id]/route.ts next.config.ts`).
+- **Build Produksi Next.js**: `npm run build` sukses (exit code 0), `BUILD_ID: JTdS8Jb2coBKY5Q1yv8GA`, rute dynamic `/` (`ƒ /`) dan `/api/inbox/conversations` terkompilasi, manifest 26 berkas valid.
+- **Tooling Suite**: `tests/tooling/pipeline-tooling.test.mjs` (53 checks PASS) dan `tests/tooling/deployment-tooling.test.mjs` (Suite 1 & 3: 22 checks PASS).
+
+**Status**: P2.10 tetap **In Progress** sampai redeployment Vercel terverifikasi dan smoke test remote nyata dijalankan.
+
 
