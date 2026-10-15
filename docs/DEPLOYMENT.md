@@ -60,14 +60,22 @@ Gunakan script migrasi idempoten yang tersedia:
 ```bash
 node scripts/apply-prototype-migrations.mjs "<TARGET_HELPDESK_DATABASE_URL>"
 ```
-*Script ini mengecek tabel `supabase_migrations.schema_migrations`, mengabaikan migrasi yang sudah ada, dan menjalankan migrasi yang tersisa dalam transaksi terpisah tanpa reset data.*
+*Script ini:*
+- Memvalidasi protokol (`postgres:`, `postgresql:`) dan mewajibkan `sslmode=verify-full` untuk remote database host (menolak `sslmode=disable` dan menghapus fallback `rejectUnauthorized: false`).
+- Memeriksa tabel `supabase_migrations.schema_migrations`, mengabaikan migrasi yang sudah tercatat.
+- Menggunakan `stripOuterTransactionWrapper` untuk menghapus pembungkus `BEGIN/COMMIT` terluar dari berkas SQL migrasi.
+- Menjalankan perubahan skema DDL dan pencatatan nomor versi ke `supabase_migrations.schema_migrations` dalam **satu transaksi PostgreSQL atomik tunggal per berkas migrasi**, menjamin rollback penuh bila terjadi kegagalan sebelum commit.
 
 ### Menjalankan Seed Data Dummy dan Tester
 Gunakan script seeder idempoten:
 ```bash
 node scripts/apply-prototype-seed.mjs "<TARGET_HELPDESK_DATABASE_URL>"
 ```
-*Script ini menerapkan `seed.sql` dan `fixtures/network.sql` (`ON CONFLICT DO NOTHING`), memastikan akun singleton `automation_settings` berada pada mode `SHADOW`, serta mendaftarkan tester Telegram (`6727338166`) pada `public.channel_identities`.*
+*Script ini:*
+- Memvalidasi koneksi dengan paritas TLS runtime (`sslmode=verify-full` untuk remote host).
+- Menerapkan `seed.sql` dan `fixtures/network.sql` (`ON CONFLICT DO NOTHING`).
+- Memeriksa baris singleton `automation_settings`. Hanya mengonfirmasi jaminan SHADOW jika mode aktual adalah `SHADOW` (`shadowGuaranteed: true`). Jika mode berbeda, memberikan peringatan eksplisit dan mendukung opsi fail-closed `requireShadow: true`.
+- Mendaftarkan tester Telegram (`6727338166`) pada `public.channel_identities`.
 
 ---
 
@@ -80,11 +88,21 @@ Bot Prototype: `@upaznet_helpdesk_proto_bot` (ID: `8892832714`).
 node scripts/manage-telegram-webhook.mjs status
 ```
 
+### Aturan Validasi Endpoint Telegram API
+Script menerapkan validasi ketat terhadap URL API Telegram (`options.apiBaseUrl` / `TELEGRAM_API_BASE_URL`):
+- **Default**: `https://api.telegram.org`.
+- **Protokol yang Didukung**: Hanya `http:` dan `https:`. Protokol lain (`ftp:`, `ws:`, `file:`, dll.) ditolak secara *fail-closed*.
+- **HTTP Loopback Only**: Protokol `http:` secara ketat hanya diizinkan untuk loopback fixture pengujian lokal (`localhost`, `127.0.0.1`, dan `::1` setelah normalisasi bracket IPv6).
+- **Anti-Bypass Hostname**: Pencocokan substring atau prefix yang menyerupai loopback (misalnya `localhost.example.com` atau `127.0.0.1.example.com`) ditolak secara presisi.
+- **Wajib HTTPS untuk Nonlokal**: Seluruh host nonlokal wajib menggunakan HTTPS dengan verifikasi sertifikat TLS bawaan (tanpa `rejectUnauthorized: false` atau pelemahan TLS).
+- **Sanitasi Kredensial & Pre-Flight Rejection**: URL tidak valid, URL yang memuat kredensial (`user:pass`), atau HTTP nonlokal ditolak seketika sebelum memanggil `http.request` maupun `https.request` (zero-transport invocation), dengan pesan error bersih tanpa membocorkan bot token atau webhook secret.
+- **CLI Exit Code**: Jika `TELEGRAM_API_BASE_URL` tidak valid, CLI langsung keluar dengan exit code 1.
+
 ### Pemasangan Webhook ke Deployment HTTPS
 ```bash
 node scripts/manage-telegram-webhook.mjs set "https://<VERCEL_DOMAIN>/api/webhooks/telegram" "<TELEGRAM_WEBHOOK_SECRET>"
 ```
-*Script menyetel `drop_pending_updates: false` dan `allowed_updates: ["message", "edited_message"]` secara aman.*
+*Script menyetel `drop_pending_updates: false`, menangani penolakan API (`ok: false`) atau HTTP status non-200 dengan exit nonzero, serta memverifikasi kesesuaian URL aktual melalui `getWebhookInfo` sebelum menyatakan pemasangan sukses.*
 
 ### Pemulihan (Rollback) Webhook
 Jika deployment dihentikan atau perlu dialihkan kembali ke URL sebelumnya:
@@ -101,14 +119,59 @@ Gunakan script automated smoke test:
 node scripts/smoke-test-deployment.mjs "https://<VERCEL_DOMAIN>" "<TARGET_HELPDESK_DATABASE_URL>"
 ```
 
-Suite menguji secara konkret:
+> **Batas Bukti & Status**: Runner ini dan seluruh tooling deployment telah diverifikasi perilakunya secara komprehensif pada basis data terisolasi, spy transport, dan fixture loopback (`tests/tooling/deployment-tooling.test.mjs`, 42/42 checks PASS, D144–D148). Bukti pengujian transport/CLI Telegram lokal terkontrol (penanganan HTTP non-200, JSON rusak, timeout transport, exit code CLI) dan pengamanan validasi endpoint URL telah ditutup secara konkret, terpisah dari kebutuhan deployment dan smoke test remote nyata. Pelaksanaan smoke test pada deployment remote nyata tetap merupakan pekerjaan terbuka berikutnya yang menunggu linking target Vercel/Supabase oleh pengguna.
+
+### Konvensi Parameter & Variabel Environment Runner
+
+Runner `scripts/smoke-test-deployment.mjs` membaca konfigurasi dengan aturan dan prioritas berikut:
+
+1. **Argumen CLI Posisional**:
+   - Argumen 1 (`argv[2]`): Target Base URL (contoh: `"https://<VERCEL_DOMAIN>"`).
+   - Argumen 2 (`argv[3]`): Connection string target database PostgreSQL (contoh: `"<TARGET_HELPDESK_DATABASE_URL>"`).
+
+2. **Hierarki Variabel Environment**:
+   - **`baseUrl` (URL Target Deployment)**:
+     - Prioritas 1: Argumen CLI `argv[2]`
+     - Prioritas 2: `process.env.DEPLOYMENT_URL` (hanya dari environment proses shell)
+     - Default: `'http://localhost:3000'`
+     - *Catatan penting*: Runner **sengaja tidak membaca URL target dari `.env.local`** agar pengujian lokal tidak secara tidak sengaja tertukar dengan deployment remote atau sebaliknya. URL target harus diberikan secara eksplisit melalui argumen CLI atau `DEPLOYMENT_URL`.
+   - **`dbUrl` (Database URL)**:
+     - Prioritas 1: Argumen CLI `argv[3]`
+     - Prioritas 2: `process.env.HELPDESK_DATABASE_URL`
+     - Prioritas 3: `HELPDESK_DATABASE_URL` dari berkas `.env.local`
+     - Wajib tersedia (jika kosong, Check 3 / koneksi database langsung gagal).
+   - **`supabaseUrl`**:
+     - Urutan prioritas: `process.env.SUPABASE_URL` → `.env.local: SUPABASE_URL` → `process.env.NEXT_PUBLIC_SUPABASE_URL` → `.env.local: NEXT_PUBLIC_SUPABASE_URL`.
+   - **`supabaseAnonKey`**:
+     - Urutan prioritas: `process.env.SUPABASE_ANON_KEY` → `.env.local: SUPABASE_ANON_KEY` → `process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` → `.env.local: NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`.
+   - **`staffEmail`**:
+     - Urutan prioritas: `process.env.STAFF_EMAIL` → `.env.local: STAFF_EMAIL`.
+   - **`staffPassword`**:
+     - Urutan prioritas: `process.env.STAFF_PASSWORD` → `.env.local: STAFF_PASSWORD`.
+   - **`webhookSecret`**:
+     - Urutan prioritas: `process.env.TELEGRAM_WEBHOOK_SECRET` → `.env.local: TELEGRAM_WEBHOOK_SECRET`.
+   - **`testerId`**:
+     - Urutan prioritas: `process.env.TELEGRAM_TESTER_ALLOWLIST` → `.env.local: TELEGRAM_TESTER_ALLOWLIST`.
+     - Default: `'6727338166'`.
+
+Suite menguji secara konkret tanpa placeholder:
 1. **HTTPS Reachability**: Memastikan server dapat dijangkau melalui protokol HTTPS aman.
-2. **Proteksi Autentikasi**: Memastikan `/dashboard` melakukan redirect (307/302) ke `/login` bagi request tanpa sesi staf, dan `/api/inbox/conversations` menolak dengan HTTP 401.
-3. **Keamanan Webhook**: Menguji bahwa request tanpa token secret atau dengan secret yang salah ditolak (HTTP 401 Unauthorized) dan membuktikan zero data mutation pada tabel `ingress_events`.
-4. **Ingestion & SHADOW**: Mengirimkan update dummy dari ID tester allowlist (`6727338166`) dengan secret valid, memverifikasi HTTP 200 accepted, dan membuktikan:
-   - Event tersimpan di `ingress_events`.
-   - Job tersimpan di `processing_jobs` dan diproses.
-   - Pesan tersimpan di `messages`.
-   - Mode operasional tetap `SHADOW`.
-   - **TIDAK ada** `outbound_intents` yang dibuat atau terkirim.
-   - **TIDAK ada** `reply_claims` yang terkunci (preservasi guard debounce).
+2. **Proteksi Autentikasi Publik**: Memastikan `/dashboard` melakukan redirect (307/302) strictly ke `/login` pada target origin yang sama via `isValidLoginRedirect` (menolak respons 200 dengan Location, tujuan non-login, serta off-origin baik URL absolut, protocol-relative `//other.example/login`, maupun skema uppercase `HTTPS://other.example/login`), dan `/api/inbox/conversations` menolak dengan HTTP 401.
+3. **Koneksi Database & TLS**: Memvalidasi koneksi ke PostgreSQL target dengan paritas TLS runtime (`sslmode=verify-full`). Ketiadaan koneksi DB menggagalkan pengujian secara eksplisit.
+4. **Keamanan Webhook & Zero Mutation**: Menguji penolakan request tanpa secret token dan request dengan secret salah (HTTP 401), serta memverifikasi **zero database mutation** melalui perbandingan hitungan riil baris `public.ingress_events` sebelum dan sesudah probe penolakan.
+5. **Pre-Ingestion Guard**: Memeriksa `public.automation_settings` di database sebelum mengirim pesan uji. Jika mode bukan `SHADOW` atau `emergency_stop` aktif, injeksi pesan uji dihentikan seketika untuk melindungi operasi live.
+6. **Ingestion Webhook, Envelope & Skema Presisi**: Mengirimkan update dummy dari ID tester allowlist (`6727338166`) dengan secret valid. Memverifikasi envelope respons HTTP 200 (`status === 'accepted'`, `duplicate === false`, string `ingressId`).
+7. **Bounded Polling & Verifikasi Database**:
+   - Memantau penyelesaian worker via polling berbatas waktu (`public.processing_jobs.status === 'done'`) hingga selesai atau timeout/gagal eksplisit.
+   - Memverifikasi entri tersimpan di `ingress_events` (`chat_id`, `provider_message_id`, mode `SHADOW`).
+   - Memverifikasi entri pesan di `messages` (`classification`, `conversation_id`).
+   - Memverifikasi entri `triage_assessments`.
+   - Memverifikasi preservasi guard: **0 baris** `outbound_intents` (tidak ada outbound otomatis) dan **0 baris** `reply_claims` (tidak ada klaim debounce) akibat pesan uji tersebut.
+8. **Autentikasi Staf Nyata & Siklus Sesi**:
+   - Melakukan login staf nyata melalui `@supabase/ssr` (`signInWithPassword`). Ketiadaan kredensial staf atau URL/key Supabase menggagalkan pengujian secara eksplisit.
+   - Mengakses `/dashboard` dengan cookie sesi aktif (harus HTTP 200).
+   - Mengakses `/api/inbox/conversations` dengan cookie sesi aktif (harus HTTP 200).
+   - Melakukan logout nyata (`signOut`) dengan evaluasi nilai error (kegagalan signOut menggagalkan pengujian).
+   - Memverifikasi penolakan akses pasca-logout (redirect strictly ke `/login` pada dashboard dan HTTP 401 pada endpoint API).
+9. **Hasil Keseluruhan**: Status `allPassed: true` hanya diberikan jika seluruh 7 pemeriksaan wajib dijalankan dan bernilai lulus (`pass: true`).
+

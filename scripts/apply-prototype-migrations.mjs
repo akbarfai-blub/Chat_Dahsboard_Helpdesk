@@ -2,57 +2,113 @@
 /**
  * scripts/apply-prototype-migrations.mjs
  *
- * Safe, idempotent migration runner for prototype Supabase databases.
- * - Reads migration files in order from supabase/migrations/
- * - Checks supabase_migrations.schema_migrations table to see which have already been applied
- * - Applies only unapplied migrations inside atomic transactions
- * - Preserves existing data without database reset
+ * Safe, atomic, and idempotent migration runner for prototype Supabase databases.
+ * - Enforces strict TLS parity with runtime lib/postgres/server.ts (remote requires sslmode=verify-full).
+ * - Reads migration files in order from supabase/migrations/.
+ * - Explicitly unwraps outer BEGIN/COMMIT from migration SQL files to guarantee atomic execution
+ *   of both schema DDL and version insertion in one transaction per migration.
+ * - Checks supabase_migrations.schema_migrations table to prevent re-applying migrations.
+ * - Never prints passwords or raw database URLs.
  */
 
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import pg from 'pg';
 
 const { Client } = pg;
 
-export async function runPrototypeMigrations(dbUrl, options = {}) {
-  const migrationsDir = options.migrationsDir || path.resolve(process.cwd(), 'supabase/migrations');
-  const logger = options.logger || console;
-
-  if (!dbUrl) {
-    throw new Error('Database URL is required for applying migrations.');
+/**
+ * Validates protocol, hostname, and TLS rules matching runtime lib/postgres/server.ts.
+ */
+export function parseAndValidateDbConfig(dbUrl) {
+  if (!dbUrl || typeof dbUrl !== 'string') {
+    throw new Error('Database URL is required');
   }
-
   let parsedUrl;
   try {
     parsedUrl = new URL(dbUrl);
-  } catch (err) {
-    throw new Error(`Invalid Database URL: ${err.message}`);
+  } catch {
+    throw new Error('Invalid Database URL format');
   }
 
-  const isLocal = ['localhost', '127.0.0.1', '::1'].includes(parsedUrl.hostname);
+  if (!['postgres:', 'postgresql:'].includes(parsedUrl.protocol)) {
+    throw new Error('Invalid database protocol: must be postgres: or postgresql:');
+  }
+
+  const hostname = parsedUrl.hostname.replace(/^\[|\]$/g, '').toLowerCase();
+  const isLocal = ['localhost', '127.0.0.1', '::1'].includes(hostname);
   const sslMode = parsedUrl.searchParams.get('sslmode');
 
-  const clientConfig = {
-    connectionString: dbUrl,
-  };
-
-  // If remote and sslmode is verify-full or require
   if (!isLocal) {
-    if (sslMode === 'verify-full') {
-      clientConfig.ssl = { rejectUnauthorized: true };
-    } else if (sslMode === 'no-verify' || sslMode === 'disable') {
-      clientConfig.ssl = false;
-    } else {
-      clientConfig.ssl = { rejectUnauthorized: false };
+    if (sslMode !== 'verify-full') {
+      throw new Error('Remote database connection requires sslmode=verify-full');
     }
+    return {
+      connectionString: dbUrl,
+      ssl: { rejectUnauthorized: true },
+      isLocal: false,
+      hostname,
+      port: parsedUrl.port ? parseInt(parsedUrl.port, 10) : 5432,
+      database: parsedUrl.pathname.replace(/^\//, '') || 'postgres',
+    };
   }
 
-  const client = new Client(clientConfig);
+  return {
+    connectionString: dbUrl,
+    ssl: false,
+    isLocal: true,
+    hostname,
+    port: parsedUrl.port ? parseInt(parsedUrl.port, 10) : 5432,
+    database: parsedUrl.pathname.replace(/^\//, '') || 'postgres',
+  };
+}
+
+/**
+ * Explicitly unwraps outer transaction wrapper (BEGIN ... COMMIT) from migration SQL.
+ * Preserves all inner statements, triggers, functions, and comments.
+ */
+export function stripOuterTransactionWrapper(sql) {
+  let hadLeadingBegin = false;
+  let hadTrailingCommit = false;
+  let result = sql;
+
+  // 1. Check leading BEGIN; (ignoring leading whitespace and comments)
+  const leadingMatch = result.match(
+    /^((?:[ \t\r\n]|--[^\r\n]*(?:\r?\n|$)|(?:\/\*[\s\S]*?\*\/))*)\b(BEGIN(?:\s+TRANSACTION|\s+WORK)?|START\s+TRANSACTION)\s*;/i
+  );
+  if (leadingMatch) {
+    hadLeadingBegin = true;
+    result = leadingMatch[1] + result.slice(leadingMatch[0].length);
+  }
+
+  // 2. Check trailing COMMIT; (ignoring trailing whitespace and comments)
+  const trailingMatch = result.match(
+    /\b(COMMIT(?:\s+TRANSACTION|\s+WORK)?|END(?:\s+TRANSACTION|\s+WORK)?)\s*;?((?:[ \t\r\n]|--[^\r\n]*(?:\r?\n|$)|(?:\/\*[\s\S]*?\*\/))*)$/i
+  );
+  if (trailingMatch) {
+    hadTrailingCommit = true;
+    result = result.slice(0, trailingMatch.index) + trailingMatch[2];
+  }
+
+  return {
+    sql: result,
+    hadLeadingBegin,
+    hadTrailingCommit,
+  };
+}
+
+export async function runPrototypeMigrations(dbUrl, options = {}) {
+  const migrationsDir = options.migrationsDir || path.resolve(process.cwd(), 'supabase/migrations');
+  const logger = options.logger || console;
+  const clientFactory = options.clientFactory;
+
+  const dbConfig = parseAndValidateDbConfig(dbUrl);
+  const client = clientFactory ? clientFactory(dbConfig) : new Client(dbConfig);
   await client.connect();
 
   try {
-    logger.log(`[Migrations] Connected to target database: ${parsedUrl.hostname}:${parsedUrl.port || 5432}/${parsedUrl.pathname.replace(/^\//, '')}`);
+    logger.log(`[Migrations] Connected to target database: ${dbConfig.hostname}:${dbConfig.port}/${dbConfig.database}`);
 
     // Ensure supabase_migrations schema and table exist
     await client.query(`
@@ -99,20 +155,30 @@ export async function runPrototypeMigrations(dbUrl, options = {}) {
     for (const item of pending) {
       logger.log(`[Migrations] Applying: ${item.file}...`);
       const filePath = path.join(migrationsDir, item.file);
-      const sql = fs.readFileSync(filePath, 'utf8').replace(/^\uFEFF/, '');
+      const rawSql = fs.readFileSync(filePath, 'utf8').replace(/^\uFEFF/, '');
+      const { sql: unwrappedSql } = stripOuterTransactionWrapper(rawSql);
 
       await client.query('BEGIN');
       try {
-        await client.query(sql);
+        await client.query(unwrappedSql);
         await client.query(
-          `INSERT INTO supabase_migrations.schema_migrations (version, name) VALUES ($1, $2) ON CONFLICT (version) DO NOTHING;`,
+          `INSERT INTO supabase_migrations.schema_migrations (version, name) VALUES ($1, $2);`,
           [item.version, item.name]
         );
+
+        if (options.injectedFailureVersion === item.version) {
+          throw new Error(`Injected failure for testing atomicity on migration ${item.version}`);
+        }
+
         await client.query('COMMIT');
         logger.log(`[Migrations] Successfully applied: ${item.file}`);
         newlyApplied.push(item.version);
       } catch (err) {
-        await client.query('ROLLBACK');
+        try {
+          await client.query('ROLLBACK');
+        } catch {
+          // ignore rollback failure
+        }
         logger.error(`[Migrations] Error applying ${item.file}:`, err.message);
         throw new Error(`Migration ${item.file} failed: ${err.message}`);
       }
@@ -129,8 +195,6 @@ export async function runPrototypeMigrations(dbUrl, options = {}) {
     await client.end();
   }
 }
-
-import { fileURLToPath } from 'node:url';
 
 // CLI execution if called directly
 if (process.argv[1] && path.resolve(process.argv[1]) === path.resolve(fileURLToPath(import.meta.url))) {
@@ -149,4 +213,3 @@ if (process.argv[1] && path.resolve(process.argv[1]) === path.resolve(fileURLToP
       process.exit(1);
     });
 }
-

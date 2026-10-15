@@ -1747,21 +1747,400 @@ Tanggal: 13 Oktober 2026. Persiapan arsitektur, tooling otomasi migrasi, seeder,
 |---|---|---|
 | D143 | **Kesiapan Konfigurasi dan Tooling Deployment Prototype SHADOW (P2.10)**: 1. Audit lingkungan mengonfirmasi integritas build Next.js (`BUILD_ID: uCRy779fnf8FFKoi4n9bz`), bot Telegram live (`@upaznet_helpdesk_proto_bot`, ID 8892832714), dan allowlist tester 6727338166; 2. Dibuat tooling migrasi idempoten 13 berkas `apply-prototype-migrations.mjs`, seeder non-destruktif `apply-prototype-seed.mjs`, pengelola webhook aman `manage-telegram-webhook.mjs`, dan automated smoke test `smoke-test-deployment.mjs`; 3. Inventarisasi variabel environment didokumentasikan di `docs/DEPLOYMENT.md` tanpa membocorkan secret; 4. Sesuai aturan AGENTS.md, status P2.10 berstatus In Progress menunggu penyambungan target remote oleh pengguna sebelum diverifikasi final ke Done. | **PERSIAPAN, TOOLING, DAN DOKUMENTASI P2.10 SELESAI. STATUS: 🟡 IN PROGRESS.** Entry berikutnya D144. |
 
+### 2026-10-13 — D144: Perbaikan Enam Temuan Tooling Deployment P2.10, Validasi TLS Paritas Runtime, Atomisitas Transaksi Migrasi, Pengamanan Pre-Ingestion SHADOW, dan Pembuktian Terarah pada Database Terisolasi
 
+1. **Latar Belakang & Koreksi Klaim D143**:
+   - Evaluasi lanjutan terhadap klaim kesiapan D143 mengidentifikasi 6 temuan terbuka pada tooling deployment (dicatat pada `docs/P2_10_FOLLOWUP.md`):
+     1. *Smoke Test Placeholder*: `smoke-test-deployment.mjs` awal memuat stub `pass: true` pada pemeriksaan login staf dan ketiadaan DB dianggap lulus tanpa mutasi/assertion nyata.
+     2. *Pelemahan TLS*: Script migrasi, seed, dan smoke test menggunakan fallback `rejectUnauthorized: false` dan tidak mewajibkan `sslmode=verify-full` sebagaimana runtime aplikasi (`lib/postgres/server.ts`).
+     3. *Ketidaksesuaian Skema Smoke Test*: Kueri pengujian menggunakan kolom/tabel yang tidak ada pada skema migrasi aktual (`deduplication_key`, `processing_jobs.id/attempts`, `messages.sender_type`, `outbound_intents.payload`, `reply_claims.id`).
+     4. *Pemisahan Transaksi Migrasi*: Berkas migrasi `.sql` sudah memuat `BEGIN/COMMIT`; pembungkus runner sebelumnya tidak membuat transaksi bersarang sehingga DDL skema dan pencatatan versi tidak dieksekusi secara atomik.
+     5. *Penanganan Respons Telegram*: `manage-telegram-webhook.mjs` mengabaikan respons Telegram `ok: false`, HTTP non-200, dan tidak memverifikasi kesesuaian URL webhook terpasang secara ketat.
+     6. *Jaminan SHADOW & Pre-Ingestion Guard*: Seeder melaporkan jaminan SHADOW tanpa memvalidasi mode, dan smoke test menyuntikkan payload uji sebelum memastikan mode operasional adalah `SHADOW`.
 
+2. **Implementasi Perbaikan Tooling**:
+   - **Koreksi 1 & 3 — Integritas Smoke Test (`scripts/smoke-test-deployment.mjs`)**:
+     - Menghapus seluruh placeholder `pass: true`. Seluruh 7 pemeriksaan wajib (`httpsReachable`, `unauthenticatedProtected`, `dbConnection`, `webhookSecurity`, `preIngestionShadow`, `webhookIngestionAndShadow`, `staffAuth`) harus dieksekusi dan bernilai `pass: true` agar keseluruhan bernilai `allPassed: true`.
+     - Kredensial staf (`staffEmail`, `staffPassword`, `supabaseUrl`, `supabaseAnonKey`) dan `dbUrl` menjadi mandatory. Ketiadaannya menghasilkan status FAIL eksplisit.
+     - Login staf nyata diverifikasi via `@supabase/ssr` (`signInWithPassword`), cookie sesi divalidasi mengakses `/dashboard` (HTTP 200) dan `/api/inbox/conversations` (HTTP 200), kemudian logout (`signOut`) dieksekusi dan penolakan sesi pasca-logout divalidasi (redirect 307/302 ke `/login` dan API 401).
+     - Pemeriksaan zero mutation pada probe penolakan webhook divalidasi via perbandingan baris riil `count(*)` pada `public.ingress_events` sebelum dan sesudah probe.
+     - Respons webhook diperiksa envelope-nya: `status === 'accepted'`, `duplicate === false`, dan `ingressId` berupa string UUID valid.
+     - Pemrosesan worker dipantau via bounded polling berbatas waktu (`maxWaitMs`, interval) pada `public.processing_jobs`; timeout atau kegagalan worker menghasilkan kegagalan eksplisit.
+     - Kueri DB diselaraskan 100% dengan skema aktual: `ingress_events.chat_id`, `provider_message_id`, `messages.classification`, `messages.conversation_id`, `outbound_intents` origin/status, `reply_claims` complaint_id, serta membuktikan nol outbound intent dan nol claim debounce di mode SHADOW.
+   - **Koreksi 2 — Paritas TLS Runtime Aplikasi (`parseAndValidateDbConfig`)**:
+     - Ditambahkan helper terpadu `parseAndValidateDbConfig(databaseUrl)` pada `apply-prototype-migrations.mjs`, `apply-prototype-seed.mjs`, dan `smoke-test-deployment.mjs`.
+     - Memvalidasi protokol (`postgres:`, `postgresql:`), hostname, dan mengklasifikasikan host lokal (loopback/internal Docker) vs remote.
+     - Untuk remote host: wajib `sslmode=verify-full`, menegakkan `rejectUnauthorized: true`, dan menolak konfigurasi yang mematikan verifikasi sertifikat (`sslmode=disable`, `no-verify`). Fallback longgar `rejectUnauthorized: false` dihapus permanen.
+     - Pesan kesalahan dan log disanitasi ketat tanpa pernah mencetak password, connection string, token, atau secret.
+   - **Koreksi 4 — Atomisitas Transaksi Migrasi Tunggal (`apply-prototype-migrations.mjs`)**:
+     - Menambahkan `stripOuterTransactionWrapper(sqlContent)` yang membersihkan outer `BEGIN/COMMIT` dari berkas migrasi SQL secara aman.
+     - DDL migrasi dan pencatatan nomor versi ke `supabase_migrations.schema_migrations` dijalankan dalam satu transaksi PostgreSQL atomik (`BEGIN...COMMIT`).
+     - Jika DDL atau pencatatan versi gagal, seluruh perubahan skema dan pencatatan versi dibatalkan serentak via `ROLLBACK`.
+   - **Koreksi 5 — Penanganan Respons Telegram Eksplisit (`manage-telegram-webhook.mjs`)**:
+     - Respons Telegram `ok: false`, status HTTP non-200, timeout, dan network error ditangani dengan pesan error deskriptif (tanpa leak token) dan memicu `process.exit(1)`.
+     - Perintah `set` dan `restore` memvalidasi konfigurasi aktual pasca-pemasangan melalui pemanggilan `getWebhookInfo` untuk memastikan `webhookInfo.url === targetUrl` sebelum menyatakan sukses.
+     - Parameter `drop_pending_updates: false` dipertahankan.
+   - **Koreksi 6 — Penegakan SHADOW Mode (`apply-prototype-seed.mjs` & Pre-Ingestion Guard)**:
+     - `apply-prototype-seed.mjs` tidak lagi mengklaim jaminan SHADOW jika mode existing bukan SHADOW. Mengembalikan `shadowGuaranteed: false`, menerbitkan peringatan, dan mendukung opsi fail-closed `requireShadow: true`.
+     - `smoke-test-deployment.mjs` menambahkan Pre-Ingestion Guard yang memeriksa tabel `public.automation_settings` sebelum mengirimkan pesan uji: jika mode bukan `SHADOW` atau `emergency_stop` bernilai `true`, pengujian dihentikan seketika untuk mencegah efek samping yang tidak diinginkan.
 
+3. **Pembuktian Empiris Terarah pada Database Terisolasi**:
+   - Dibuat suite pengujian komprehensif `tests/tooling/deployment-tooling.test.mjs` pada database terisolasi `p210_tooling_test`:
+     - Suite 1 (TLS Validation & Sanitasi Credential): 7 checks PASS.
+     - Suite 2 (Atomisitas Transaksi Migrasi & Rollback Terarah): 4 checks PASS (termasuk pembuktian rollback bersama DDL + version record saat disuntikkan error sebelum commit).
+     - Suite 3 (Telegram Webhook Management & Error Handling): 4 checks PASS.
+     - Suite 4 (Enforcement SHADOW Seeder & Pre-Ingestion Guard): 4 checks PASS.
+     - Suite 5 (Integritas Smoke Test, Bounded Polling, Skema Presisi, & E2E Verification): 5 checks PASS.
+     - Total: **29/29 assertions PASS (exit code 0, durasi 1.13 detik)**.
+   - Regresi unit test aplikasi (`npm test`): **305/305 unit tests PASS (exit code 0)**.
+   - Database workspace pengguna (port 54322) tidak disentuh dan webhook bot publik tidak diubah pada sesi ini.
 
+| ID | Keputusan | Status / dampak |
+|---|---|---|
+| D144 | **Perbaikan Enam Temuan Tooling Deployment P2.10 (Paritas TLS Runtime, Atomisitas Migrasi, Skema Presisi, dan Pengamanan SHADOW)**: 1. `smoke-test-deployment.mjs` mengeliminasi placeholder `pass: true`, mewajibkan login/inbox/logout staf via `@supabase/ssr`, bounded polling job worker, kueri skema presisi 100%, dan zero mutation DB riil; 2. `parseAndValidateDbConfig` menyamakan aturan TLS runtime (`sslmode=verify-full`, menolak `rejectUnauthorized: false` & menolak disable); 3. `apply-prototype-migrations.mjs` menggunakan `stripOuterTransactionWrapper` membuktikan atomisitas skema DDL + version record dalam 1 transaksi; 4. `manage-telegram-webhook.mjs` menangani `ok: false` dan memverifikasi kesesuaian URL riil via `getWebhookInfo`; 5. Seeder dan smoke test menerapkan pre-ingestion guard fail-closed mewajibkan `SHADOW`; 6. Pembuktian empiris komprehensif 29/29 checks PASS pada `tests/tooling/deployment-tooling.test.mjs` di DB terisolasi; 305/305 unit test regresi PASS; status P2.10 tetap In Progress menunggu linking remote dan deployment aktual. | **TOOLING DEPLOYMENT TERKOREKSI & TERVERIFIKASI EMPIRIS. STATUS P2.10: 🟡 IN PROGRESS.** Entry berikutnya D145. |
 
+### 2026-10-14 — D145: Koreksi Penanganan SignOut Smoke Test, Validasi Redirect Presisi, Pemulihan D143, dan Penyelarasan Environment Runner
 
+1. **Latar Belakang & Evaluasi Review Tindak Lanjut P2.10**:
+   - Review terhadap implementasi D144 mengidentifikasi 4 temuan lanjutan yang memerlukan perbaikan dan pengujian terarah:
+     1. *SignOut Error Handling*: Pemanggilan `staffClient.auth.signOut()` pada `smoke-test-deployment.mjs` tidak mengevaluasi properti `error`. Jika terjadi kegagalan logout di Supabase Auth, pengujian tetap dapat menghasilkan PASS karena cookie lokal terhapus dan request berikutnya mendapat 307/401.
+     2. *Redirect Destination Validation*: Logika pengecekan dashboard unauthenticated dan post-logout sebelumnya mengizinkan status 302/307 tanpa memeriksa header Location, serta mengizinkan respons 200 jika memuat substring `/login`. Hal ini rentan meloloskan redirect ke `/dashboard`, `/maintenance`, atau URL tidak sah.
+     3. *Pemulihan Histori D143*: Tabel keputusan D143 terhapus secara tidak sengaja saat D144 ditambahkan. Sesuai aturan append-only, tabel D143 harus dipulihkan secara persis dari commit baseline `2e1321b`.
+     4. *Penyelarasan Environment Runner*: Dokumentasi panduan `docs/DEPLOYMENT.md` menyebut `BASE_URL`/`VERCEL_URL` dan `TELEGRAM_TESTER_ID`, sedangkan runner `smoke-test-deployment.mjs` membaca argumen CLI, `DEPLOYMENT_URL`, dan `TELEGRAM_TESTER_ALLOWLIST`, serta tidak mengambil URL target dari `.env.local`.
 
+2. **Implementasi Perbaikan**:
+   - **Koreksi 1 (SignOut Error Handling)**: `smoke-test-deployment.mjs` mengevaluasi kembalian `{ error: signOutError }` dari `staffClient.auth.signOut()`. Keberadaan error membatalkan klaim sukses (`signOutSuccess = false`), mencatat error ke logger, dan menggagalkan `staffAuth` (`pass: false`) serta keseluruhan `allPassed` (`false`), meskipun cookie lokal terhapus dan request berikutnya tertolak.
+   - **Koreksi 2 (Validasi Redirect Presisi)**: Menambahkan helper `isValidLoginRedirect(status, locationHeader, baseUrl)`. Memvalidasi bahwa status HTTP harus 307 atau 302 (menolak 200 dengan Location), parsing URL relatif/absolut secara presisi, memvalidasi origin cocok dengan baseUrl (mencegah off-origin redirect), dan memastikan pathname strictly `/login` (menolak redirect ke `/dashboard`, `/maintenance`, `/login-other`, dll.).
+   - **Koreksi 3 (Pemulihan Histori D143)**: Tabel keputusan D143 dipulihkan secara persis dari commit `2e1321b` tepat di bawah narasi D143 dan sebelum heading D144.
+   - **Koreksi 4 (Penyelarasan Petunjuk Environment)**: Mengoreksi `docs/DEPLOYMENT.md` agar merinci secara akurat argumen CLI `argv[2]` (URL) dan `argv[3]` (DB URL), variabel process environment yang dibaca (`DEPLOYMENT_URL`, `HELPDESK_DATABASE_URL`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `STAFF_EMAIL`, `STAFF_PASSWORD`, `TELEGRAM_WEBHOOK_SECRET`, `TELEGRAM_TESTER_ALLOWLIST`), variabel yang dibaca dari `.env.local` (di mana target URL sengaja tidak dibaca dari `.env.local`), serta hierarki prioritas dan defaultnya.
 
+3. **Pembuktian Empiris Terarah**:
+   - Pengujian terarah ditambahkan pada `tests/tooling/deployment-tooling.test.mjs`:
+     - Validasi redirect login presisi: menerima 307 & 302 ke `/login` (relatif & absolut), menolak 200 dengan Location, menolak redirect ke `/dashboard`, `/maintenance`, `/login-malicious`, dan off-origin URL.
+     - Penolakan Check 2 dan Check 5 jika redirect dashboard mengarah ke tujuan selain `/login` atau status bukan 302/307.
+     - Penolakan Check 5 jika login & akses berhasil tetapi `signOut()` mengembalikan error meskipun cookie telah dibersihkan.
+     - Preservasi keberhasilan penuh saat seluruh kriteria redirect dan signOut terpenuhi.
 
+| ID | Keputusan | Status / dampak |
+|---|---|---|
+| D145 | **Koreksi Penanganan SignOut Smoke Test, Validasi Redirect Presisi, Pemulihan D143, dan Penyelarasan Environment Runner**: 1. `smoke-test-deployment.mjs` memeriksa nilai error pada `staffClient.auth.signOut()`, mewajibkan `signOutSuccess: true` agar `staffAuth` dan `allPassed` bernilai PASS; 2. `isValidLoginRedirect` menegakkan parsing Location untuk URL relatif/absolut dengan pathname strictly `/login` dan status 307/302 (menolak 200, destination non-login, dan off-origin); 3. Tabel D143 dipulihkan persis dari commit `2e1321b`; 4. `DEPLOYMENT.md` diselaraskan dengan kontrak runner aktual (argumen CLI, process.env, pembacaan `.env.local`, urutan prioritas, dan default); 5. Diverifikasi via pengujian terarah pada `tests/tooling/deployment-tooling.test.mjs`; status P2.10 tetap In Progress. | **EMPAT TEMUAN REVIEW TERKOREKSI & TERVERIFIKASI EMPIRIS. STATUS P2.10: 🟡 IN PROGRESS.** Entry berikutnya D146. |
 
+### 2026-10-14 — D146: Pengerasan Pemeriksaan Origin Redirect (isValidLoginRedirect) dan Pelurusan Batas Bukti Tooling P2.10
 
+1. **Latar Belakang & Evaluasi Origin Redirect**:
+   - Pemeriksaan origin pada `isValidLoginRedirect` sebelumnya bergantung pada awalan teks `http://` atau `https://`.
+   - Akibatnya, Location protocol-relative seperti `//other.example/login` atau skema uppercase seperti `HTTPS://other.example/login` berpotensi lolos meskipun mengarah ke origin yang berbeda.
+   - Selain itu, diperlukan penegasan batas bukti dokumentasi bahwa kekurangan bukti transport/CLI Telegram (HTTP non-200, JSON rusak, timeout transport, exit code CLI) dapat dilengkapi melalui pengujian lokal terkontrol tanpa menyentuh bot live, dan terpisah dari kebutuhan deployment remote. Klaim berlebihan seperti "terverifikasi 100%" atau "tinggal linking remote" harus dieliminasi selama kekurangan bukti transport/CLI masih terbuka.
 
+2. **Implementasi Pengerasan Origin**:
+   - `isValidLoginRedirect` di `scripts/smoke-test-deployment.mjs` mem-parse URL tujuan dengan target URL sebagai base (`new URL(trimmed, parsedBase)`).
+   - Setelah parsing berhasil, selalu membandingkan `parsed.origin === parsedBase.origin` tanpa kondisi berdasarkan awalan teks Location.
+   - Status 302/307 dan pathname strictly `/login` tetap diwajibkan; respons 200 dengan Location serta tujuan non-login tetap ditolak.
+   - Helper yang sama digunakan pada Check 2 (unauthenticated) dan Check 5e (post-logout).
 
+3. **Pembuktian Empiris Terarah**:
+   - Kasus uji origin terarah ditambahkan pada `tests/tooling/deployment-tooling.test.mjs` (Subtest 5.6) dengan base `https://deploy.example.com`:
+     - `//deploy.example.com/login` → diterima (`true`).
+     - `//other.example/login` → ditolak (`false`).
+     - `HTTPS://deploy.example.com/login` → diterima (`true`).
+     - `HTTPS://other.example/login` → ditolak (`false`).
+     - Seluruh varian 307 dan 302 divalidasi identik; penolakan terbukti murni karena perbedaan origin.
+   - Seluruh 33 checks pada `tests/tooling/deployment-tooling.test.mjs` lulus (exit code 0).
 
+4. **Batas Bukti Terbuka**:
+   - Pengujian transport/CLI Telegram tetap merupakan pekerjaan terbuka di luar sesi ini.
+   - Status P2.10 tetap In Progress.
 
+| ID | Keputusan | Status / dampak |
+|---|---|---|
+| D146 | **Pengerasan Pemeriksaan Origin Redirect (isValidLoginRedirect) dan Pelurusan Batas Bukti Tooling P2.10**: 1. `isValidLoginRedirect` selalu membandingkan `parsed.origin === parsedBase.origin` tanpa pemeriksaan awalan teks, menolak `//other.example/login` dan `HTTPS://other.example/login` secara presisi; 2. Terbukti pada `tests/tooling/deployment-tooling.test.mjs` (Subtest 5.6); 3. Batas bukti diluruskan: kekurangan bukti transport/CLI Telegram (HTTP non-200, JSON rusak, timeout, exit code CLI) dapat dilengkapi secara lokal terkontrol tanpa mengubah bot live, terpisah dari deployment remote, dan tetap menjadi pekerjaan terbuka; klaim "terverifikasi 100%" atau "tinggal linking remote" tidak digunakan; status P2.10 tetap In Progress. | **ORIGIN REDIRECT DITEGAKKAN & BATAS BUKTI DILURUSKAN. STATUS P2.10: 🟡 IN PROGRESS.** Entry berikutnya D147. |
 
+### 2026-10-14 — D147: Pembuktian Empiris Transport dan CLI Telegram Lokal Terkontrol (HTTP Non-200, JSON Rusak, Timeout, dan Exit Code CLI)
+
+1. **Latar Belakang & Kekurangan Bukti Transport/CLI**:
+   - D144–D146 mengidentifikasi bahwa pembuktian penanganan HTTP non-200, JSON rusak, timeout transport, dan exit code CLI pada `scripts/manage-telegram-webhook.mjs` masih terbuka karena sebelumnya hanya diuji menggunakan `customRequester` mock tanpa melalui transport request/HTTP nyata.
+   - Sesuai arahan, pengujian harus membuktikan jalur pemrosesan transport aktual (pengiriman request, pembacaan status/body, parsing JSON, penanganan timeout/error, dan penerusan kegagalan ke CLI) menggunakan loopback fixture HTTP terkontrol dan subprocess CLI terisolasi tanpa menyentuh bot live, tanpa membaca `.env.local`, dan tanpa melemahkan TLS secara global.
+
+2. **Implementasi Titik Injeksi & Penanganan Transport/CLI**:
+   - `scripts/manage-telegram-webhook.mjs`:
+     - Menambahkan titik injeksi minimal `options.apiBaseUrl || process.env.TELEGRAM_API_BASE_URL || 'https://api.telegram.org'`, mempertahankan default HTTPS Telegram dengan verifikasi sertifikat penuh.
+     - Mendukung HTTP dan HTTPS sesuai URL target (`client = isHttps ? https : http`, port dinamis).
+     - Menambahkan proteksi flag `timedOut` untuk mencegah race condition antara event `timeout` dan `error`.
+     - Sanitasi token Telegram pada pesan error network (`[REDACTED_TOKEN]`).
+     - Memperbaiki komparasi path modul CLI entrypoint `isCliEntry` agar case-insensitive pada platform Windows (`path.resolve(process.argv[1]).toLowerCase() === path.resolve(fileURLToPath(import.meta.url)).toLowerCase()`).
+     - CLI meneruskan `TELEGRAM_API_BASE_URL` dan `TELEGRAM_REQUEST_TIMEOUT_MS` ke operasi `status`, `set`, dan `restore`, dengan `drop_pending_updates: false`.
+
+3. **Pembuktian Empiris Terarah (`tests/tooling/deployment-tooling.test.mjs`)**:
+   - Menambahkan helper `createTelegramFixtureServer(handler)` (tracking koneksi socket dan penghancuran paksa saat teardown agar tidak bocor/menggantung) dan `runCliSubprocess(args, envVars, tempDir)` (lingkungan terisolasi di `os.tmpdir()`, tanpa `.env.local`, sanitasi `NODE_TEST_CONTEXT` agar tidak mengganggu stdio IPC test runner, batas timeout safeguard 5s).
+   - Subtest 3.5 (HTTP non-200): Fixture mengirim HTTP 500 dengan body `{"ok": true, "result": "misleading-success"}`. Terbukti ditolak dengan error `[500] HTTP 500`, membuktikan status HTTP diperiksa dan tidak tertipu oleh `ok: true`.
+   - Subtest 3.6 (JSON rusak): Fixture mengirim HTTP 200 dengan HTML response. Terbukti menghasilkan rejection terkontrol `Failed to parse Telegram API response (HTTP 200)` tanpa menggantung.
+   - Subtest 3.7 (Transport timeout): Fixture menahan respons tanpa mengirim data; request dengan timeout 150ms terbukti dihentikan (`req.destroy()`) dan reject dalam batas waktu (< 2s, durasi aktual ~158ms).
+   - Subtest 3.8 (Exit code CLI): Menjalankan entry point CLI via subprocess terisolasi; terbukti menghasilkan exit code 1 pada HTTP 500, JSON rusak, dan timeout tanpa mencetak pesan sukses palsu di stdout.
+   - Subtest 3.9 (Pembanding sukses CLI): Menjalankan CLI `status` dan `set` via subprocess terisolasi; terbukti menghasilkan exit code 0, verifikasi post-konfigurasi via `getWebhookInfo` cocok dengan URL target, dan fixture menerima payload dengan `drop_pending_updates: false` secara presisi.
+   - Seluruh 38 checks pada `tests/tooling/deployment-tooling.test.mjs` LULUS (38/38 PASS, 0 fail, exit code 0).
+
+4. **Batas Bukti Terbuka & Status**:
+   - Kekurangan bukti transport/CLI Telegram lokal terkontrol telah ditutup secara konkret.
+   - Bukti berasal dari transport lokal terkontrol (loopback server + subprocess), bukan interaksi bot live atau deployment remote.
+   - Pekerjaan terbuka yang tersisa untuk P2.10 hanyalah deployment remote Vercel/Supabase dan verifikasi smoke test remote nyata.
+   - Status P2.7–P2.9 tetap **Done**, P2.10 tetap **In Progress**, P2.11 tetap **Not Started**.
+
+| ID | Keputusan | Status / dampak |
+|---|---|---|
+| D147 | **Pembuktian Empiris Transport dan CLI Telegram Lokal Terkontrol (HTTP Non-200, JSON Rusak, Timeout, dan Exit Code CLI)**: 1. `scripts/manage-telegram-webhook.mjs` mendukung titik injeksi `TELEGRAM_API_BASE_URL` dan `TELEGRAM_REQUEST_TIMEOUT_MS`, sanitasi token, proteksi `timedOut`, dan kompatibilitas Windows `isCliEntry`; 2. Suite 3 `tests/tooling/deployment-tooling.test.mjs` diperluas dengan 5 checks baru (3.5–3.9): membuktikan HTTP non-200 dengan `ok: true` ditolak, JSON rusak pada HTTP 200 ditolak tanpa menggantung, transport timeout selesai dalam batas waktu, subprocess CLI menghasilkan exit code 1 tanpa sukses palsu, dan pembanding sukses CLI menghasilkan exit code 0 dengan verifikasi `getWebhookInfo` dan `drop_pending_updates: false`; 3. Total 38/38 checks PASS pada runner tooling; 4. Batas bukti transport/CLI lokal ditutup penuh secara empiris; status P2.10 tetap In Progress menunggu deployment remote nyata. | **BUKTI TRANSPORT/CLI TELEGRAM LOKAL LENGKAP & TERVERIFIKASI EMPIRIS. STATUS P2.10: 🟡 IN PROGRESS.** Entry berikutnya D148. |
+
+### 2026-10-14 — D148: Pengamanan Validasi Endpoint Telegram API (Validasi Loopback HTTP, Penolakan Host Nonlokal, Sanitasi URL, dan Isolasi Pre-Flight Zero-Transport)
+
+1. **Latar Belakang & Celah Validasi Titik Injeksi**:
+   - Titik injeksi pengujian `apiBaseUrl` / `TELEGRAM_API_BASE_URL` yang diperkenalkan pada D147 membuka celah di mana konfigurasi URL dapat mengarahkan request HTTP ke host nonlokal atau mengarahkan protokol selain HTTPS ke klien HTTP.
+   - Diperlukan aturan validasi endpoint presisi sebelum request dibuat (*pre-flight validation*), baik pada jalur pemanggilan programmatik maupun entri CLI.
+
+2. **Implementasi Pengaman Endpoint (`validateTelegramApiBaseUrl`)**:
+   - Diekspor sebagai fungsi mandiri `validateTelegramApiBaseUrl(rawUrl)` pada `scripts/manage-telegram-webhook.mjs`:
+     - Default URL tetap `https://api.telegram.org`.
+     - Hanya protokol `http:` dan `https:` yang diizinkan; protokol lain (`ftp:`, `ws:`, `file:`, dll.) ditolak secara *fail-closed*.
+     - Protokol HTTP secara ketat hanya diizinkan untuk loopback fixture pengujian (`localhost`, `127.0.0.1`, dan `::1` setelah normalisasi bracket IPv6).
+     - Menolak pencocokan substring atau prefix yang menyerupai loopback (misal `localhost.example.com` atau `127.0.0.1.example.com` ditolak).
+     - Host nonlokal wajib menggunakan HTTPS.
+     - Menolak URL yang memuat kredensial pengguna (`username` atau `password`).
+     - Menolak URL invalid atau kosong dengan pesan kegagalan bersih tanpa membocorkan token bot atau secret webhook.
+     - Penolakan dilakukan sebelum `http.request` maupun `https.request` dipanggil, menjamin nol pemanggilan transport jaringan pada URL invalid/insecure.
+   - Penerapan identik pada jalur CLI: `TELEGRAM_API_BASE_URL` divalidasi saat inisialisasi; jika tidak valid, CLI mencatat pesan error bersih dan langsung keluar dengan `process.exit(1)`.
+   - Mempertahankan verifikasi TLS bawaan Node.js tanpa `rejectUnauthorized: false` atau pelemahan TLS global.
+   - Mempertahankan seluruh perilaku webhook: `drop_pending_updates: false`, verifikasi post-konfigurasi `getWebhookInfo`, dan penanganan error respons Telegram.
+
+3. **Pembuktian Empiris Terarah (`tests/tooling/deployment-tooling.test.mjs`)**:
+   - Menambahkan 4 subtest baru pada Suite 3 (Subtest 3.10–3.13):
+     - Subtest 3.10: `validateTelegramApiBaseUrl` memvalidasi 13 variasi URL: menerima default Telegram, HTTP loopback IPv4/localhost/IPv6, dan HTTPS nonlokal; menolak HTTP remote, variasi subdomain penipu (`localhost.attacker.com`, `127.0.0.1.nip.io`), protokol non-HTTP (`ftp:`, `javascript:`, `ws:`), URL berkredensial, dan URL invalid/kosong.
+     - Subtest 3.11: `telegramApiRequest` membuktikan nol pemanggilan transport (`httpCalls === 0`, `httpsCalls === 0`) pada konfigurasi URL tidak aman atau invalid.
+     - Subtest 3.12: HTTPS ke host nonlokal lolos validasi konfigurasi dan mencapai transport client dengan `rejectUnauthorized: undefined` bawaan tanpa membuat request jaringan eksternal (via spy https).
+     - Subtest 3.13: Subprocess CLI terisolasi menghasilkan exit code 1 dengan pesan validasi presisi (bukan timeout, network error, atau token error) saat disuntikkan `TELEGRAM_API_BASE_URL` HTTP nonlokal, protokol ftp, atau domain penipu `localhost.attacker.com`.
+   - Total **42/42 assertions PASS** (exit code 0, durasi ~2.1s).
+
+4. **Batas Bukti & Status**:
+   - Bukti transport/CLI Telegram lokal (D147) dan pengaman endpoint (D148) telah selesai penuh dan terverifikasi secara lokal tanpa menyentuh jaringan live.
+   - Satu-satunya blocker terbuka untuk penyelesaian P2.10 adalah proses deployment remote nyata (menghubungkan project Vercel & Supabase remote) dan verifikasi smoke test remote.
+   - Status P2.7–P2.9 tetap **Done**, P2.10 tetap **In Progress**, P2.11 tetap **Not Started**.
+
+| ID | Keputusan | Status / dampak |
+|---|---|---|
+| D148 | **Pengamanan Validasi Endpoint Telegram API (Validasi Loopback HTTP, Penolakan Host Nonlokal, Sanitasi URL, dan Isolasi Pre-Flight Zero-Transport)**: 1. `scripts/manage-telegram-webhook.mjs` mengimplementasikan `validateTelegramApiBaseUrl`: default `https://api.telegram.org`, HTTP hanya untuk loopback presisi (`localhost`, `127.0.0.1`, `::1`), host nonlokal wajib HTTPS, menolak pencocokan substring/prefix (misal `localhost.example.com`), menolak kredensial dalam URL, dan menolak protokol non-HTTP/HTTPS; 2. Penolakan terjadi sebelum request dipanggil (pre-flight zero-transport); 3. CLI keluar dengan exit code 1 pada endpoint tidak aman tanpa membocorkan token; 4. Suite 3 `tests/tooling/deployment-tooling.test.mjs` diperluas dengan 4 checks baru (3.10–3.13), total 42/42 checks PASS; 5. Batas bukti lokal tooling lengkap; status P2.10 tetap In Progress menunggu deployment remote nyata. | **PENGAMAN ENDPOINT TELEGRAM TEREALISASI & TERVERIFIKASI EMPIRIS. STATUS P2.10: 🟡 IN PROGRESS.** Entry berikutnya D149. |
+
+### 2026-10-15 — D149: Penerapan Migrasi Resmi (13 Migrasi) dan Seed Prototype pada Supabase Cloud Remote (saysxjdyalnbhxqqmytp), Penegakan SHADOW Mode, dan Verifikasi Skema & Fixture Lengkap
+
+1. **Latar Belakang & Konteks Eksekusi**:
+   - Setelah koneksi Direct, Session pooler, dan Transaction pooler ke Supabase Cloud (`saysxjdyalnbhxqqmytp`) berhasil divalidasi dengan TLSv1.3 dan autentikasi sukses (password alfanumerik), pengguna mengizinkan penerapan migrasi resmi yang belum terpasang dan seed prototype.
+   - Eksekusi dijalankan via pipeline terkontrol `scripts/apply-prototype-pipeline.mjs` menggunakan runner resmi `scripts/apply-prototype-migrations.mjs` dan `scripts/apply-prototype-seed.mjs` dengan target `PROTOTYPE_DATABASE_URL` (port 5432) dan verifikasi TLS ketat melalui `NODE_EXTRA_CA_CERTS=certs/prod-ca-2021.crt`.
+
+2. **Hasil Penerapan Migrasi**:
+   - Pre-check awal mendeteksi 0/13 migrasi terpasang di database remote.
+   - Seluruh 13 berkas migrasi dari `supabase/migrations/` berhasil diterapkan secara atomik satu per satu dalam transaksinya masing-masing:
+     1. `20260919115958_create_customer_identity_topology.sql`
+     2. `20260920090000_create_mock_network_status.sql`
+     3. `20260922090000_create_episode_persistence.sql`
+     4. `20260929100000_add_ingress_metadata.sql`
+     5. `20260929200000_create_conversation_persistence.sql`
+     6. `20260929200001_adjust_conversation_foreign_keys.sql`
+     7. `20260930100000_create_manual_incidents.sql`
+     8. `20261002100000_create_job_leases_and_attempts.sql`
+     9. `20261004100000_create_staff_conversation_reads.sql`
+     10. `20261004110000_revoke_direct_staff_conversation_reads_mutation.sql`
+     11. `20261004120000_create_staff_message_reads.sql`
+     12. `20261004130000_correct_legacy_message_read_backfill.sql`
+     13. `20261012100000_create_staff_classification_labels.sql`
+   - Total migrasi: 13/13 applied, 0 skipped, 0 failed, 0 pending pada ledger `supabase_migrations.schema_migrations`.
+
+3. **Hasil Penerapan Seed & Penegakan SHADOW**:
+   - `supabase/seed.sql` diterapkan: 1 ODC (`ODC-DUMMY-01`), 2 ODP (`ODP-DUMMY-01`, `ODP-DUMMY-02`), 12 pelanggan (`10000000-...-0001` s/d `...0012`), 12 layanan (`20000000-...`), 12 pemetaan topologi, dan 5 identitas channel dummy.
+   - `supabase/fixtures/network.sql` diterapkan: 16 skenario mock network, 180 baris observasi ONU, dan 16 baris observasi uplink. Skenario stale dan unknown dipertahankan sesuai desain tanpa manipulasi timestamp.
+   - Tester mapping dipastikan: `60000000-0000-4000-8000-000000000099` (Telegram tester ID `6727338166`, bot `upaznet_helpdesk_bot`, status `verified`).
+   - Penegakan mode operasional: Singleton row `automation_settings` diinisialisasi dan diverifikasi dengan `mode = 'SHADOW'`, `emergency_stop = false`, `version = 1`, dan `shadowGuaranteed: true` (`requireShadow: true`).
+
+4. **Verifikasi Skema & Fixture Terarah**:
+   - 22 tabel inti diverifikasi keberadaannya di schema `public`.
+   - Data fixture spesifik UUID dan hitungan diverifikasi langsung via kueri database independen.
+   - Pipeline exit code: 0.
+
+5. **Batas Bukti & Status**:
+   - Database Supabase remote kini telah terisi skema dan fixture prototype secara utuh.
+   - Akun staf Auth dan deployment Vercel belum dibuat/dijalankan.
+   - Status P2.7–P2.9 tetap **Done**, P2.10 tetap **In Progress**, P2.11 tetap **Not Started**.
+
+| ID | Keputusan | Status / dampak |
+|---|---|---|
+| D149 | **Penerapan Migrasi Resmi (13 Migrasi) dan Seed Prototype pada Supabase Cloud Remote (saysxjdyalnbhxqqmytp), Penegakan SHADOW Mode, dan Verifikasi Skema & Fixture Lengkap**: 1. `scripts/apply-prototype-pipeline.mjs` mengeksekusi migrasi resmi via `runPrototypeMigrations` (13/13 applied, 0 pending); 2. `runPrototypeSeed` menerapkan seed pelanggan, topologi, network fixture, tester mapping Telegram (`6727338166`), dan menegakkan singleton `automation_settings` mode `SHADOW` (`shadowGuaranteed: true`, `emergency_stop: false`); 3. Verifikasi skema mengonfirmasi 22 tabel inti dan seluruh fixture UUID; 4. Exit code 0; 5. P2.10 tetap In Progress menunggu penyiapan akun staf dan konfigurasi/deployment Vercel. | **MIGRASI & SEED SUPABASE REMOTE SELESAI & TERVERIFIKASI EMPIRIS. STATUS P2.10: 🟡 IN PROGRESS.** Entry berikutnya D150. |
+| D150 | **Perbaikan Guard Pra-Mutasi, Assertion Wajib Verifikasi Skema & Fixture, Pengujian Tooling Terisolasi (37/37 PASS), dan Verifikasi Read-Only Database Remote Supabase Cloud**: 1. Guard `scripts/apply-prototype-pipeline.mjs` diperketat dengan pencocokan eksak username (`postgres.saysxjdyalnbhxqqmytp`), validasi target, penolakan mode non-SHADOW / emergency stop aktif / ketidakkonsistenan ledger dengan 0 runner execution; 2. Assertion verifikasi wajib menegakkan kesesuaian 13 migrasi, 22 tabel inti, fixture spesifik UUID, tester Telegram `6727338166`, observasi stale, dan mode `SHADOW`; 3. `scripts/verify-prototype-schema.mjs` menyediakan verifikasi mandiri via `BEGIN READ ONLY` (0 mutasi); 4. Pengujian lokal terisolasi `tests/tooling/pipeline-tooling.test.mjs` lulus 100% (37/37 checks PASS, exit code 0); 5. Verifikasi read-only remote terhadap Supabase Cloud `saysxjdyalnbhxqqmytp` lulus penuh (exit code 0, 0 mutasi); 6. P2.10 tetap In Progress menunggu akun staf Auth dan deployment Vercel. | **GUARD & ASSERTION PIPELINE DIPERBAIKI, TERUJI LOKAL (37/37 PASS), DAN DATABASE REMOTE TERVERIFIKASI READ-ONLY. STATUS P2.10: 🟡 IN PROGRESS.** Entry berikutnya D151. |
+| D151 | **Penguatan Isolasi Subprocess Pengujian CLI, Verifikasi Keanggotaan Pasangan Fixture Jaringan (180 ONU & 16 Upstream), Penyelarasan Fakta Identitas/Topologi, dan Verifikasi Read-Only Remote Supabase Cloud**: 1. Isolasi pengujian CLI subprocess dijamin via konfigurasi dummy independen (`PROTOTYPE_ENV_FILE`) dan client/transport seam terisolasi (`PROTOTYPE_TEST_CLIENT_MODULE`) tanpa membaca `.env.local` atau kontak jaringan luar; 2. Pembuktian nol pemanggilan runner migrasi dan seed pada 5 kondisi penolakan guard; 3. Assertion pasangan fixture jaringan diperketat ke keanggotaan pasangan eksplisit (180 pasang ONU pada 15 skenario dan 12 dummy service, tanpa observasi missing_status, serta 16 pasang upstream MOCK-UPLINK-01); 4. Penyelarasan dokumentasi faktual: ODC berawalan `30000000`, ODP berawalan `40000000`, identitas dummy `60000000`, kode pelanggan `DUMMY-CUST-*`, dan pemetaan topologi 10 ke ODP-01 + 2 ke ODP-02; 5. Suite tooling lokal lulus 100% (49/49 checks PASS, exit code 0); 6. Verifikasi read-only remote terhadap Supabase Cloud `saysxjdyalnbhxqqmytp` lulus penuh (exit code 0, 0 mutasi); 7. P2.10 tetap In Progress. | **ISOLASI CLI & ASSERTION PASANGAN NETWORK LULUS TERUJI EMPIRIS (49/49 PASS) DAN REMOTE TERVERIFIKASI READ-ONLY. STATUS P2.10: 🟡 IN PROGRESS.** Entry berikutnya D152. |
+| D152 | **Penutupan Jalur Campuran Mock Client dengan Runner Mutasi Nyata, Enforce DI Lengkap, Pengujian Tooling (4 Parent Suites / 49 Subtests PASS), dan Bukti Verifikasi Remote Aktual**: 1. CLI mutating pipeline (`scripts/apply-prototype-pipeline.mjs`) secara ketat menolak `PROTOTYPE_TEST_CLIENT_MODULE` sebelum koneksi atau pemanggilan runner; 2. Jalur dependency injection mewajibkan penyediaan `migrationRunner` dan `seedRunner` lengkap saat `clientFactory` diinjeksi, mencegah fallback ke runner nyata; 3. Verifier read-only tetap mempertahankan seam lokal untuk pengujian CLI tanpa risiko mutasi; 4. Seluruh pengujian lokal (4 parent suites, 49 subtests = 53 checks) lulus 100% tanpa menyentuh jaringan remote; 5. Menghasilkan dan menyajikan bukti verifikasi remote aktual dari eksekusi `scripts/verify-prototype-schema.mjs` (task-554) tanpa teks rekonstruksi; 6. P2.10 tetap In Progress. | **JALUR CAMPURAN MOCK DITUTUP, DI DIKERASKAN, DAN BUKTI REMOTE AKTUAL TERTELUSURI LENGKAP. STATUS P2.10: 🟡 IN PROGRESS.** Entry berikutnya D153. |
+
+---
+
+### D150 — Perbaikan Guard Pra-Mutasi, Assertion Wajib Verifikasi Skema & Fixture, Pengujian Tooling Terisolasi (37/37 PASS), dan Verifikasi Read-Only Database Remote Supabase Cloud
+
+**Konteks**:
+Setelah migrasi dan seed Supabase remote dijalankan pada D149, perbaikan terarah dilakukan pada pipeline dan verifier database (`scripts/apply-prototype-pipeline.mjs` dan runner baru `scripts/verify-prototype-schema.mjs`) untuk memperketat guard sebelum mutasi, mewajibkan assertion struktural dan relasional yang presisi, membuktikannya pada pengujian lokal tanpa kontak remote, dan memverifikasi database Supabase Cloud secara read-only tanpa eksekusi ulang migrasi atau seed.
+
+**Detail Keputusan & Perbaikan**:
+1. **Pengerasan Guard Pra-Mutasi (`validatePipelineTarget`, `evaluatePreCheckGuard`, `runPipelinePreCheck`)**:
+   - Validasi parameter target secara presisi: `host = aws-0-ap-southeast-2.pooler.supabase.com`, `port = 5432`, `username = postgres.saysxjdyalnbhxqqmytp` (pencocokan eksak tanpa substring match), `database = postgres`, `sslmode=verify-full`, dan `NETWORK_PROVIDER=mock`.
+   - Pemeriksaan awal dijadikan prasyarat wajib untuk melanjutkan (bukan sekadar logging).
+   - Guard membaca state existing `automation_settings`: jika sudah ada dan `mode !== 'SHADOW'` atau `emergency_stop === true`, proses dihentikan seketika sebelum runner migrasi atau seeder dipanggil (fail-closed, zero runner execution).
+   - Guard membaca ledger `supabase_migrations.schema_migrations`: menolak versi migrasi yang tidak dikenal repository atau keberadaan tabel aplikasi pada database tanpa ledger yang valid/konsisten. Membedakan database baru yang kosong (0 ledger, 0 app table) dari keadaan existing yang tidak konsisten.
+   - Modul diekspor sehingga dapat diimpor untuk pengujian tanpa otomatis menjalankan pipeline atau mengakses remote (`isDirectExecution`).
+
+2. **Assertion Verifikasi Wajib (`runDirectedVerification`)**:
+   - Paritas ledger: himpunan versi pada `supabase_migrations.schema_migrations` wajib cocok persis dengan 13 file migrasi resmi di `supabase/migrations/` (tidak boleh ada versi hilang maupun tidak dikenal).
+   - 22 tabel inti di schema `public` diverifikasi keberadaannya secara eksak (`public.complaints`, `public.incidents`, `public.incident_activity_log`, `public.processing_job_attempts`, `public.staff_message_classifications`, `public.staff_message_classification_history`, dsb.).
+   - Fixture diverifikasi berdasarkan UUID/kode dan relasi spesifik seed resmi: 1 ODC (`ODC-DUMMY-01`), 2 ODP (`ODP-DUMMY-01`, `ODP-DUMMY-02`), 12 pelanggan dummy (`10000000-...-0001` s/d `...0012`), 12 layanan (`20000000-...`), 12 pemetaan topologi, dan 5 identitas channel dummy. Hitungan dibatasi strictly pada fixture prototype tersebut agar data lain di masa mendatang tidak dianggap bagian seed.
+   - Tester mapping diverifikasi: kombinasi `channel = telegram`, `channel_account_id = upaznet_helpdesk_bot`, dan `sender_external_id = 6727338166` wajib terhubung ke pelanggan yang diharapkan (`10000000-0000-4000-8000-000000000001`) dengan status `verification_status = verified`.
+   - Fixture network diverifikasi: 16 skenario mock, 180 observasi ONU, dan 16 observasi upstream. Observasi skenario stale (`observed_at < now() - interval '5 minutes'`) wajib bernilai true tanpa menyegarkan timestamp atau mengharuskan semua observasi tetap fresh.
+   - Singleton `automation_settings` diverifikasi: `mode = 'SHADOW'`, `emergency_stop = false`, `version = 1`.
+   - Pesan "ALL CHECKS PASSED" dan exit code 0 hanya dikeluarkan jika seluruh assertion wajib lulus; kegagalan apa pun melempar error dan menghasilkan exit code 1.
+
+3. **Runner Verifikasi Read-Only Mandiri (`scripts/verify-prototype-schema.mjs`)**:
+   - Menyediakan jalur pemeriksaan terpisah yang tidak memanggil runner migrasi maupun seeder.
+   - Menjalankan seluruh kueri verifikasi di dalam transaksi `BEGIN READ ONLY` dengan timeout koneksi/kueri 10 detik dan verifikasi TLSv1.3 penuh (`rejectUnauthorized: true`). Menjamin 0 mutasi database.
+
+4. **Pembuktian Empiris Pengujian Lokal Terisolasi (`tests/tooling/pipeline-tooling.test.mjs`)**:
+   - 37 checks dalam 4 suite lulus 100% tanpa menyentuh jaringan/remote (`duration_ms: ~1856ms`, exit code 0):
+     - Suite 1 (8 tests): Target validation guard menolak host salah, port salah, username substring match / username salah, database salah, sslmode non-verify-full, password placeholder, dan NETWORK_PROVIDER non-mock. Target valid diterima.
+     - Suite 2 (7 tests): Pre-check guards menolak target invalid, mode existing non-SHADOW, emergency stop aktif, tabel ada tanpa ledger, dan versi migrasi tidak dikenal di ledger. Membuktikan bahwa pada seluruh penolakan guard, runner migrasi dan seeder sama-sama dipanggil 0 kali (`migrationCalls === 0`, `seedCalls === 0`). Keadaan awal valid (kosong maupun existing migrated) lolos.
+     - Suite 3 (15 tests): Assertion wajib terbukti fail-closed saat versi ledger hilang, versi ledger tidak dikenal, tabel inti hilang, pelanggan/layanan/ODC/ODP/topologi/identitas hilang, tester salah customer / unverified, skenario stale hilang atau false, jumlah baris ONU/upstream salah, mode bukan SHADOW, atau emergency stop aktif. Fixture lengkap lulus penuh.
+     - Suite 4 (3 tests): Read-only runner terbukti menegakkan `BEGIN READ ONLY` dan 0 mutasi, memetakan kegagalan assertion ke exit code 1 via subprocess terisolasi, dan memetakan kelulusan assertion ke exit code 0.
+
+5. **Verifikasi Read-Only Database Remote Supabase Cloud (`saysxjdyalnbhxqqmytp`)**:
+   - Dieksekusi via `scripts/verify-prototype-schema.mjs` dengan `NODE_EXTRA_CA_CERTS=certs/prod-ca-2021.crt`.
+   - Kueri dijalankan dalam transaksi `BEGIN READ ONLY` melalui Session pooler port 5432:
+     - Migrations: 13/13 applied (0 pending) ✅
+     - Core Tables Verified: 22 tables present ✅
+     - Fixtures Verified: Customers=12, Services=12, ODCs=1, ODPs=2, Mappings=12 ✅
+     - Tester Identity: 6727338166 linked to Customer 10000000-0000-4000-8000-000000000001 (verified) ✅
+     - Network Fixtures: Scenarios=16, ONU rows=180, Uplink rows=16 (stale preserved: true) ✅
+     - Automation Settings: mode=SHADOW, emergency_stop=false, version=1 ✅
+     - Exit code: 0 (`ALL READ-ONLY ASSERTIONS PASSED`).
+   - Tidak ada mutasi, re-run migrasi, seed ulang, atau manipulasi data pada remote database.
+
+6. **Batas & Status**:
+   - Verifikasi database Supabase Cloud remote telah selesai penuh dan terverifikasi empiris secara read-only.
+   - Status P2.7–P2.9 tetap **Done**, P2.10 tetap **In Progress**, P2.11 tetap **Not Started**.
+   - Tahap berikutnya: penyiapan akun staf Auth pada Supabase remote dan konfigurasi Vercel deployment.
+
+---
+
+### D151 — Penguatan Isolasi Subprocess Pengujian CLI, Verifikasi Keanggotaan Pasangan Fixture Jaringan (180 ONU & 16 Upstream), Penyelarasan Fakta Identitas/Topologi, dan Verifikasi Read-Only Remote Supabase Cloud
+
+**Konteks**:
+Melanjutkan evaluasi pengujian pipeline dan verifikasi database P2.10:
+1. Memperbaiki isolasi subprocess pengujian CLI agar tidak membaca `.env.local` pengguna, tidak mewarisi kredensial remote, dan tidak bergantung pada kegagalan soket/jaringan eksternal untuk mengklaim kelulusan tes negatif.
+2. Memperketat verifikasi observasi fixture jaringan dari sekadar hitungan total baris tabel menjadi pemeriksaan keanggotaan pasangan spesifik (`scenario_id` + `service_id` untuk ONU, dan `scenario_id` + `link_id` untuk upstream) yang dibatasi secara presisi pada ruang fixture.
+3. Meluruskan rincian identitas dan topologi historis agar 100% selaras dengan `supabase/seed.sql` dan `supabase/fixtures/network.sql`.
+4. Mengeksekusi ulang verifikasi read-only mandiri terhadap Supabase Cloud remote.
+
+**Detail Keputusan & Perbaikan**:
+1. **Isolasi Subprocess CLI & Seam Client Pengujian**:
+   - `scripts/verify-prototype-schema.mjs` dan `scripts/apply-prototype-pipeline.mjs` mendukung jalur konfigurasi terisolasi via `process.env.PROTOTYPE_ENV_FILE` atau `options.envLocalPath` tanpa menyentuh `.env.local` saat pengujian.
+   - Menyediakan client/transport seam pengujian lokal melalui `process.env.PROTOTYPE_TEST_CLIENT_MODULE` (`tests/tooling/test-client-seam.mjs`), diimpor secara dinamis via `pathToFileURL` (kompatibel penuh dengan path drive Windows `D:\...`).
+   - Pada penggunaan produksi normal, `PROTOTYPE_TEST_CLIENT_MODULE` tidak disetel, sehingga client `pg` riil dengan verifikasi TLSv1.3 penuh (`rejectUnauthorized: true`) dan guard target presisi tetap ditegakkan tanpa pelemahan apa pun.
+   - Pengujian subprocess membuktikan:
+     - Target tidak valid: keluar exit 1, pesan penolakan guard presisi (`Invalid NETWORK_PROVIDER "live". Expected "mock".`), 0 percobaan koneksi.
+     - Target valid dummy dengan fixture lengkap: keluar exit 0, mencetak ringkasan lengkap `ALL READ-ONLY ASSERTIONS PASSED ✅`.
+     - Target valid dummy dengan fixture salah: keluar exit 1, mencetak alasan spesifik, tanpa pesan sukses keseluruhan.
+     - Bukti bahwa kegagalan negatif murni akibat penolakan guard/assertion dan BUKAN akibat kegagalan DNS (`ENOTFOUND`), koneksi (`ECONNREFUSED`), timeout (`ETIMEDOUT`), TLS, atau berkas konfigurasi hilang (`File not found`).
+
+2. **Pembuktian Nol Pemanggilan Runner Migrasi & Seed pada 5 Jalur Rejeksi**:
+   - `runPrototypePipeline` dibuktikan empiris memanggil runner migrasi dan seed tepat 0 kali (`migrationCalls === 0`, `seedCalls === 0`) pada setiap kondisi:
+     1. Target invalid (URL invalid atau NETWORK_PROVIDER non-mock).
+     2. Mode existing bukan `SHADOW` (`automation_settings.mode = 'FULL'`).
+     3. Emergency stop aktif (`emergency_stop = true`).
+     4. Tabel aplikasi ada tanpa ledger valid (`schema_migrations` kosong).
+     5. Versi migrasi di ledger tidak dikenal repository (`99991231235959_unknown`).
+   - Kondisi valid pembanding terbukti berhasil memanggil runner dan lulus verifikasi.
+
+3. **Verifikasi Keanggotaan Pasangan Fixture Jaringan**:
+   - Fixture ONU: Memverifikasi keanggotaan 180 pasangan eksak `scenario_id` (15 skenario, tanpa `missing_status`) dan `service_id` (12 dummy services `20000000-0000-4000-8000-000000000001` s/d `...0012`).
+   - Menegakkan bahwa skenario `missing_status` tidak memiliki baris observasi ONU pada dummy services.
+   - Fixture Upstream: Memverifikasi keanggotaan 16 pasangan eksak `scenario_id` (16 skenario) dan `link_id` (`MOCK-UPLINK-01`).
+   - Pemeriksaan dibatasi strictly pada ruang fixture: data tambahan di luar ruang fixture (layanan lain atau uplink lain) tidak menggagalkan verifikasi, sedangkan penggantian atau pengurangan pasangan di dalam ruang fixture menghasilkan kegagalan eksplisit.
+   - Skenario stale (`observed_at < now() - interval '5 minutes'`) dan mode `SHADOW` tetap dipertahankan.
+
+4. **Penyelarasan Fakta Identitas & Topologi Resmi**:
+   - ODC: UUID `30000000-0000-4000-8000-000000000001`, kode `ODC-DUMMY-01`.
+   - ODP: UUID `40000000-0000-4000-8000-000000000001` (`ODP-DUMMY-01`) dan `...0002` (`ODP-DUMMY-02`).
+   - Identitas Channel Dummy: UUID `60000000-0000-4000-8000-000000000001` s/d `...0005`.
+   - Kode Pelanggan: `DUMMY-CUST-001` s/d `DUMMY-CUST-012` (UUID `10000000-...`).
+   - Kode Layanan: `DUMMY-SVC-001` s/d `DUMMY-SVC-012` (UUID `20000000-...`).
+   - Pemetaan Topologi: Layanan 1–10 terpetakan ke ODP-01 dan Layanan 11–12 terpetakan ke ODP-02 (pembagian 10 + 2).
+   - Nama Skenario Jaringan Resmi: `normal`, `los_individual`, `los_area`, `low_coverage`, `upstream_down`, `stale`, `unknown`, `missing_status`, `future_timestamp`, `missing_timestamp`, `provider_error`, `timeout`, `onu_error_upstream_down`, `upstream_error_los`, `recovered`, dan `new_event`.
+
+5. **Hasil Pengujian Lokal & Remote**:
+   - Lokal: 49 checks lulus penuh pada `tests/tooling/pipeline-tooling.test.mjs` (`0 fail`, `0 skipped`, exit code 0).
+   - Remote Supabase Cloud (`saysxjdyalnbhxqqmytp`): Kueri dieksekusi dalam transaksi `BEGIN READ ONLY` via Session pooler port 5432:
+     - 13/13 migrasi applied (0 pending).
+     - 22 tabel inti di schema `public` terverifikasi.
+     - Fixture ODC (1), ODP (2), Pelanggan (12), Layanan (12), Topologi (12), Identitas (5) terverifikasi.
+     - Tester Telegram `6727338166` terhubung ke pelanggan `10000000-0000-4000-8000-000000000001` (verified).
+     - Fixture Jaringan: 16 skenario, 180 pasangan ONU terverifikasi, 16 pasangan Upstream terverifikasi, observasi stale valid.
+     - Automation settings: mode SHADOW, emergency_stop false, version 1.
+     - Hasil: `ALL READ-ONLY ASSERTIONS PASSED ✅`, exit code: 0, 0 mutasi pada database remote.
+
+6. **Status & Langkah Berikutnya**:
+   - Status P2.7–P2.9 tetap **Done**, P2.10 tetap **In Progress**, P2.11 tetap **Not Started**.
+   - Tahap berikutnya adalah penyiapan akun staf Auth pada Supabase remote dan konfigurasi Vercel deployment.
+
+---
+
+### D152 — Penutupan Jalur Campuran Mock Client dengan Runner Mutasi Nyata, Penegakan Injeksi Lengkap pada Pipeline Mutasi, Pengujian Tooling Terarah (4 Parent Suites / 49 Subtests), dan Pelaporan Bukti Verifikasi Remote Aktual
+
+**Konteks**:
+Evaluasi lanjutan terhadap pipeline deployment dan verifikasi P2.10:
+1. Menutup celah di mana `scripts/apply-prototype-pipeline.mjs` sebelumnya membaca variabel lingkungan `PROTOTYPE_TEST_CLIENT_MODULE` untuk client pre-check/verifikasi sementara runner migrasi dan seed dapat jatuh ke runner nyata, yang berisiko mengizinkan penulisan mutasi remote berdasarkan state mock.
+2. Mewajibkan bahwa pada jalur programmatic dependency injection, penyuntikan client uji (`options.clientFactory`) wajib disertai penyuntikan runner migrasi (`options.migrationRunner`) dan runner seed (`options.seedRunner`) yang lengkap tanpa fallback ke default nyata.
+3. Mengoreksi dan meluruskan bukti verifikasi remote sebelumnya yang memuat kutipan rekonstruksi naratif, dengan menyajikan stdout/stderr asli yang tertelusuri langsung dari eksekusi verifier read-only aktual.
+
+**Detail Keputusan & Perbaikan**:
+1. **Penolakan Mutlak `PROTOTYPE_TEST_CLIENT_MODULE` pada CLI Mutasi**:
+   - `scripts/apply-prototype-pipeline.mjs` secara ketat menolak `process.env.PROTOTYPE_TEST_CLIENT_MODULE` di tingkat CLI maupun di dalam fungsi `runPrototypePipeline`.
+   - Proses langsung keluar dengan exit code 1 dan pesan penolakan presisi: `PROTOTYPE_TEST_CLIENT_MODULE is forbidden in the mutating pipeline (apply-prototype-pipeline.mjs)...` sebelum membuka koneksi jaringan, membaca schema, atau memanggil runner migrasi/seed.
+   - Verifier read-only (`scripts/verify-prototype-schema.mjs`) tetap mempertahankan dukungan seam client lokal untuk pengujian CLI yang sudah diterima karena tidak memiliki efek samping mutasi.
+
+2. **Penegakan Dependency Injection Lengkap**:
+   - Jika `options.clientFactory` disuntikkan secara programmatic, pemanggil wajib menyuntikkan `options.migrationRunner` dan `options.seedRunner`.
+   - Ketiadaan salah satu runner memicu penolakan fail-closed (`Incomplete dependency injection: clientFactory was provided without an explicit ...`) sebelum inisialisasi koneksi (`client.connect()`) atau efek samping apa pun.
+   - Pembanding keadaan valid dengan dependency injection lengkap terbukti berhasil mengeksekusi pipeline dan verifikasi secara murni di memori.
+
+3. **Hasil Pengujian Tooling Lokal (4 Parent Suites / 49 Subtests PASS)**:
+   - Pengujian `tests/tooling/pipeline-tooling.test.mjs` menghasilkan kelulusan 100% pada 53 checks yang dilaporkan runner `node:test` (4 parent test suites dan 49 subtests terarah, 0 fail, 0 skipped, durasi ~614ms):
+     - Suite 1: Target Validation Guard — 8 subtests (1.1–1.8).
+     - Suite 2: Pre-check Guards & Zero-Runner Execution — 15 subtests (2.1–2.6, 2.7a–2.7e, 2.8, 2.9a–2.9c). Termasuk bukti empiris penolakan DI parsial (2.9a, 2.9b), penolakan variabel mock pada mutating pipeline (2.9c), dan nol pemanggilan runner pada 5 kondisi rejeki guard.
+     - Suite 3: Mandatory Directed Verification Assertions — 19 subtests (3.1–3.11, 3.12a–3.12e, 3.13–3.15). Termasuk bukti keanggotaan 180 pasang ONU dan 16 pasang Upstream.
+     - Suite 4: Read-Only Verification Runner & Subprocess Exit Code — 7 subtests (4.1–4.2, 4.3–4.7). Termasuk pembuktian subprocess mutating CLI menolak `PROTOTYPE_TEST_CLIENT_MODULE` dengan exit 1 tanpa koneksi jaringan (4.7).
+
+4. **Bukti Verifikasi Remote Supabase Cloud Aktual (Task-554)**:
+   - Dijalankan via `scripts/verify-prototype-schema.mjs` dengan `NODE_EXTRA_CA_CERTS=certs/prod-ca-2021.crt` pada 15 Oktober 2026, 22:52 WIB (task-554) terhadap target `aws-0-ap-southeast-2.pooler.supabase.com:5432/postgres`.
+   - Menggunakan client `pg` riil dalam transaksi `BEGIN READ ONLY` (0 mutasi database, tanpa pemanggilan migrasi atau seed).
+   - Stdout/stderr asli yang tertelusuri langsung dari `task-554.log`:
+     ```text
+     [ReadOnlyVerification] Connected to target: aws-0-ap-southeast-2.pooler.supabase.com:5432/postgres
+     [ReadOnlyVerification] Transaction started: BEGIN READ ONLY (guaranteed 0 mutations).
+     [ReadOnlyVerification] Read-only verification completed and committed.
+
+     ======================================================
+     [READ-ONLY VERIFICATION SUMMARY]
+     Migrations: 13/13 applied (0 pending) ✅
+     Core Tables Verified: 22 tables present ✅
+     Fixtures: Customers=12, Services=12, ODCs=1, ODPs=2, Mappings=12 ✅
+     Tester Identity: 6727338166 linked to Customer 10000000-0000-4000-8000-000000000001 (verified) ✅
+     Network Fixtures: Scenarios=16, ONU pairs=180, Uplink pairs=16 (stale preserved: true) ✅
+     Automation Settings: mode=SHADOW, emergency_stop=false, version=1 ✅
+     Overall Result: ALL READ-ONLY ASSERTIONS PASSED ✅
+     ======================================================
+
+     VERIFY_EXIT_CODE=0
+     ```
+   - Exit code: 0.
+
+5. **Status & Langkah Berikutnya**:
+   - Status P2.7–P2.9 tetap **Done**, P2.10 tetap **In Progress**, P2.11 tetap **Not Started**.
+   - Tahap berikutnya adalah penyiapan akun staf Auth pada Supabase remote dan konfigurasi Vercel deployment.
 
 

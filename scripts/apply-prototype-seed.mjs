@@ -3,13 +3,17 @@
  * scripts/apply-prototype-seed.mjs
  *
  * Idempotently applies seed.sql, fixtures/network.sql, and tester identity mapping.
- * Does NOT reset database or delete existing users/data.
+ * - Strict TLS parity matching runtime lib/postgres/server.ts (remote requires sslmode=verify-full).
+ * - Verifies whether automation_settings is genuinely in SHADOW mode (does NOT falsely report SHADOW guaranteed).
+ * - Does NOT reset database or delete existing users/data.
+ * - Never prints passwords or raw database URLs.
  */
 
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import pg from 'pg';
+import { parseAndValidateDbConfig } from './apply-prototype-migrations.mjs';
 
 const { Client } = pg;
 
@@ -17,37 +21,15 @@ export async function runPrototypeSeed(dbUrl, options = {}) {
   const logger = options.logger || console;
   const testerSenderId = options.testerSenderId || process.env.TELEGRAM_TESTER_ALLOWLIST || '6727338166';
   const botAccountId = options.botAccountId || process.env.TELEGRAM_BOT_ACCOUNT_ID || 'upaznet_helpdesk_bot';
+  const requireShadow = options.requireShadow ?? false;
+  const clientFactory = options.clientFactory;
 
-  if (!dbUrl) {
-    throw new Error('Database URL is required for seeding.');
-  }
-
-  let parsedUrl;
-  try {
-    parsedUrl = new URL(dbUrl);
-  } catch (err) {
-    throw new Error(`Invalid Database URL: ${err.message}`);
-  }
-
-  const isLocal = ['localhost', '127.0.0.1', '::1'].includes(parsedUrl.hostname);
-  const sslMode = parsedUrl.searchParams.get('sslmode');
-
-  const clientConfig = { connectionString: dbUrl };
-  if (!isLocal) {
-    if (sslMode === 'verify-full') {
-      clientConfig.ssl = { rejectUnauthorized: true };
-    } else if (sslMode === 'no-verify' || sslMode === 'disable') {
-      clientConfig.ssl = false;
-    } else {
-      clientConfig.ssl = { rejectUnauthorized: false };
-    }
-  }
-
-  const client = new Client(clientConfig);
+  const dbConfig = parseAndValidateDbConfig(dbUrl);
+  const client = clientFactory ? clientFactory(dbConfig) : new Client(dbConfig);
   await client.connect();
 
   try {
-    logger.log(`[Seed] Connected to target database: ${parsedUrl.hostname}:${parsedUrl.port || 5432}/${parsedUrl.pathname.replace(/^\//, '')}`);
+    logger.log(`[Seed] Connected to target database: ${dbConfig.hostname}:${dbConfig.port}/${dbConfig.database}`);
 
     // 1. Apply seed.sql
     const seedPath = path.resolve(process.cwd(), 'supabase/seed.sql');
@@ -92,19 +74,39 @@ export async function runPrototypeSeed(dbUrl, options = {}) {
       logger.log(`[Seed] Tester channel identity ensured for ${botAccountId} / ${testerSenderId}.`);
     }
 
-    // 4. Verify automation_settings table has singleton row in SHADOW mode
+    // 4. Verify automation_settings table state
     const { rows: settingsRows } = await client.query(
       `SELECT singleton, mode, emergency_stop, version FROM public.automation_settings WHERE singleton = true;`
     );
+
+    let shadowGuaranteed = false;
+    let currentMode = null;
+    let emergencyStop = false;
+
     if (settingsRows.length === 0) {
       await client.query(`INSERT INTO public.automation_settings (singleton, mode) VALUES (true, 'SHADOW');`);
       logger.log('[Seed] Initialized automation_settings singleton row with mode=SHADOW.');
+      shadowGuaranteed = true;
+      currentMode = 'SHADOW';
+      emergencyStop = false;
     } else {
-      logger.log(`[Seed] Current automation_settings: mode=${settingsRows[0].mode}, emergency_stop=${settingsRows[0].emergency_stop}, version=${settingsRows[0].version}`);
+      currentMode = settingsRows[0].mode;
+      emergencyStop = settingsRows[0].emergency_stop;
+      if (currentMode === 'SHADOW' && !emergencyStop) {
+        shadowGuaranteed = true;
+        logger.log(`[Seed] Current automation_settings verified in SHADOW mode (emergency_stop=false, version=${settingsRows[0].version}).`);
+      } else {
+        shadowGuaranteed = false;
+        const warningMsg = `Current automation_settings mode is '${currentMode}' (emergency_stop=${emergencyStop}). SHADOW is NOT guaranteed.`;
+        if (requireShadow) {
+          throw new Error(`FAIL-CLOSED: ${warningMsg}`);
+        }
+        logger.warn(`[Seed] WARNING: ${warningMsg}`);
+      }
     }
 
-    logger.log('[Seed] Seeding completed cleanly.');
-    return { ok: true };
+    logger.log('[Seed] Seeding completed.');
+    return { ok: true, shadowGuaranteed, mode: currentMode, emergencyStop };
   } finally {
     await client.end();
   }
@@ -117,7 +119,10 @@ if (process.argv[1] && path.resolve(process.argv[1]) === path.resolve(fileURLToP
     process.exit(1);
   }
   runPrototypeSeed(targetUrl)
-    .then(() => process.exit(0))
+    .then((res) => {
+      console.log('[Seed] Result:', JSON.stringify(res, null, 2));
+      process.exit(0);
+    })
     .catch((err) => {
       console.error('[Seed] Fatal:', err.message);
       process.exit(1);
