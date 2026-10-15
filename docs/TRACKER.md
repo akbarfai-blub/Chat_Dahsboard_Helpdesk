@@ -572,7 +572,7 @@ Hasil tersedia melalui API; panel evidence dashboard mengikuti P2.7.
 | [P2.7](#task-p2-7)   | Panel konteks identitas dan evidence jaringan         | ✅ Done        | P2.6, P1.5.3                       | D69, D71, D72, D124, D125, D126, D127, D128, D129, D130, D131, D132, D133, D134, D135 |
 | [P2.8](#task-p2-8)   | Label dan koreksi klasifikasi oleh staf               | ✅ Done        | P2.6, P1.1.2                       | D65, D66, D69, D136, D137, D138, D139, D140, D141, D142 |
 | [P2.9](#task-p2-9)   | Direktori pelanggan pendukung yang read-only          | ✅ Done        | P0.6, P0.8, P0.9                   | D70, D71            |
-| [P2.10](#task-p2-10) | Konfigurasi dan deployment prototype SHADOW           | 🟡 In Progress | P0.2, P0.4, P0.5, P2.2, P2.5, P2.6 | D50, D67, D68, D143, D144, D145, D146, D147, D148, D149, D150, D151, D152, D153 |
+| [P2.10](#task-p2-10) | Konfigurasi dan deployment prototype SHADOW           | 🟡 In Progress | P0.2, P0.4, P0.5, P2.2, P2.5, P2.6 | D50, D67, D68, D143, D144, D145, D146, D147, D148, D149, D150, D151, D152, D153, D154, D155 |
 | [P2.11](#task-p2-11) | Verifikasi vertical slice SHADOW end-to-end           | ⬜ Not Started | P2.7, P2.8, P2.10                  | D65, D67, D68       |
 
 ### Detail task
@@ -1112,13 +1112,31 @@ Supabase prototype, Vercel env, bot token/secret, dan tester IDs terkonfigurasi;
   4. Pengalihan sesi pada `/` (`app/page.tsx`): halaman statis "Hello world!" diganti Server Component dinamis yang memverifikasi sesi server-side via Supabase client; sesi valid dialihkan ke `/dashboard` (307) dan tanpa sesi dialihkan ke `/login` (307) tanpa redirect loop.
   5. Diagnostik aman di route handler (`app/api/inbox/conversations/route.ts` dan `[id]/route.ts`): mencatat nama error, kode, dan pesan yang disanitasi tanpa password/token/cookie/connection string mentah.
   6. Seluruh 307 unit test lulus (`npm test`), linter 0 error/warning, `npm run build` sukses (exit code 0, `BUILD_ID: JTdS8Jb2coBKY5Q1yv8GA`).
+- **Pengerasan Keamanan Log Error, Pengujian Fallback CA X.509 & Penyelarasan Bukti Smoke Test Pengguna (D154)**:
+  1. Keamanan log error: Memperbaiki diagnostik server pada `app/api/inbox/conversations/route.ts` dan `[id]/route.ts`. Pesan error mentah (`err.message`), stack trace, connection string, password, token, cookie, dan isi pesan pelanggan dijamin 100% tidak diteruskan ke log maupun respons HTTP. Menggunakan helper terpusat `classifyRouteError` yang hanya mencatat konteks route, kategori (`DatabaseError`, `TlsError`, `NetworkError`, `ConfigurationError`, `UnknownError`), dan kode terallowlist/tervalidasi. Respons kegagalan tetap mengembalikan HTTP 500 dengan envelope standar `{ success: false, data: null, error: { code: "INTERNAL_ERROR", message: "..." } }`.
+  2. Pengujian fallback CA X.509: Memperluas `resolveDatabaseCaCertificate` dengan opsi injeksi `{ env?, certPath? }` untuk mengaktifkan jalur fallback (Step 3) secara deterministik tanpa menghapus/mengubah berkas fisik atau memerlukan koneksi jaringan. Memvalidasi sertifikat fallback menggunakan `crypto.X509Certificate` dan mencocokkan secara kriptografis subject, issuer, serialNumber, validTo, dan `fingerprint256` persis dengan sertifikat acuan `certs/prod-ca-2021.crt`.
+  3. Validasi lokal terbaru: 310/310 unit tests PASS (`npm test`, exit code 0), 49/49 assertions PASS pada `inbox-service.test.ts`, 0 ESLint errors/warnings, `npm run build` sukses (exit code 0, `BUILD_ID: yBmXh45QZ1qw8jB7Ss89p`, 26 berkas manifest VALID).
+  4. Bukti smoke test deployment bersumber dari eksekusi pengguna (`https://chat-dahsboard-helpdesk.vercel.app`):
+     - Seluruh 7 pemeriksaan wajib PASS (`allPassed: true`, `PROCESS_EXIT_CODE=0`).
+     - Tanpa autentikasi: `/dashboard` mengembalikan 307 menuju `/login`; `/api/inbox/conversations` mengembalikan 401.
+     - Dengan sesi staf: dashboard dan API Inbox mengembalikan 200.
+     - Logout berhasil; dashboard kembali mengarah ke login (307) dan API kembali 401.
+     - Request webhook tanpa secret atau dengan secret salah ditolak 401; jumlah baris ingress tetap 1 sebelum dan sesudah pemeriksaan tersebut.
+     - Pesan simulasi diterima dan diproses sampai job berstatus done; pesan, percakapan, dan assessment terbentuk. Ingress ID: `0877a630-93c3-4756-804f-674b21d08e78`.
+     - Mode SHADOW terjaga; outbound intents dan reply claims untuk pesan simulasi masing-masing 0.
+  5. Konfirmasi pesan Telegram nyata bersumber dari pengguna:
+     - Bot ID `8892832714`, username `@upaznet_helpdesk_proto_bot`, webhook URL `https://chat-dahsboard-helpdesk.vercel.app/api/webhooks/telegram`, pending updates: 0, allowed updates: `message`, `edited_message`, custom cert: false.
+     - Pesan Telegram nyata dari tester terkonfirmasi diterima dan masuk ke Inbox dashboard. Sesuai instruksi, evaluasi assessment pesan simulasi tidak dianggap sebagai bukti evaluasi pesan Telegram nyata.
+- **Penyelarasan Rujukan BUILD_ID & Pembatasan Ringkasan Smoke Test (D155)**:
+  1. Penyelarasan BUILD_ID acuan aktif ke `yBmXh45QZ1qw8jB7Ss89p` sesuai artefak `.next/BUILD_ID` dan `docs/evidence/P2_7/build-source-manifest.json` yang sinkron dengan 26 berkas workspace.
+  2. Pembatasan ringkasan smoke test deployment pengguna strictly pada fakta runner empiris, tanpa ekstrapolasi berlebihan terhadap integritas tabel database lain.
 
 **Catatan/Blocker**
 
 P2.10 tetap **In Progress**.
 - **Tahap Database Supabase Remote Selesai & Terverifikasi Read-Only**: Tahap database Supabase Cloud remote telah selesai penuh, termigrasi, terseed, dan terverifikasi read-only secara empiris (D149, D150, D151, D152).
-- **Langkah Tersisa untuk P2.10**: Redeployment Vercel oleh pengguna untuk menerapkan perbaikan D153, pengarahan webhook Telegram live via `manage-telegram-webhook.mjs set`, dan eksekusi smoke test remote nyata (`smoke-test-deployment.mjs`).
-- **Kebijakan Klaim**: Status P2.10 tetap In Progress dan tidak dimajukan ke Done sebelum deployment remote dan smoke test remote nyata terverifikasi. Sesuai AGENTS.md, P2.7–P2.9 tetap Done dan P2.11 tetap Not Started.
+- **Langkah Tersisa untuk P2.10**: Redeployment Vercel oleh pengguna untuk menerapkan perbaikan runtime terbaru (D154/D155) dan verifikasi terarah pasca-deploy.
+- **Kebijakan Klaim**: Status P2.10 tetap In Progress dan tidak dimajukan ke Done sebelum redeployment Vercel dengan kode runtime terbaru diterapkan dan diverifikasi. Sesuai AGENTS.md, P2.7–P2.9 tetap Done dan P2.11 tetap Not Started.
 
 </details>
 

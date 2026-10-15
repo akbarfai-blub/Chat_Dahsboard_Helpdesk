@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server";
 import { createClient } from "../../../../../lib/supabase/server";
 import { getHelpdeskPool } from "../../../../../lib/postgres/server";
-import { getInboxConversationDetail, InboxError, type Queryable } from "../../../../../lib/application/inbox-service";
+import {
+  getInboxConversationDetail,
+  InboxError,
+  classifyRouteError,
+  type Queryable,
+} from "../../../../../lib/application/inbox-service";
 import { isValidUuid } from "../../../../../lib/application/inbox-contracts";
 
 export const dynamic = "force-dynamic";
@@ -54,15 +59,8 @@ export async function GET(
     if (err instanceof InboxError) {
       return failure(err.status, err.code, err.message);
     }
-    const safeError =
-      err instanceof Error
-        ? {
-            name: err.name,
-            code: (err as { code?: string }).code,
-            message: err.message.replace(/:[^:@/]+@/g, ":***@"),
-          }
-        : { name: "UnknownError" };
-    console.error("[InboxConversationDetailRoute Error]", safeError);
+    const diagnostic = classifyRouteError("GET /api/inbox/conversations/[id]", err);
+    console.error("[InboxConversationDetailRoute Error]", diagnostic);
     return failure(500, "INTERNAL_ERROR", "Terjadi kesalahan pada server saat memuat detail percakapan.");
   }
 }

@@ -10,14 +10,18 @@ import {
   InboxError,
   listInboxConversations,
   getInboxConversationDetail,
+  classifyRouteError,
   type Queryable,
 } from "../../lib/application/inbox-service";
+import crypto from "node:crypto";
+import fs from "node:fs";
+import path from "node:path";
 import { validateRequestOrigin } from "../../lib/application/origin-validator";
 import { GET as getConversationsRoute } from "../../app/api/inbox/conversations/route";
 import { GET as getConversationDetailRoute } from "../../app/api/inbox/conversations/[id]/route";
 import { POST as postConversationReadRoute } from "../../app/api/inbox/conversations/[id]/read/route";
 import { EnvRestorer } from "../utils/test-guard";
-import { resolveDatabaseCaCertificate } from "../../lib/postgres/server";
+import { resolveDatabaseCaCertificate, SUPABASE_ROOT_CA_2021 } from "../../lib/postgres/server";
 
 test("Inbox pagination rejects unsafe numbers before database access", async (t) => {
   const lastSafePageAt25 = Math.floor(Number.MAX_SAFE_INTEGER / 25) + 1;
@@ -1081,7 +1085,85 @@ test("Koreksi B2: Route handlers direct invocation with Request/Response unit te
     assert.equal(body.error.code, "CONVERSATION_NOT_FOUND");
   });
 
-  await t.test("GET /api/inbox/conversations catches unexpected errors, logs safe diagnostic, and returns 500 INTERNAL_ERROR", async () => {
+  await t.test("classifyRouteError strictly eliminates secrets and categorizes errors safely", () => {
+    // 1. Sensitive error with database URI, token, cookie, customer message, and stack trace
+    const sensitiveError = Object.assign(
+      new Error("Failed connecting to postgresql://postgres:p@ssw0rd999!@db.internal:5432/helpdesk?token=secret-token-xyz&cookie=session=abcd"),
+      {
+        code: "28P01",
+        password: "p@ssw0rd999!",
+        token: "secret-token-xyz",
+        cookie: "session=abcd",
+        customerMessage: "Tolong perbaiki internet di ODP-UBP-01 rumah saya",
+        stack: "Error at db.ts:42\n    connectionString: postgresql://postgres:p@ssw0rd999!@db.internal:5432\n    payload: ODP-UBP-01",
+      }
+    );
+
+    const diag = classifyRouteError("GET /api/inbox/conversations", sensitiveError);
+    assert.deepEqual(diag, {
+      route: "GET /api/inbox/conversations",
+      category: "DatabaseError",
+      code: "28P01",
+    });
+
+    const serialized = JSON.stringify(diag);
+    assert.ok(!serialized.includes("p@ssw0rd999!"), "Must not leak password");
+    assert.ok(!serialized.includes("secret-token-xyz"), "Must not leak token");
+    assert.ok(!serialized.includes("session=abcd"), "Must not leak cookie");
+    assert.ok(!serialized.includes("ODP-UBP-01"), "Must not leak customer message");
+    assert.ok(!serialized.includes("db.internal"), "Must not leak host or URI");
+    assert.ok(!serialized.includes("stack"), "Must not include stack property");
+
+    // 2. Allowlisted TLS errors
+    const tlsErr = Object.assign(new Error("self signed certificate"), { code: "SELF_SIGNED_CERT_IN_CHAIN" });
+    assert.deepEqual(classifyRouteError("GET /api/inbox/conversations", tlsErr), {
+      route: "GET /api/inbox/conversations",
+      category: "TlsError",
+      code: "SELF_SIGNED_CERT_IN_CHAIN",
+    });
+
+    // 3. Allowlisted Network errors
+    const netErr = Object.assign(new Error("connection refused"), { code: "ECONNREFUSED" });
+    assert.deepEqual(classifyRouteError("GET /api/inbox/conversations", netErr), {
+      route: "GET /api/inbox/conversations",
+      category: "NetworkError",
+      code: "ECONNREFUSED",
+    });
+
+    // 4. Configuration errors
+    const configErr = new Error("HELPDESK_DATABASE_URL is required");
+    assert.deepEqual(classifyRouteError("GET /api/inbox/conversations", configErr), {
+      route: "GET /api/inbox/conversations",
+      category: "ConfigurationError",
+      code: "CONFIG_ERROR",
+    });
+
+    // 5. DatabaseError without recognized SQLSTATE
+    const genericDbErr = Object.assign(new Error("query failed"), { name: "DatabaseError" });
+    assert.deepEqual(classifyRouteError("GET /api/inbox/conversations", genericDbErr), {
+      route: "GET /api/inbox/conversations",
+      category: "DatabaseError",
+      code: "DATABASE_ERROR",
+    });
+
+    // 6. Unknown error with unallowlisted code (code must be discarded, not forwarded)
+    const unvalidatedErr = Object.assign(new Error("custom app failure"), { code: "CUSTOMER_SSN_99999" });
+    assert.deepEqual(classifyRouteError("GET /api/inbox/conversations", unvalidatedErr), {
+      route: "GET /api/inbox/conversations",
+      category: "UnknownError",
+      code: "UNEXPECTED_ERROR",
+    });
+    assert.ok(!JSON.stringify(classifyRouteError("GET /api/inbox/conversations", unvalidatedErr)).includes("CUSTOMER_SSN_99999"));
+
+    // 7. Non-object / primitive error
+    assert.deepEqual(classifyRouteError("GET /api/inbox/conversations", "string error"), {
+      route: "GET /api/inbox/conversations",
+      category: "UnknownError",
+      code: "UNEXPECTED_ERROR",
+    });
+  });
+
+  await t.test("GET /api/inbox/conversations catches unexpected errors, prevents log/response leaks, and returns 500 INTERNAL_ERROR", async () => {
     const originalConsoleError = console.error;
     const loggedErrors: unknown[] = [];
     console.error = (...args: unknown[]) => {
@@ -1089,6 +1171,26 @@ test("Koreksi B2: Route handlers direct invocation with Request/Response unit te
     };
 
     try {
+      const dummySecrets = {
+        password: "supersecret-password-123",
+        token: "bearer-token-abc-999",
+        cookie: "auth-session-cookie=secret",
+        customerPayload: "Tolong jaringan saya di ODP-UBP-02 mati total",
+        uri: "postgresql://postgres:supersecret-password-123@db.internal:5432/db",
+      };
+
+      const sensitiveErr = Object.assign(
+        new Error(`Connection failed to ${dummySecrets.uri}?token=${dummySecrets.token}&cookie=${dummySecrets.cookie}`),
+        {
+          code: "28P01", // Valid SQLSTATE
+          password: dummySecrets.password,
+          token: dummySecrets.token,
+          cookie: dummySecrets.cookie,
+          customerMessage: dummySecrets.customerPayload,
+          stack: `Error at db.ts:10\n    secret: ${dummySecrets.password}`,
+        }
+      );
+
       const req = new Request("http://localhost:3000/api/inbox/conversations");
       const res = await getConversationsRoute(
         req,
@@ -1101,12 +1203,13 @@ test("Koreksi B2: Route handlers direct invocation with Request/Response unit te
           }),
           getPool: () => ({
             query: async () => {
-              throw new Error("Connection failed: postgresql://postgres:supersecret@db.internal:5432/db");
+              throw sensitiveErr;
             },
           }),
         }
       );
 
+      // 1. Response status & envelope validation
       assert.equal(res.status, 500);
       const body = await res.json();
       assert.equal(body.success, false);
@@ -1114,34 +1217,247 @@ test("Koreksi B2: Route handlers direct invocation with Request/Response unit te
       assert.equal(body.error.code, "INTERNAL_ERROR");
       assert.equal(body.error.message, "Terjadi kesalahan pada server saat memuat percakapan.");
 
-      // Verify safe logging occurred
+      // 2. Zero leak in HTTP response body
+      const rawBody = JSON.stringify(body);
+      assert.ok(!rawBody.includes(dummySecrets.password), "Response must not contain password");
+      assert.ok(!rawBody.includes(dummySecrets.token), "Response must not contain token");
+      assert.ok(!rawBody.includes(dummySecrets.cookie), "Response must not contain cookie");
+      assert.ok(!rawBody.includes(dummySecrets.customerPayload), "Response must not contain customer message");
+      assert.ok(!rawBody.includes("db.internal"), "Response must not contain connection string");
+
+      // 3. Verify safe logging occurred
       assert.equal(loggedErrors.length, 1);
-      const loggedObj = (loggedErrors[0] as unknown[])[1] as { message?: string };
-      // Verify password was sanitized and not logged in plaintext
-      assert.ok(loggedObj.message);
-      assert.ok(!loggedObj.message.includes("supersecret"));
-      assert.ok(loggedObj.message.includes(":***@"));
+      const [logPrefix, logData] = loggedErrors[0] as [string, Record<string, unknown>];
+      assert.equal(logPrefix, "[InboxConversationsRoute Error]");
+      assert.deepEqual(logData, {
+        route: "GET /api/inbox/conversations",
+        category: "DatabaseError",
+        code: "28P01",
+      });
+
+      // 4. Zero leak in console log output
+      const rawLog = JSON.stringify(loggedErrors[0]);
+      assert.ok(!rawLog.includes(dummySecrets.password), "Log must not contain password");
+      assert.ok(!rawLog.includes(dummySecrets.token), "Log must not contain token");
+      assert.ok(!rawLog.includes(dummySecrets.cookie), "Log must not contain cookie");
+      assert.ok(!rawLog.includes(dummySecrets.customerPayload), "Log must not contain customer message");
+      assert.ok(!rawLog.includes("db.internal"), "Log must not contain connection string");
+      assert.ok(!rawLog.includes("stack"), "Log must not contain stack trace");
     } finally {
       console.error = originalConsoleError;
     }
   });
 
-  await t.test("resolveDatabaseCaCertificate returns bundled fallback and respects env overrides", () => {
-    const defaultCa = resolveDatabaseCaCertificate();
-    assert.ok(defaultCa.includes("BEGIN CERTIFICATE"));
-    assert.ok(defaultCa.includes("Supabase Root 2021 CA") || defaultCa.includes("MIIDxDCCAqygAwIBAgIUbLxMod62P2ktCiAkxnKJwtE9VPYwDQYJKoZIhvcNAQEL"));
+  await t.test("GET /api/inbox/conversations/[id] catches unexpected errors, prevents log/response leaks, and returns 500 INTERNAL_ERROR", async () => {
+    const originalConsoleError = console.error;
+    const loggedErrors: unknown[] = [];
+    console.error = (...args: unknown[]) => {
+      loggedErrors.push(args);
+    };
 
-    // Env override check
-    const originalEnv = process.env.HELPDESK_DB_CA;
     try {
-      process.env.HELPDESK_DB_CA = "-----BEGIN CERTIFICATE-----\nMOCK_CA\n-----END CERTIFICATE-----";
-      const customCa = resolveDatabaseCaCertificate();
-      assert.equal(customCa, "-----BEGIN CERTIFICATE-----\nMOCK_CA\n-----END CERTIFICATE-----");
+      const dummySecrets = {
+        password: "detail-secret-pass-456",
+        token: "detail-token-xyz-888",
+        cookie: "session-detail=secretval",
+        customerPayload: "Pesan pelanggan dalam percakapan: modem merah berkedip",
+        uri: "postgresql://postgres:detail-secret-pass-456@db.internal:5432/db",
+      };
+
+      const sensitiveErr = Object.assign(
+        new Error(`Detail query failed on ${dummySecrets.uri}`),
+        {
+          code: "08006", // Valid connection failure SQLSTATE
+          password: dummySecrets.password,
+          token: dummySecrets.token,
+          cookie: dummySecrets.cookie,
+          customerMessage: dummySecrets.customerPayload,
+        }
+      );
+
+      const convId = "00000000-0000-4000-8000-000000000001";
+      const req = new Request(`http://localhost:3000/api/inbox/conversations/${convId}`);
+      const res = await getConversationDetailRoute(
+        req,
+        { params: Promise.resolve({ id: convId }) },
+        {
+          getAuthClient: async () => ({
+            auth: {
+              getUser: async () => ({ data: { user: { id: fakeStaffId } }, error: null }),
+            },
+          }),
+          getPool: () => ({
+            query: async () => {
+              throw sensitiveErr;
+            },
+          }),
+        }
+      );
+
+      // 1. Response status & envelope validation
+      assert.equal(res.status, 500);
+      const body = await res.json();
+      assert.equal(body.success, false);
+      assert.equal(body.data, null);
+      assert.equal(body.error.code, "INTERNAL_ERROR");
+      assert.equal(body.error.message, "Terjadi kesalahan pada server saat memuat detail percakapan.");
+
+      // 2. Zero leak in HTTP response body
+      const rawBody = JSON.stringify(body);
+      assert.ok(!rawBody.includes(dummySecrets.password));
+      assert.ok(!rawBody.includes(dummySecrets.token));
+      assert.ok(!rawBody.includes(dummySecrets.cookie));
+      assert.ok(!rawBody.includes(dummySecrets.customerPayload));
+
+      // 3. Verify safe logging occurred
+      assert.equal(loggedErrors.length, 1);
+      const [logPrefix, logData] = loggedErrors[0] as [string, Record<string, unknown>];
+      assert.equal(logPrefix, "[InboxConversationDetailRoute Error]");
+      assert.deepEqual(logData, {
+        route: "GET /api/inbox/conversations/[id]",
+        category: "DatabaseError",
+        code: "08006",
+      });
+
+      // 4. Zero leak in console log output
+      const rawLog = JSON.stringify(loggedErrors[0]);
+      assert.ok(!rawLog.includes(dummySecrets.password));
+      assert.ok(!rawLog.includes(dummySecrets.token));
+      assert.ok(!rawLog.includes(dummySecrets.cookie));
+      assert.ok(!rawLog.includes(dummySecrets.customerPayload));
     } finally {
-      if (originalEnv === undefined) {
-        delete process.env.HELPDESK_DB_CA;
+      console.error = originalConsoleError;
+    }
+  });
+
+  await t.test("Route error logging discards unallowlisted error codes and produces generic diagnostics", async () => {
+    const originalConsoleError = console.error;
+    const loggedErrors: unknown[] = [];
+    console.error = (...args: unknown[]) => {
+      loggedErrors.push(args);
+    };
+
+    try {
+      const unallowlistedErr = Object.assign(
+        new Error("Unexpected internal error with leaked credential code"),
+        {
+          code: "LEAKY_INTERNAL_QUERY_OR_SECRET",
+        }
+      );
+
+      const req = new Request("http://localhost:3000/api/inbox/conversations");
+      const res = await getConversationsRoute(
+        req,
+        { params: Promise.resolve({}) },
+        {
+          getAuthClient: async () => ({
+            auth: {
+              getUser: async () => ({ data: { user: { id: fakeStaffId } }, error: null }),
+            },
+          }),
+          getPool: () => ({
+            query: async () => {
+              throw unallowlistedErr;
+            },
+          }),
+        }
+      );
+
+      assert.equal(res.status, 500);
+      assert.equal(loggedErrors.length, 1);
+      const [, logData] = loggedErrors[0] as [string, Record<string, unknown>];
+      assert.deepEqual(logData, {
+        route: "GET /api/inbox/conversations",
+        category: "UnknownError",
+        code: "UNEXPECTED_ERROR",
+      });
+      // Verify unallowlisted code is completely absent from log output
+      const rawLog = JSON.stringify(loggedErrors[0]);
+      assert.ok(!rawLog.includes("LEAKY_INTERNAL_QUERY_OR_SECRET"));
+    } finally {
+      console.error = originalConsoleError;
+    }
+  });
+
+  await t.test("resolveDatabaseCaCertificate fallback parses as valid X.509 and matches reference certificate", () => {
+    // 1. Truly activate fallback: empty env and non-existent certPath
+    const missingCertPath = path.resolve(process.cwd(), "nonexistent-test-certs/missing-prod-ca.crt");
+    const fallbackCa = resolveDatabaseCaCertificate({
+      env: {},
+      certPath: missingCertPath,
+    });
+
+    assert.equal(fallbackCa, SUPABASE_ROOT_CA_2021);
+
+    // 2. Also activate fallback when certPath exists but is unreadable (directory instead of file)
+    const unreadableCertPath = path.resolve(process.cwd(), "certs");
+    const unreadableFallbackCa = resolveDatabaseCaCertificate({
+      env: {},
+      certPath: unreadableCertPath,
+    });
+    assert.equal(unreadableFallbackCa, SUPABASE_ROOT_CA_2021);
+
+    // 3. Cryptographic X.509 certificate parsing and comparison
+    const fallbackCert = new crypto.X509Certificate(fallbackCa);
+
+    const referenceCertPath = path.resolve(process.cwd(), "certs/prod-ca-2021.crt");
+    const referenceCa = fs.readFileSync(referenceCertPath, "utf8").trim();
+    const referenceCert = new crypto.X509Certificate(referenceCa);
+
+    // Assert subject, issuer, SHA-256 fingerprint, and validity match reference certificate
+    assert.equal(fallbackCert.subject, referenceCert.subject);
+    assert.equal(fallbackCert.issuer, referenceCert.issuer);
+    assert.equal(fallbackCert.fingerprint256, referenceCert.fingerprint256);
+    assert.equal(fallbackCert.validTo, referenceCert.validTo);
+    assert.equal(fallbackCert.serialNumber, referenceCert.serialNumber);
+
+    // Assert key attributes of Supabase Root 2021 CA
+    assert.ok(fallbackCert.subject.includes("Supabase Root 2021 CA"));
+    assert.equal(
+      fallbackCert.fingerprint256,
+      "80:70:25:AD:50:D4:ED:21:9D:2C:9C:7D:29:9C:00:4F:82:4E:B0:0C:F7:F6:5A:FE:F6:07:D0:7B:72:E6:CA:FA"
+    );
+
+    // 4. Environment override precedence testing
+    const envOverrideCa = resolveDatabaseCaCertificate({
+      env: { HELPDESK_DB_CA: "-----BEGIN CERTIFICATE-----\nMOCK_HELPDESK_CA\n-----END CERTIFICATE-----" },
+      certPath: referenceCertPath,
+    });
+    assert.equal(envOverrideCa, "-----BEGIN CERTIFICATE-----\nMOCK_HELPDESK_CA\n-----END CERTIFICATE-----");
+
+    const supabaseEnvCa = resolveDatabaseCaCertificate({
+      env: { SUPABASE_DB_CA: "-----BEGIN CERTIFICATE-----\nMOCK_SUPABASE_CA\n-----END CERTIFICATE-----" },
+      certPath: referenceCertPath,
+    });
+    assert.equal(supabaseEnvCa, "-----BEGIN CERTIFICATE-----\nMOCK_SUPABASE_CA\n-----END CERTIFICATE-----");
+
+    // 5. File selection from disk when env is empty
+    const fileCa = resolveDatabaseCaCertificate({
+      env: {},
+      certPath: referenceCertPath,
+    });
+    assert.equal(fileCa, referenceCa);
+
+    // 6. Default invocation without arguments cleanly resolves certificate and restores env
+    const originalHelpdeskCa = process.env.HELPDESK_DB_CA;
+    const originalSupabaseCa = process.env.SUPABASE_DB_CA;
+    try {
+      delete process.env.HELPDESK_DB_CA;
+      delete process.env.SUPABASE_DB_CA;
+
+      const defaultCa = resolveDatabaseCaCertificate();
+      const defaultCert = new crypto.X509Certificate(defaultCa);
+      assert.equal(defaultCert.fingerprint256, referenceCert.fingerprint256);
+    } finally {
+      if (originalHelpdeskCa !== undefined) {
+        process.env.HELPDESK_DB_CA = originalHelpdeskCa;
       } else {
-        process.env.HELPDESK_DB_CA = originalEnv;
+        delete process.env.HELPDESK_DB_CA;
+      }
+      if (originalSupabaseCa !== undefined) {
+        process.env.SUPABASE_DB_CA = originalSupabaseCa;
+      } else {
+        delete process.env.SUPABASE_DB_CA;
       }
     }
   });

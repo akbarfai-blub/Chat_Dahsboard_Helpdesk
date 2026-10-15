@@ -107,44 +107,65 @@ Penyebab kegagalan Inbox pada deployment Vercel dan halaman awal statis telah di
 | P2 | Diagnostik error server aman dan terbatas | **Teratasi (PASS)** | `app/api/inbox/conversations/route.ts` dan `[id]/route.ts`: Menambahkan safe diagnostic logging pada blok `catch (err)` yang mencatat nama, kode, dan pesan yang disanitasi (menghapus format password/URI) ke `console.error` tanpa membocorkan rahasia atau isi pesan pelanggan. |
 | P1 | Build produksi & regresi unit test | **Teratasi (PASS)** | `npm run build` sukses (exit code 0, `BUILD_ID: JTdS8Jb2coBKY5Q1yv8GA`, manifest 26 berkas valid); `npm test` 307/307 tests PASS (exit code 0); `eslint` 0 error/warning pada seluruh berkas yang dimodifikasi. |
 
+## Status Resolusi Tiga Catatan Review P2.10 (D154)
+
+Tiga catatan review pada implementasi D153 telah diperbaiki secara tuntas dan diverifikasi:
+
+| Prioritas | Bidang | Status | Perbaikan dan Bukti Verifikasi |
+|---|---|---|---|
+| P1 | Pengerasan Keamanan Log Error Rute Inbox | **Teratasi (PASS)** | `lib/application/inbox-service.ts`, `app/api/inbox/conversations/route.ts`, dan `[id]/route.ts`: Menghapus logging `err.message` dan sanitasi regex terbatas. Memperkenalkan `classifyRouteError` terpusat: logging server secara ketat HANYA mencatat objek `{ route, category, code }`. Kategori dibatasi (`DatabaseError`, `TlsError`, `NetworkError`, `ConfigurationError`, `UnknownError`) dan kode divalidasi ketat (SQLSTATE 5 karakter, allowlisted TLS/POSIX network error codes). Kode tidak dikenal dibuang dan digantikan `UNEXPECTED_ERROR`. Pesan mentah, stack trace, connection string, password, bearer token, cookie, dan isi pesan pelanggan 100% tidak diteruskan ke log maupun respons HTTP. Respons kegagalan tetap HTTP 500 envelope standar. Terbukti pada 4 unit test terarah di `tests/application/inbox-service.test.ts`. |
+| P1 | Pengujian Kriptografis Fallback CA X.509 | **Teratasi (PASS)** | `lib/postgres/server.ts` dan `tests/application/inbox-service.test.ts`: `resolveDatabaseCaCertificate` diperluas dengan opsi injeksi `{ env?, certPath? }` tanpa mengubah signature runtime default. Mengaktifkan jalur fallback (Step 3) secara deterministik ketika environment kosong dan berkas cert tidak ada/tidak dapat dibaca. Sertifikat fallback diparse sebagai X.509 (`crypto.X509Certificate`) dan dicocokkan secara kriptografis terhadap acuan `certs/prod-ca-2021.crt` (subject, issuer, serialNumber, validTo, fingerprint256 identik). Pengujian tidak memodifikasi/menghapus berkas disk dan tanpa koneksi jaringan. Terbukti pada subtest `resolveDatabaseCaCertificate fallback parses as valid X.509 and matches reference certificate`. |
+| P2 | Penyelarasan Bukti Empiris & Dokumentasi | **Teratasi (PASS)** | Mempartisi secara tegas 4 ranah pembuktian (reproduksi TLS laptop, validasi lokal terbaru, smoke test deployment bersumber pengguna, dan konfirmasi pengiriman Telegram nyata bersumber pengguna). Menambahkan `D154` dan `D155` secara append-only di `docs/decision-log.md` untuk meluruskan D153/D154, memperbarui `docs/TRACKER.md`, dan menyelaraskan inventarisasi env var di `docs/DEPLOYMENT.md`. |
 
 ## Batas bukti yang tersedia
 
-- **Pengujian Tooling Terisolasi**:
-  - Suite `tests/tooling/deployment-tooling.test.mjs` mencakup **42 checks** (5 suite) yang mengeksekusi DDL migrasi, seeder, webhook manager mock, transport fixture loopback, subprocess CLI terisolasi, pengaman validasi endpoint, dan smoke test runner terhadap basis data terisolasi (`p210_tooling_test`). Seluruh 42 checks LULUS (exit code 0).
-  - Suite `tests/tooling/pipeline-tooling.test.mjs` mencakup **53 checks** yang terdiri dari **4 parent test suites** dan **49 subtests terarah** (0 fail, 0 skipped, exit code 0):
-    - Suite 1 (Parent): Target Validation Guard — **8 subtests** (1.1–1.8).
-    - Suite 2 (Parent): Pre-check Guards & Zero-Runner Execution — **15 subtests** (2.1–2.6, 2.7a–2.7e, 2.8, 2.9a–2.9c).
-    - Suite 3 (Parent): Mandatory Directed Verification Assertions — **19 subtests** (3.1–3.11, 3.12a–3.12e, 3.13–3.15).
-    - Suite 4 (Parent): Read-Only Verification Runner & Subprocess Exit Code — **7 subtests** (4.1–4.2, 4.3–4.7).
-    *(Sebagai catatan pembanding, angka 49 pada laporan sebelumnya terdiri dari 4 parent suites dan 45 subtests dengan rincian 8/12/19/6).*
-- **Regresi Domain Unit Test**: 305/305 unit test aplikasi lulus (`npm test`, exit code 0).
-- **Pembedaan Ranah Pengujian dan Batas Bukti Terbuka**:
-  1. *Pengujian lokal terisolasi*: Berhasil penuh (Suite deployment-tooling 42 checks dan pipeline-tooling 53 checks passing tanpa menyentuh jaringan remote).
-  2. *Bukti Transport/CLI Telegram Lokal Terkontrol*: Telah ditutup penuh secara empiris melalui D147 (Suite 3: 3.5–3.9). Bukti ini berasal dari server loopback dan subprocess lokal, bukan interaksi bot live atau deployment remote.
-  3. *Pengaman Validasi Endpoint Telegram API*: Telah ditutup penuh secara empiris melalui D148 (Suite 3: 3.10–3.13) dengan pembuktian nol pemanggilan transport pada URL tidak aman.
-  4. *Request HTTP simulasi & Mock Autentikasi Smoke Test*: Digunakan pada Check 2, Check 3, Check 4, dan Check 5 smoke test harness via mock HTTP handler dan mock Supabase Auth client untuk membuktikan penolakan 401, redirect presisi 307/302 ke `/login`, penolakan status 200/non-login/off-origin, dan kegagalan signOut tanpa interaksi jaringan eksternal.
-  5. *Database Supabase Cloud Remote*: Konektivitas Direct/Session/Transaction pooler, penerapan migrasi resmi 13/13, penerapan seed prototype lengkap, dan verifikasi read-only menyeluruh telah **SELESAI & TERVERIFIKASI PENUH SECARA EMPIRIS (D149, D150, D151, D152)** tanpa mutasi tambahan.
-  6. *Deployment Remote*: Belum dilakukan karena deployment Vercel belum dijalankan.
-  7. *Kebijakan Klaim*: Status P2.10 tetap In Progress sampai deployment remote nyata dan smoke test remote nyata terverifikasi konkret.
-- Database workspace pengguna (port 54322) tidak disentuh dan tidak di-reset.
+Pemisahan secara tegas empat ranah pembuktian yang tersedia:
+
+1. **Ranah 1 — Reproduksi TLS dari Laptop (Lokal)**:
+   - Investigasi awal membuktikan bahwa parser connection string driver `pg` menimpa opsi TLS menjadi kosong `{}` saat menemukan `sslmode=verify-full`, memicu `SELF_SIGNED_CERT_IN_CHAIN` karena CA Supabase tidak ada di trust store bawaan Node.js.
+   - Solusi konfigurasi pool eksplisit dengan parameter terpisah dan CA eksplisit terbukti berhasil menghubungkan client `pg` laptop ke Transaction Pooler Supabase remote (`saysxjdyalnbhxqqmytp`).
+
+2. **Ranah 2 — Validasi Lokal Perubahan Terbaru (Runtime D154/D155)**:
+   - **Regresi Unit Tests**: **310/310 tests PASS** (`npm test`, exit code 0, durasi ~606ms).
+   - **Targeted Route & CA Fallback Tests**: **49/49 assertions PASS** pada `tests/application/inbox-service.test.ts`, mencakup zero-leak assertions pada log dan respons, sanitasi error code, aktivasi Step 3 fallback, dan validasi X.509 kriptografis.
+   - **Linter**: **0 error / 0 warning** (`npx eslint app/api/inbox/conversations/route.ts "app/api/inbox/conversations/[id]/route.ts" lib/application/inbox-service.ts lib/postgres/server.ts tests/application/inbox-service.test.ts`).
+   - **Build Produksi Next.js**: `npm run build` sukses (exit code 0), `BUILD_ID: yBmXh45QZ1qw8jB7Ss89p`, 26 berkas manifest VALID.
+
+3. **Ranah 3 — Smoke Test Deployment yang Dijalankan Pengguna**:
+   - Sumber bukti: Eksekusi langsung oleh pengguna menggunakan `scripts/smoke-test-deployment.mjs` terhadap URL live `https://chat-dahsboard-helpdesk.vercel.app`.
+   - Hasil eksekusi pengguna:
+     - Seluruh 7 pemeriksaan wajib PASS (`allPassed: true`, `PROCESS_EXIT_CODE=0`).
+     - Tanpa autentikasi: `/dashboard` mengembalikan 307 menuju `/login`; `/api/inbox/conversations` mengembalikan 401.
+     - Dengan sesi staf: dashboard dan API Inbox mengembalikan 200.
+     - Logout berhasil; dashboard kembali mengarah ke login (307) dan API kembali 401.
+     - Request webhook tanpa secret atau dengan secret salah ditolak 401; jumlah baris ingress tetap 1 sebelum dan sesudah pemeriksaan tersebut.
+     - Pesan simulasi diterima dan diproses sampai job berstatus done; pesan, percakapan, dan assessment terbentuk. Ingress ID pengujian: `0877a630-93c3-4756-804f-674b21d08e78`.
+     - Mode SHADOW terjaga; outbound intents dan reply claims untuk pesan simulasi masing-masing 0.
+
+4. **Ranah 4 — Konfirmasi Pengiriman Telegram Nyata Sampai Inbox**:
+   - Sumber bukti: Konfirmasi pengguna setelah memasang webhook Telegram publik ke domain deployment live.
+   - Konfigurasi bot Telegram live:
+     - Bot ID: `8892832714`, username: `@upaznet_helpdesk_proto_bot`.
+     - Webhook URL: `https://chat-dahsboard-helpdesk.vercel.app/api/webhooks/telegram`.
+     - Webhook status: pending updates: 0, allowed updates: `message`, `edited_message`, custom cert: false.
+   - Konfirmasi fungsional: Pesan nyata dari tester terkonfirmasi diterima dan muncul pada antrean Inbox dashboard staf.
+   - *Batasan klaim*: Sesuai instruksi, evaluasi triage assessment pada pesan simulasi tidak dianggap sebagai bukti evaluasi assessment pesan Telegram nyata.
 
 ## Urutan kelanjutan
 
-1. Tooling deployment, bukti transport/CLI Telegram lokal terkontrol, dan pengaman validasi endpoint telah selesai dan dibuktikan secara empiris (D144, D145, D146, D147, D148).
-2. Konektivitas Supabase Cloud (`saysxjdyalnbhxqqmytp`) Direct, Session pooler, dan Transaction pooler telah tuntas diverifikasi dengan TLSv1.3 dan kredensial alfanumerik.
-3. **Menerapkan migrasi, seeder, dan verifikasi read-only ke Supabase remote**: **SELESAI & TERVERIFIKASI (D149, D150, D151, D152)**. 13/13 migrasi applied, 22 tabel inti terverifikasi, seluruh fixture dan tester mapping (`6727338166`) tersimpan, observasi stale dipertahankan, 180 pasangan ONU dan 16 pasangan Upstream terverifikasi eksak, mode operasional `SHADOW` ditegakkan, jalur campuran mock ditutup, dan verifikasi kueri `BEGIN READ ONLY` lulus penuh (exit code 0, 0 mutasi database).
-4. Penyiapan akun staf Auth pada Supabase remote (`STAFF_EMAIL`, `STAFF_PASSWORD`).
-5. Menghubungkan target Vercel pengguna (`npx vercel link` dan env configuration).
-6. Deployment Vercel.
-7. Memasang webhook ke deployment Vercel via `manage-telegram-webhook.mjs set`.
-8. Menjalankan `smoke-test-deployment.mjs` terhadap domain Vercel live dan Supabase remote aktual untuk membuktikan seluruh 7 pemeriksaan wajib lulus secara konkret.
-9. Merekomendasikan P2.10 Done hanya setelah bukti deployment remote dan smoke test remote aktual tersedia. Setelah itu lanjutkan P2.11.
+1. Tooling deployment, migrasi database remote, seed prototype, dan verifikasi read-only telah selesai (D144–D152).
+2. Deployment prototype live Vercel dan smoke test deployment awal telah dieksekusi oleh pengguna dengan hasil 7/7 PASS (D153).
+3. Webhook Telegram live telah dipasang oleh pengguna dan pesan Telegram nyata terkonfirmasi masuk ke Inbox.
+4. Perbaikan keamanan log error, pengujian fallback CA X.509, penyelarasan BUILD_ID, dan pembatasan ringkasan smoke test telah selesai dan tervalidasi secara lokal (D154, D155).
+5. **Langkah Tersisa untuk P2.10**:
+   - Pengguna melakukan commit, push, dan redeploy Vercel untuk menerapkan pembaruan runtime terbaru (sanitasi log dan CA fallback resolver).
+   - Pengguna memastikan deployment baru aktif dan verifikasi fungsi Inbox tetap normal.
+6. Merekomendasikan status P2.10 **Done** setelah redeployment perubahan terbaru diverifikasi. Setelah itu lanjutkan ke [P2.11](TRACKER.md#task-p2-11) (Verifikasi vertical slice SHADOW end-to-end).
 
 ## Isi checkpoint repository
 
-- Sertakan implementasi P2.7/P2.8, migration, pengujian, dokumentasi, dan bukti yang sudah tersedia.
-- Sertakan persiapan P2.10 sebagai pekerjaan yang belum selesai beserta catatan ini.
+- Sertakan implementasi P2.7/P2.8/P2.10, perbaikan log error diagnostic (`classifyRouteError`), resolver fallback CA X.509, pengujian terarah, dokumentasi, dan bukti empiris.
 - File sementara `scratch/`, environment rahasia, metadata runtime lokal, dan hasil build tidak diperlukan dalam commit checkpoint.
 - Commit dan push dilakukan manual oleh pengguna sesuai AGENTS.md. Catatan ini tidak menyatakan commit atau push sudah dilakukan.
+
 

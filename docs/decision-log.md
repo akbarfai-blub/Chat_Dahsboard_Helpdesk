@@ -2183,4 +2183,89 @@ Pada deployment Vercel prototype:
 
 **Status**: P2.10 tetap **In Progress** sampai redeployment Vercel terverifikasi dan smoke test remote nyata dijalankan.
 
+---
+
+### D154 — Pengerasan Keamanan Log Error Rute Inbox, Pengujian Kriptografis Fallback CA X.509, dan Penyelarasan Bukti Smoke Test Pengguna
+
+**Konteks**:
+Menindaklanjuti tiga catatan review pada P2.10:
+1. *Keamanan Log Error*: Klaim logging aman pada D153 sebelumnya masih mencatat pesan error mentah (`err.message`) setelah penyamaran regex password URI sederhana, serta tidak memvalidasi properti kode error kustom. Hal ini berisiko membocorkan rahasia (token, query SQL, cookie, password non-URI, atau isi pesan pelanggan) ke log serverless functions Vercel.
+2. *Pengujian Fallback CA*: Implementasi pengujian CA pada D153 hanya memeriksa string match sederhana dan tidak mengaktifkan jalur fallback (Step 3) secara deterministik ketika environment kosong dan berkas sertifikat di disk tidak ada atau tidak terbaca.
+3. *Penyelarasan Dokumentasi & Bukti*: Menyelaraskan status dan mempartisi secara tegas empat ranah pembuktian: (a) reproduksi TLS dari laptop, (b) validasi lokal perubahan terbaru, (c) smoke test deployment yang dijalankan oleh pengguna, dan (d) konfirmasi pengiriman pesan Telegram nyata ke Inbox.
+
+**Detail Keputusan & Perbaikan**:
+1. **Pengerasan Diagnostik Log Error Rute Inbox (`lib/application/inbox-service.ts`, `app/api/inbox/conversations/route.ts`, `app/api/inbox/conversations/[id]/route.ts`)**:
+   - Menghapus pencatatan `err.message` dan properti error mentah apa pun dari blok `catch (err)` pada kedua route handler.
+   - Memperkenalkan helper terpusat `classifyRouteError(route: string, err: unknown): RouteErrorDiagnostic`.
+   - Log server secara ketat HANYA mencatat objek ringkas: `{ route, category, code }`:
+     - `category`: `"DatabaseError" | "TlsError" | "NetworkError" | "ConfigurationError" | "UnknownError"`.
+     - `code`: Validasi ketat kode SQLSTATE 5 karakter (`/^[0-9A-Z]{5}$/` e.g. `28P01`, `08006`), kode TLS terallowlist (`SELF_SIGNED_CERT_IN_CHAIN`, `DEPTH_ZERO_SELF_SIGNED_CERT`, dsb.), kode network POSIX terallowlist (`ECONNREFUSED`, `ETIMEDOUT`, `ENOTFOUND`, dsb.), atau fallback aman (`CONFIG_ERROR`, `DATABASE_ERROR`, `UNEXPECTED_ERROR`).
+     - Seluruh kode error yang tidak dikenal atau tidak terdaftar secara ketat dibuang dan digantikan oleh `UNEXPECTED_ERROR`.
+   - Pesan error mentah, stack trace, connection string, password, bearer token, cookie, dan isi pesan pelanggan dijamin 100% tidak diteruskan ke log maupun respons HTTP.
+   - Respons kegagalan tetap mempertahankan status HTTP 500 dengan envelope standar `{ success: false, data: null, error: { code: "INTERNAL_ERROR", message: "..." } }`, tanpa mengubah kegagalan menjadi antrean kosong.
+   - Seluruh guard autentikasi (401), validasi parameter (400), dan aturan bisnis tetap utuh.
+
+2. **Pengujian Kriptografis Fallback CA X.509 (`lib/postgres/server.ts`, `tests/application/inbox-service.test.ts`)**:
+   - Memperluas `resolveDatabaseCaCertificate(options?: DatabaseCaResolverOptions)` dengan opsi injeksi `{ env?, certPath? }` tanpa mengubah kontrak default tanpa argumen runtime.
+   - Pengujian terarah membuktikan aktivasi jalur fallback (Step 3) secara murni di memori ketika environment kosong dan `certPath` mengarah ke berkas non-existent atau berkas tidak dapat dibaca (e.g. direktori), tanpa menghapus/mengubah berkas asli di disk dan tanpa koneksi jaringan.
+   - Memvalidasi fallback certificate secara kriptografis menggunakan Node.js `crypto.X509Certificate` dan membuktikan kecocokan identik dengan sertifikat acuan `certs/prod-ca-2021.crt`:
+     - `subject`: `C=US\nST=Delware\nL=New Castle\nO=Supabase Inc\nCN=Supabase Root 2021 CA`
+     - `issuer`: identik dengan subject (self-signed root CA)
+     - `fingerprint256`: `80:70:25:AD:50:D4:ED:21:9D:2C:9C:7D:29:9C:00:4F:82:4E:B0:0C:F7:F6:5A:FE:F6:07:D0:7B:72:E6:CA:FA`
+     - `validTo` & `serialNumber`: identik 100%.
+   - Seluruh environment dan mock dipulihkan secara bersih via blok `finally`.
+
+3. **Penyelarasan Bukti Empiris & Dokumentasi**:
+   - Memisahkan secara tegas 4 ranah pembuktian:
+     1. *Reproduksi TLS laptop*: Pembuktian awal kegagalan TLS driver `pg` akibat parser connection string pg dan resolusinya via explicit pool config + CA cert.
+     2. *Validasi lokal perubahan terbaru*: 310/310 unit tests PASS (`npm test`, exit code 0), 49/49 assertions PASS pada `inbox-service.test.ts`, 0 ESLint errors/warnings, dan `npm run build` sukses (exit code 0, `BUILD_ID: 93zG7aP_qYjI5Vqie-m4t`, 26 berkas manifest VALID).
+     3. *Smoke test deployment bersumber dari pengguna*: Dicatat sebagai ringkasan pelaporan pengguna terhadap live Vercel deployment (`https://chat-dahsboard-helpdesk.vercel.app`):
+        - Seluruh 7 pemeriksaan wajib PASS (`allPassed: true`, `PROCESS_EXIT_CODE=0`).
+        - Dashboard/API tanpa sesi terlindungi (redirect 307 ke `/login`).
+        - Login staf berhasil; dashboard dan API Inbox mengembalikan HTTP 200.
+        - Logout berhasil; akses sesudah logout kembali ditolak (redirect 307).
+        - Webhook menolak secret kosong/salah tanpa penambahan ingress.
+        - Pesan simulasi diproses hingga job berstatus `done`; pesan, percakapan, dan assessment terbentuk.
+        - Mode `SHADOW` dipertahankan; outbound intents dan reply claims bernilai 0.
+        - Ingress ID pengujian: `0877a630-93c3-4756-804f-674b21d08e78`.
+     4. *Konfirmasi penerimaan Telegram nyata bersumber dari pengguna*:
+        - Bot ID: `8892832714`, username: `@upaznet_helpdesk_proto_bot`.
+        - Webhook URL: `https://chat-dahsboard-helpdesk.vercel.app/api/webhooks/telegram`.
+        - Pending updates: 0, allowed updates: `message`, `edited_message`, custom cert: false.
+        - Pesan riil Telegram dari tester terkonfirmasi masuk ke Inbox dashboard.
+        - Sesuai instruksi, pemeriksaan assessment pesan simulasi tidak dianggap sebagai bukti assessment pesan Telegram nyata.
+
+**Status**: P2.10 tetap **In Progress** menunggu redeployment Vercel oleh pengguna untuk menerapkan perbaikan log sanitization dan fallback CA terbaru (D154). Sesuai batasan AGENTS.md, P2.7–P2.9 tetap **Done** dan P2.11 tetap **Not Started**.
+
+---
+
+### D155 — Penyelarasan Rujukan BUILD_ID Terbaru dan Pembatasan Ringkasan Smoke Test Sesuai Bukti Pengguna
+
+**Konteks**:
+Menindaklanjuti review pra-commit terhadap dua ketidaksesuaian dokumentasi pada P2.10:
+1. *Rujukan BUILD_ID*: Dokumentasi lokal sebelumnya mencantumkan BUILD_ID `93zG7aP_qYjI5Vqie-m4t`, sedangkan artefak build aktual pada `.next/BUILD_ID` dan manifest pengikatan build-source `docs/evidence/P2_7/build-source-manifest.json` yang sinkron dengan 26 hash berkas workspace mencatat `yBmXh45QZ1qw8jB7Ss89p`.
+2. *Cakupan Ringkasan Smoke Test Deployment*: Ringkasan pengujian sebelumnya memuat narasi umum yang berpotensi ditafsirkan berlebihan sebagai pembuktian integritas menyeluruh seluruh tabel database, padahal pengujian runner `smoke-test-deployment.mjs` secara spesifik memverifikasi jumlah baris `ingress_events` (tetap 1 sebelum dan sesudah penolakan webhook secret salah/kosong).
+
+**Detail Keputusan & Pelurusan**:
+1. **Penyelarasan Rujukan BUILD_ID Terbaru**:
+   - Menyelaraskan rujukan BUILD_ID acuan aktif pada `docs/TRACKER.md` dan `docs/P2_10_FOLLOWUP.md` ke `yBmXh45QZ1qw8jB7Ss89p` sesuai pembacaan read-only artefak fisik `.next/BUILD_ID` dan `docs/evidence/P2_7/build-source-manifest.json`.
+   - Manifest dan artefak build tidak diubah agar cocok dengan dokumentasi; ID build historis pada pengujian sebelumnya dipertahankan utuh.
+2. **Pembatasan Ringkasan Smoke Test Pengguna Sesuai Fakta Runner**:
+   - Membatasi ringkasan smoke test deployment bersumber dari pengguna strictly pada fakta empiris runner:
+     - Seluruh 7 pemeriksaan wajib PASS (`allPassed: true`, exit code 0).
+     - Tanpa autentikasi: `/dashboard` mengembalikan redirect 307 menuju `/login`; `/api/inbox/conversations` mengembalikan 401.
+     - Dengan sesi staf: `/dashboard` dan `/api/inbox/conversations` mengembalikan HTTP 200.
+     - Logout staf: berhasil; dashboard kembali mengarah ke login (307) dan API kembali 401.
+     - Webhook security: request tanpa secret atau dengan secret salah ditolak 401; jumlah baris pada tabel `ingress_events` tetap 1 sebelum dan sesudah pengujian tersebut (zero mutation verified pada ingress).
+     - Webhook ingestion & job processing: pesan simulasi diterima dan diproses hingga job berstatus `done`; entri pesan, percakapan, dan triage assessment terbentuk di database. Ingress ID: `0877a630-93c3-4756-804f-674b21d08e78`.
+     - Mode operasional `SHADOW`: terjaga penuh; outbound intents dan reply claims untuk pesan simulasi masing-masing bernilai 0.
+   - Tidak memperluas pemeriksaan jumlah ingress menjadi klaim bahwa seluruh tabel database tidak berubah.
+3. **Pemisahan dan Atribusi Bukti**:
+   - Menegaskan kembali bahwa smoke test deployment dan pemasangan webhook Telegram live bersumber murni dari eksekusi pengguna.
+   - Bukti assessment pesan simulasi tetap terpisah secara tegas dari konfirmasi penerimaan pesan Telegram nyata ke Inbox dashboard.
+
+**Status**: P2.10 tetap **In Progress** menunggu penerapan perubahan runtime terbaru ke Vercel oleh pengguna dan verifikasi terarah setelah deploy. P2.7–P2.9 tetap **Done**; P2.11 tetap **Not Started**.
+
+
+
 

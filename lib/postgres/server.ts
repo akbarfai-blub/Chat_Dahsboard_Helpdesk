@@ -29,17 +29,26 @@ CMTyZKG3XEu5Ghl1LEnI3QmEKsqaCLv12BnVjbkSeZsMnevJPs1Ye6TjjJwdik5P
 o/bKiIz+Fq8=
 -----END CERTIFICATE-----`;
 
-export function resolveDatabaseCaCertificate(): string {
+export interface DatabaseCaResolverOptions {
+  env?: Record<string, string | undefined>;
+  certPath?: string;
+}
+
+export function resolveDatabaseCaCertificate(options?: DatabaseCaResolverOptions): string {
   // 1. Explicit environment variable if configured
-  const envCa = process.env.HELPDESK_DB_CA || process.env.SUPABASE_DB_CA;
+  const envSource = options?.env ?? process.env;
+  const envCa = envSource.HELPDESK_DB_CA || envSource.SUPABASE_DB_CA;
   if (envCa && envCa.trim().length > 0) {
     return envCa.trim();
   }
 
   // 2. Read from filesystem certs/prod-ca-2021.crt if present
   try {
-    const certPath = path.resolve(process.cwd(), "certs/prod-ca-2021.crt");
-    if (fs.existsSync(certPath)) {
+    const certPath =
+      options?.certPath !== undefined
+        ? options.certPath
+        : path.resolve(process.cwd(), "certs/prod-ca-2021.crt");
+    if (certPath && fs.existsSync(certPath)) {
       const content = fs.readFileSync(certPath, "utf8").trim();
       if (content.length > 0) {
         return content;

@@ -53,6 +53,115 @@ export class InboxError extends Error {
   }
 }
 
+export type RouteErrorCategory =
+  | "DatabaseError"
+  | "TlsError"
+  | "NetworkError"
+  | "ConfigurationError"
+  | "UnknownError";
+
+export interface RouteErrorDiagnostic {
+  route: string;
+  category: RouteErrorCategory;
+  code: string;
+}
+
+const ALLOWED_TLS_CODES = new Set([
+  "SELF_SIGNED_CERT_IN_CHAIN",
+  "DEPTH_ZERO_SELF_SIGNED_CERT",
+  "UNABLE_TO_VERIFY_LEAF_SIGNATURE",
+  "CERT_HAS_EXPIRED",
+  "CERT_NOT_YET_VALID",
+  "ERR_TLS_CERT_ALTNAME_INVALID",
+]);
+
+const ALLOWED_NETWORK_CODES = new Set([
+  "ECONNREFUSED",
+  "ETIMEDOUT",
+  "ENOTFOUND",
+  "EAI_AGAIN",
+  "ECONNRESET",
+  "EHOSTUNREACH",
+  "EPIPE",
+]);
+
+/**
+ * Classifies unexpected route-level errors into safe, restricted diagnostics.
+ * Strictly guarantees that raw error messages, stack traces, connection strings,
+ * passwords, tokens, cookies, and customer payloads are never leaked to logs.
+ */
+export function classifyRouteError(route: string, err: unknown): RouteErrorDiagnostic {
+  if (!err || typeof err !== "object") {
+    return {
+      route,
+      category: "UnknownError",
+      code: "UNEXPECTED_ERROR",
+    };
+  }
+
+  const errObj = err as Record<string, unknown>;
+  const rawCode = typeof errObj.code === "string" ? errObj.code.trim() : "";
+  const name = typeof errObj.name === "string" ? errObj.name : "";
+  const message = typeof errObj.message === "string" ? errObj.message : "";
+
+  // 1. PostgreSQL SQLSTATE: 5 alphanumeric characters (e.g. 28P01, 08006, 57P01, 42P01)
+  if (/^[0-9A-Z]{5}$/.test(rawCode)) {
+    return {
+      route,
+      category: "DatabaseError",
+      code: rawCode,
+    };
+  }
+
+  // 2. TLS / Certificate errors
+  if (ALLOWED_TLS_CODES.has(rawCode) || name === "TLSError") {
+    return {
+      route,
+      category: "TlsError",
+      code: ALLOWED_TLS_CODES.has(rawCode) ? rawCode : "TLS_ERROR",
+    };
+  }
+
+  // 3. Network / POSIX system errors
+  if (ALLOWED_NETWORK_CODES.has(rawCode)) {
+    return {
+      route,
+      category: "NetworkError",
+      code: rawCode,
+    };
+  }
+
+  // 4. Configuration errors
+  if (
+    message.includes("is required") ||
+    message.includes("Invalid HELPDESK_DATABASE_URL") ||
+    message.includes("sslmode=verify-full") ||
+    message.includes("Invalid database protocol")
+  ) {
+    return {
+      route,
+      category: "ConfigurationError",
+      code: "CONFIG_ERROR",
+    };
+  }
+
+  // 5. DatabaseError without recognized SQLSTATE code
+  if (name === "DatabaseError") {
+    return {
+      route,
+      category: "DatabaseError",
+      code: "DATABASE_ERROR",
+    };
+  }
+
+  // 6. Fallback generic diagnostic
+  return {
+    route,
+    category: "UnknownError",
+    code: "UNEXPECTED_ERROR",
+  };
+}
+
 export interface Queryable {
   query: <R extends QueryResultRow = QueryResultRow>(
     queryText: string,

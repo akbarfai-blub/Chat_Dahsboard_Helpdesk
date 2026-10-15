@@ -28,6 +28,7 @@ Berdasarkan audit kode aktual (`lib/supabase/auth-config.ts`, `lib/supabase/serv
 | `SUPABASE_ANON_KEY` | Server-side saja (Private) | String anon key Supabase | Kunci anon Supabase untuk runtime server SSR. |
 | `SUPABASE_SERVICE_ROLE_KEY` | Server-side saja (**Secret**) | String service-role key Supabase | Kunci admin untuk background job worker (`drainProcessingJobs`) dan background task. DILARANG menggunakan prefix `NEXT_PUBLIC_`. |
 | `HELPDESK_DATABASE_URL` | Server-side saja (**Secret**) | `postgresql://postgres:[PASSWORD]@[HOST]:[PORT]/postgres?sslmode=verify-full` | Connection string PostgreSQL langsung/pooler untuk transaksi `inHelpdeskTransaction` (`pg`). Remote wajib TLS `sslmode=verify-full`. DILARANG menggunakan prefix `NEXT_PUBLIC_`. |
+| `HELPDESK_DB_CA` / `SUPABASE_DB_CA` | Server-side saja (Opsional) | PEM Certificate string | Override sertifikat CA root PostgreSQL jika diperlukan (default runtime otomatis membaca `certs/prod-ca-2021.crt` dan fallback ke konstanta terikat Supabase Root 2021 CA). |
 | `NETWORK_PROVIDER` | Server-side | `mock` | Mengarahkan provider jaringan ke MockProvider internal. |
 | `TELEGRAM_BOT_ACCOUNT_ID` | Server-side | `upaznet_helpdesk_bot` | Identitas akun bot untuk partisi channel di database. |
 | `TELEGRAM_TESTER_ALLOWLIST` | Server-side | `6727338166` (ID Telegram tester) | Daftar ID pengirim numerik Telegram yang diizinkan berinteraksi dengan prototype. |

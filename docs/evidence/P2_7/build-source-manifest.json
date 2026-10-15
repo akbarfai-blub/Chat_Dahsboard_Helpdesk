@@ -1,7 +1,7 @@
 {
   "status": "VALID",
-  "buildId": "JTdS8Jb2coBKY5Q1yv8GA",
-  "createdAt": "2026-10-15T20:51:43.863Z",
+  "buildId": "yBmXh45QZ1qw8jB7Ss89p",
+  "createdAt": "2026-10-15T21:56:08.666Z",
   "scope": "p27_inbox_and_evidence",
   "scopeDescription": "Subkelompok berkas UI Inbox, panel evidence, routing context/check, dan semantics P2.7",
   "trackedFiles": [
@@ -53,7 +53,7 @@
     "lib/supabase/server.ts": "1a34658a36d1c89c772d92236943ccc6667517cc57d19d72cfe57ce29d01607b",
     "lib/application/inbox-contracts.ts": "7c9172ad5806b571561ad5edaa96aecec546723e0c5a96e4e9bb3f99e4ea3a77",
     "lib/application/inbox-service.server.ts": "428bc0f81d118b814f7dab1e3f9ac3487343f36ad5d37fd6bc2ee01b7e5272a6",
-    "lib/application/inbox-service.ts": "b5dc41ddafbfe62dbafaea1d5fc63e4acc1af479a717fb08b69ea12918630021",
+    "lib/application/inbox-service.ts": "96f23309cf7bbdb9cdfe953dd2e9dd9ff6f176f6e16eedd30b1f4f702f6e7845",
     "lib/application/origin-validator.ts": "d86014ec774013e5060a3a81137919071bbd134b2a04c7a56c7905cead6a1cb5",
     "lib/domain/evidence-semantics.ts": "76fa3b27dca7b4ca81bb43f05a60b3e26f742521bd72531658af92c02b18d253",
     "lib/domain/staff-classification.ts": "5f7e5092f020ab00253d8439e5c56ae18e0ad07bd6b13776c60b55a58ea87419",
