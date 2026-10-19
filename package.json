@@ -22,7 +22,8 @@
     "test:classification:local": "tsc -p tsconfig.test.json && node --conditions=react-server --env-file=.env.test --test .test-build/tests/integration/staff-classification.test.js",
     "test:shadow:local": "tsc -p tsconfig.test.json && node --conditions=react-server --env-file=.env.test --test .test-build/tests/integration/vertical-slice-shadow.test.js",
     "test:template:local": "tsc -p tsconfig.test.json && node --conditions=react-server --env-file=.env.test --test .test-build/tests/integration/template-renderer.test.js",
-    "test:dispatch:local": "tsc -p tsconfig.test.json && node --conditions=react-server --env-file=.env.test --test .test-build/tests/integration/dispatch-gate.test.js"
+    "test:dispatch:local": "tsc -p tsconfig.test.json && node --conditions=react-server --env-file=.env.test --test .test-build/tests/integration/dispatch-gate.test.js",
+    "test:outbound-adapter:local": "tsc -p tsconfig.test.json && node --conditions=react-server --env-file=.env.test --test .test-build/tests/integration/telegram-outbound.test.js"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",

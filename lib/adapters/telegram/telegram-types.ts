@@ -130,3 +130,45 @@ export interface TelegramUpdate {
   readonly chat_boost?: unknown;
   readonly removed_chat_boost?: unknown;
 }
+
+/**
+ * Payload sent to Telegram Bot API POST /sendMessage.
+ */
+export interface TelegramSendMessagePayload {
+  readonly chat_id: string | number;
+  readonly text: string;
+}
+
+/**
+ * Error parameters returned by Telegram Bot API on rate limiting or migration.
+ */
+export interface TelegramApiErrorParameters {
+  readonly retry_after?: number;
+  readonly migrate_to_chat_id?: number;
+}
+
+/**
+ * Successful response envelope returned by Telegram Bot API.
+ */
+export interface TelegramApiSuccessResponse<T> {
+  readonly ok: true;
+  readonly result: T;
+}
+
+/**
+ * Failure response envelope returned by Telegram Bot API.
+ */
+export interface TelegramApiErrorResponse {
+  readonly ok: false;
+  readonly error_code?: number;
+  readonly description?: string;
+  readonly parameters?: TelegramApiErrorParameters;
+}
+
+/**
+ * Discriminated union of Telegram Bot API responses.
+ */
+export type TelegramApiResponse<T> =
+  | TelegramApiSuccessResponse<T>
+  | TelegramApiErrorResponse;
+

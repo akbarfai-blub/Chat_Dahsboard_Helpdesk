@@ -2427,7 +2427,40 @@ Mengimplementasikan tugas kedua Phase 3: P3.2 — Pemeriksaan terakhir sebelum d
 |---|---|---|
 | D160 | **Implementasi Gerbang Pra-Dispatch Terakhir dan Evaluasi Transaksional (P3.2)**: 1. Modul domain murni `lib/domain/dispatch-contracts.ts` dan `lib/domain/dispatch-gate.ts` selesai mengimplementasikan 9 pre-dispatch guards deterministik (13/13 subtests PASS, 332/332 total unit tests PASS); 2. Integrasi persistence transaksional atomik `HelpdeskPersistence.evaluateDispatchGate()` dengan row-level locking `FOR UPDATE`, pembatalan otomatis intent gagal (`status = 'cancelled'`), pencatatan audit log `dispatch_blocked` / `dispatch_authorized` idempoten; 3. Zero replay backlog SHADOW saat mode beralih ke FULL terbukti empiris (AC-06); 4. Pembatalan otomatis intent otomatis saat staf takeover terbukti empiris; 5. Isolasi private chat 1-on-1 tester Telegram aman; 6. Suite integrasi database terisolasi `test:dispatch:local` lulus penuh 6/6 checks (0 fail, 0 skipped, 0 residual fixtures); 7. `decideTriage`, `planReplyClaim`, dan `process()` tetap mengembalikan `dispatchAuthorized = false`. | **P3.2 SELESAI PENUH (DONE).** P3.2 berstatus `Done`. Pipeline berikutnya: P3.3 (Pengiriman Telegram melalui ChannelAdapter). Entry berikutnya D161. |
 
-P3.2 selesai penuh (Done). Pipeline berikutnya: P3.3 (Pengiriman Telegram melalui ChannelAdapter). Entry berikutnya D161.
+### 2026-10-19 — D161: Implementasi Pengiriman Telegram melalui ChannelAdapter dan Klasifikasi Status Provider (P3.3)
+
+**Konteks**:
+Mengimplementasikan tugas ketiga Phase 3: P3.3 — Pengiriman Telegram melalui ChannelAdapter sesuai PRD §4, §7 FR-08, §11 FR-16/FR-17, §17, dan TRACKER.md. Scope strictly dibatasi pada antarmuka outbound ChannelAdapter (`lib/adapters/channel-adapter-contracts.ts`), tipe API Telegram (`lib/adapters/telegram/telegram-types.ts`), implementasi method `sendOutbound` pada `TelegramChannelAdapter` (`lib/adapters/telegram/telegram-adapter.ts`), unit test adapter (`tests/adapters/telegram-outbound.test.ts`), dan suite integrasi loopback HTTP + database terisolasi (`tests/integration/telegram-outbound.test.ts`). Migrasi SQL baru, tabel `outbound_attempts`, dan worker loop / scheduler retry database (P3.4) berada di luar scope dan tidak diimplementasikan pada task ini. Kompatibilitas mundur constructor `TelegramChannelAdapter` untuk webhook inbound P2.1/P2.2 dipertahankan penuh.
+
+**Keputusan Implementasi**:
+1. **Kontrak Outbound & Pemetaan Seragam (`lib/adapters/channel-adapter-contracts.ts`)**:
+   - Menetapkan tipe `OutboundSendRequest` yang menyatukan seluruh atribut pengiriman (`intentId`, `origin: "automatic" | "staff"`, `dispatchAuthorized: true`, `channel: "telegram"`, `channelAccountId`, `chatId`, `senderExternalId`, `text`, dan `timeoutMs`).
+   - Menyediakan fungsi pemetaan murni `buildOutboundSendRequest(authorized, options)` yang memetakan `PreDispatchAuthorizedResult` dari P3.2 ke `OutboundSendRequest` secara deterministik tanpa I/O.
+   - Mendefinisikan taksonomi diskriminatif `OutboundSendResult`:
+     - `accepted`: `deliveryStatus: "provider_accepted"`, `readByRecipient: false` (PRD §11 FR-16: tidak pernah mengklaim pesan telah dibaca), `providerMessageId` (string), `providerAcceptedAt` (ISO 8601 UTC), `httpStatus`, `retryable: false`.
+     - `failed_retryable`: `reason: "rate_limited" | "provider_server_error"`, `httpStatus`, `providerErrorCode`, `retryAfterMs` (diekstrak dari `parameters.retry_after` atau header `Retry-After`), `retryable: true`.
+     - `failed_permanent`: `reason: OutboundPermanentFailureReason`, `httpDispatched: boolean`, `retryable: false`, `httpStatus`, `providerErrorCode`.
+     - `unknown`: `reason: "timeout_after_dispatch" | "network_error_after_dispatch" | "ambiguous_provider_response"`, `httpDispatched: true`, `retryable: false` (dilarang blind retry).
+   - Menetapkan interface `OutboundChannelAdapter` dan antarmuka gabungan `ChannelAdapter extends InboundChannelAdapter, OutboundChannelAdapter`.
+2. **Implementasi Outbound TelegramChannelAdapter (`lib/adapters/telegram/telegram-adapter.ts`)**:
+   - Memperluas `TelegramAdapterConfig` dengan opsi non-breaking: `botToken`, `apiBaseUrl`, `fetchImpl`, `defaultSendTimeoutMs`. Mengambil `process.env.TELEGRAM_BOT_TOKEN` saat `sendOutbound` jika token tidak diberikan saat instansiasi class.
+   - Mengimplementasikan helper `redactTelegramBotToken(input, botToken)` yang membersihkan token literal dan regex URL pattern `/bot[^/\s]+\//gi` menjadi `/bot[REDACTED]/` serta memotong teks maksimal 500 karakter. Seluruh pesan error yang dihasilkan `sendOutbound` diproses melalui helper ini.
+   - Menegakkan 12 pre-flight safety guards lokal (`httpDispatched: false`, fail-closed `failed_permanent` dengan **0 pemanggilan fetch**): otorisasi pra-dispatch wajib, validitas origin (`automatic`/`staff`), channel telegram, kecocokan akun bot, tester allowlist terisi, private chat 1-on-1 (`chatId === senderExternalId` safe integer positif, menolak grup/supergroup ID negatif), keanggotaan allowlist, body non-kosong, prefix simulasi wajib `[SIMULASI DATA DUMMY] `, tanpa double prefix, panjang teks <= 4096, dan ketersediaan bot token.
+   - Mengirim HTTP POST ke `${apiBaseUrl}/bot${botToken}/sendMessage` dengan payload JSON `{ chat_id, text }`, dilindungi `AbortController` timeout (default 10s).
+   - Mengklasifikasikan respons provider: HTTP 200 dengan valid `message_id` dan `chat.id` cocok menjadi `accepted`; HTTP 429 menjadi `failed_retryable` dengan parsing `retryAfterMs`; HTTP 5xx menjadi `failed_retryable`; HTTP 4xx selain 429 menjadi `failed_permanent`; timeout / AbortError / socket crash / JSON malformed pada HTTP 200 menjadi `unknown` dengan `retryable: false`.
+3. **Verifikasi Empiris Penuh**:
+   - Unit test murni `tests/adapters/telegram-outbound.test.ts`: **9/9 subtests PASS** (total unit suite **341/341 checks PASS**, 0 fail, exit code 0).
+   - Integration test loopback HTTP & database terisolasi `tests/integration/telegram-outbound.test.ts` via `npm run test:outbound-adapter:local`: **5/5 checks PASS (0 fail, 0 skipped, exit code 0, durasi ~814ms)**.
+   - Regresi baseline integrasi: `test:dispatch:local` (6/6 PASS), `test:template:local` (8/8 PASS), `test:persistence:local` (12/12 PASS), `test:shadow:local` (6/6 PASS), `pipeline-tooling.test.mjs` (53/53 PASS).
+   - Linter dan typecheck: `npx eslint ...` (0 error, 0 warning), `npx tsc --noEmit` (0 error).
+   - Nol eksekusi git (`git commit`, `git push`, `git tag`).
+
+| ID | Keputusan | Status / dampak |
+|---|---|---|
+| D161 | **Implementasi Pengiriman Telegram melalui ChannelAdapter dan Klasifikasi Status Provider (P3.3)**: 1. Kontrak outbound `OutboundSendRequest`, helper pemetaan `buildOutboundSendRequest`, dan taksonomi diskriminatif `OutboundSendResult` (`accepted`, `failed_retryable`, `failed_permanent`, `unknown`) selesai di `lib/adapters/channel-adapter-contracts.ts`; 2. Jaminan PRD §11 FR-16 ditegakkan: `deliveryStatus = "provider_accepted"`, `readByRecipient = false`, provider ID dikembalikan, hasil ambigu dilarang blind retry; 3. `TelegramChannelAdapter` mengimplementasikan `ChannelAdapter` dengan 12 pre-flight safety guards (zero HTTP fetch traffic), timeout `AbortController`, parsing presisi `retryAfterMs` pada 429/5xx, sanitasi `redactTelegramBotToken`, dan kompatibilitas penuh constructor inbound; 4. Suite integrasi loopback HTTP nyata + PostgreSQL lokal terisolasi `test:outbound-adapter:local` lulus penuh 5/5 checks (0 fail, 0 skipped, 0 residual fixtures); 5. Seluruh suite pengujian aplikasi lulus 100% (341 unit checks, 53 pipeline checks, 4 integration suites, 0 ESLint errors/warnings, 0 TypeScript errors). | **P3.3 SELESAI PENUH (DONE).** P3.3 berstatus `Done`. Pipeline berikutnya: P3.4 (Worker outbound, delivery attempt, dan retry aman). Entry berikutnya D162. |
+
+Entry berikutnya D162.
+
 
 
 

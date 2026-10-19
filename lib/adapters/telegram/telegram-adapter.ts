@@ -1,11 +1,25 @@
 import type {
+  ChannelAdapter,
   InboundAdapterResult,
-  InboundChannelAdapter,
   InboundMessageType,
   InboundPayloadSizeValidation,
+  OutboundSendRequest,
+  OutboundSendResult,
 } from "../channel-adapter-contracts";
+import { SIMULATION_PREFIX } from "../../domain/template-contracts";
+import type { TelegramApiResponse, TelegramMessage } from "./telegram-types";
 
 export const TELEGRAM_CHANNEL = "telegram";
+
+/**
+ * Default Telegram Bot API base URL.
+ */
+export const DEFAULT_TELEGRAM_API_BASE_URL = "https://api.telegram.org";
+
+/**
+ * Default outbound HTTP send timeout in milliseconds (10s).
+ */
+export const DEFAULT_SEND_TIMEOUT_MS = 10_000;
 
 /**
  * Default maximum size in bytes for raw incoming JSON payloads.
@@ -54,7 +68,42 @@ export interface TelegramAdapterConfig {
    * Maximum media caption length in characters (default: 1024).
    */
   readonly maxCaptionLength?: number;
+  /**
+   * Telegram Bot API token. Optional during instantiation for inbound webhooks,
+   * but mandatory when sendOutbound is called (falls back to process.env.TELEGRAM_BOT_TOKEN).
+   */
+  readonly botToken?: string;
+  /**
+   * Base URL for Telegram Bot API calls (default: https://api.telegram.org).
+   * Useful for local loopback testing and proxying.
+   */
+  readonly apiBaseUrl?: string;
+  /**
+   * Fetch implementation override for testing.
+   */
+  readonly fetchImpl?: typeof fetch;
+  /**
+   * Default timeout in milliseconds for outbound HTTP calls (default: 10000ms).
+   */
+  readonly defaultSendTimeoutMs?: number;
 }
+
+/**
+ * Sanitizes error messages by scrubbing any occurrences of Telegram bot tokens or token URL patterns.
+ * Output is capped at 500 characters to prevent log bloat.
+ */
+export function redactTelegramBotToken(input: string, botToken?: string | null): string {
+  if (typeof input !== "string") {
+    return "";
+  }
+  let redacted = input;
+  if (typeof botToken === "string" && botToken.trim().length > 0) {
+    redacted = redacted.replaceAll(botToken.trim(), "[REDACTED]");
+  }
+  redacted = redacted.replace(/\/bot[^/\s]+\//gi, "/bot[REDACTED]/");
+  return redacted.slice(0, 500);
+}
+
 
 /**
  * Validates whether an allowlist entry string is a valid Telegram ID format (positive safe integer string).
@@ -128,15 +177,19 @@ function isValidTelegramChatId(value: unknown): value is number {
 }
 
 /**
- * Inbound ChannelAdapter implementation for Telegram Bot API webhook updates.
+ * Inbound & Outbound ChannelAdapter implementation for Telegram Bot API.
  */
-export class TelegramChannelAdapter implements InboundChannelAdapter {
+export class TelegramChannelAdapter implements ChannelAdapter {
   readonly channel = TELEGRAM_CHANNEL;
   readonly channelAccountId: string;
   private readonly testerAllowlist: ReadonlySet<string>;
   readonly maxPayloadBytes: number;
   readonly maxTextLength: number;
   readonly maxCaptionLength: number;
+  private readonly botToken?: string;
+  readonly apiBaseUrl: string;
+  private readonly fetchImpl: typeof fetch;
+  readonly defaultSendTimeoutMs: number;
 
   constructor(config: TelegramAdapterConfig) {
     if (!config || typeof config !== "object") {
@@ -178,6 +231,13 @@ export class TelegramChannelAdapter implements InboundChannelAdapter {
     this.maxPayloadBytes = config.maxPayloadBytes ?? DEFAULT_MAX_PAYLOAD_BYTES;
     this.maxTextLength = config.maxTextLength ?? DEFAULT_MAX_TEXT_LENGTH;
     this.maxCaptionLength = config.maxCaptionLength ?? DEFAULT_MAX_CAPTION_LENGTH;
+    this.botToken = config.botToken ? config.botToken.trim() : undefined;
+    this.apiBaseUrl = config.apiBaseUrl ? config.apiBaseUrl.trim() : DEFAULT_TELEGRAM_API_BASE_URL;
+    this.fetchImpl = config.fetchImpl ?? globalThis.fetch;
+    this.defaultSendTimeoutMs =
+      typeof config.defaultSendTimeoutMs === "number" && config.defaultSendTimeoutMs > 0
+        ? config.defaultSendTimeoutMs
+        : DEFAULT_SEND_TIMEOUT_MS;
   }
 
   /**
@@ -580,6 +640,372 @@ export class TelegramChannelAdapter implements InboundChannelAdapter {
           username: typeof fromObj.username === "string" ? fromObj.username : undefined,
         },
       },
+    };
+  }
+
+  /**
+   * Dispatches an outbound message to Telegram Bot API.
+   * Enforces pre-flight checks, sanitizes bot tokens from error messages,
+   * calls sendMessage via HTTP POST, and classifies results as definite or ambiguous.
+   */
+  async sendOutbound(request: OutboundSendRequest): Promise<OutboundSendResult> {
+    const nowIso = () => new Date().toISOString();
+
+    const effectiveBotToken = (this.botToken ?? process.env.TELEGRAM_BOT_TOKEN ?? "").trim();
+
+    const preflightFail = (
+      reason:
+        | "dispatch_not_authorized"
+        | "invalid_origin"
+        | "unsupported_channel"
+        | "account_mismatch"
+        | "empty_tester_allowlist"
+        | "non_private_chat"
+        | "not_in_tester_allowlist"
+        | "empty_message_body"
+        | "missing_simulation_prefix"
+        | "invalid_outbound_body"
+        | "text_too_long"
+        | "missing_bot_token",
+      errorMessage: string,
+    ): OutboundSendResult => ({
+      outcome: "failed_permanent",
+      httpDispatched: false,
+      retryable: false,
+      reason,
+      httpStatus: null,
+      providerErrorCode: null,
+      errorMessage: redactTelegramBotToken(errorMessage, effectiveBotToken),
+      respondedAt: nowIso(),
+    });
+
+    // Phase A — Pre-Flight Safety Validation (Zero HTTP requests)
+    if (!request || typeof request !== "object" || request.dispatchAuthorized !== true) {
+      return preflightFail(
+        "dispatch_not_authorized",
+        "Outbound send request is missing valid pre-dispatch authorization",
+      );
+    }
+
+    if (request.origin !== "automatic" && request.origin !== "staff") {
+      return preflightFail(
+        "invalid_origin",
+        `Origin '${request.origin}' is invalid; only 'automatic' or 'staff' outbound is allowed`,
+      );
+    }
+
+    if (request.channel !== this.channel) {
+      return preflightFail(
+        "unsupported_channel",
+        `Channel '${request.channel}' is not supported by TelegramChannelAdapter`,
+      );
+    }
+
+    if (request.channelAccountId !== this.channelAccountId) {
+      return preflightFail(
+        "account_mismatch",
+        `Channel account ID '${request.channelAccountId}' does not match adapter account '${this.channelAccountId}'`,
+      );
+    }
+
+    if (this.testerAllowlist.size === 0) {
+      return preflightFail(
+        "empty_tester_allowlist",
+        "Tester allowlist is empty or unconfigured; outbound sending disabled (fail-closed)",
+      );
+    }
+
+    const rawChatId = typeof request.chatId === "string" ? request.chatId.trim() : "";
+    const rawSenderId = typeof request.senderExternalId === "string" ? request.senderExternalId.trim() : "";
+
+    if (
+      !isValidTesterId(rawChatId) ||
+      !isValidTesterId(rawSenderId) ||
+      rawChatId !== rawSenderId
+    ) {
+      return preflightFail(
+        "non_private_chat",
+        "Outbound messages must target private 1-on-1 chats where chatId equals senderExternalId (positive safe integer)",
+      );
+    }
+
+    if (!this.testerAllowlist.has(rawChatId) || !this.testerAllowlist.has(rawSenderId)) {
+      return preflightFail(
+        "not_in_tester_allowlist",
+        `Recipient '${rawChatId}' is not authorized in the tester allowlist`,
+      );
+    }
+
+    if (typeof request.text !== "string" || request.text.trim().length === 0) {
+      return preflightFail(
+        "empty_message_body",
+        "Outbound message text cannot be empty",
+      );
+    }
+
+    if (!request.text.startsWith(`${SIMULATION_PREFIX} `)) {
+      return preflightFail(
+        "missing_simulation_prefix",
+        `Outbound message text must begin with the mandatory simulation prefix '${SIMULATION_PREFIX} '`,
+      );
+    }
+
+    const bodyAfterPrefix = request.text.slice(SIMULATION_PREFIX.length).trim();
+    if (bodyAfterPrefix.length === 0) {
+      return preflightFail(
+        "empty_message_body",
+        "Outbound message body contains only the simulation prefix with no content",
+      );
+    }
+
+    if (bodyAfterPrefix.startsWith(SIMULATION_PREFIX)) {
+      return preflightFail(
+        "invalid_outbound_body",
+        "Outbound message contains duplicate simulation prefix",
+      );
+    }
+
+    if (request.text.length > this.maxTextLength) {
+      return preflightFail(
+        "text_too_long",
+        `Outbound message text length (${request.text.length}) exceeds maximum limit of ${this.maxTextLength} chars`,
+      );
+    }
+
+    if (effectiveBotToken.length === 0) {
+      return preflightFail(
+        "missing_bot_token",
+        "Telegram bot token is missing; configure botToken in adapter config or TELEGRAM_BOT_TOKEN env",
+      );
+    }
+
+    // Phase B — HTTP Dispatch to Telegram Bot API (httpDispatched: true)
+    const url = `${this.apiBaseUrl.replace(/\/+$/, "")}/bot${effectiveBotToken}/sendMessage`;
+    const timeoutMs =
+      typeof request.timeoutMs === "number" && request.timeoutMs > 0
+        ? request.timeoutMs
+        : this.defaultSendTimeoutMs > 0
+        ? this.defaultSendTimeoutMs
+        : DEFAULT_SEND_TIMEOUT_MS;
+
+    const controller = new AbortController();
+    let didTimeout = false;
+    const timer = setTimeout(() => {
+      didTimeout = true;
+      controller.abort();
+    }, timeoutMs);
+
+    let response: Response;
+    let responseText = "";
+
+    try {
+      response = await this.fetchImpl(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify({
+          chat_id: rawChatId,
+          text: request.text,
+        }),
+        signal: controller.signal,
+      });
+      responseText = await response.text();
+    } catch (err) {
+      const respondedAt = nowIso();
+      const errorName = err instanceof Error ? err.name : "Error";
+      const rawMessage = err instanceof Error ? err.message : String(err);
+      const safeMessage = redactTelegramBotToken(rawMessage, effectiveBotToken);
+
+      if (didTimeout || errorName === "AbortError") {
+        return {
+          outcome: "unknown",
+          httpDispatched: true,
+          retryable: false,
+          reason: "timeout_after_dispatch",
+          httpStatus: null,
+          errorMessage: safeMessage || "Request timed out after dispatch",
+          respondedAt,
+        };
+      }
+
+      return {
+        outcome: "unknown",
+        httpDispatched: true,
+        retryable: false,
+        reason: "network_error_after_dispatch",
+        httpStatus: null,
+        errorMessage: safeMessage || "Network error occurred after dispatch",
+        respondedAt,
+      };
+    } finally {
+      clearTimeout(timer);
+    }
+
+    // Phase C — Classification of Definite vs Ambiguous Responses
+    const respondedAt = nowIso();
+    let parsed: TelegramApiResponse<TelegramMessage> | null = null;
+    try {
+      parsed = JSON.parse(responseText);
+    } catch {
+      // Ignore JSON parse error, parsed remains null
+    }
+
+    const errorObj = parsed && !parsed.ok ? parsed : null;
+    const httpStatus = response.status;
+    const rawDescription =
+      errorObj?.description ?? (responseText || `HTTP ${httpStatus}`);
+    const errorMessage = redactTelegramBotToken(rawDescription, effectiveBotToken);
+
+    // 1. Success 200..299
+    if (httpStatus >= 200 && httpStatus <= 299) {
+      if (
+        !parsed ||
+        typeof parsed !== "object" ||
+        parsed.ok !== true ||
+        !parsed.result ||
+        typeof parsed.result !== "object" ||
+        !isValidTelegramId(parsed.result.message_id)
+      ) {
+        return {
+          outcome: "unknown",
+          httpDispatched: true,
+          retryable: false,
+          reason: "ambiguous_provider_response",
+          httpStatus,
+          errorMessage:
+            errorMessage || "Ambiguous response: HTTP 200 but response is malformed or missing valid message_id",
+          respondedAt,
+        };
+      }
+
+      if (
+        parsed.result.chat &&
+        parsed.result.chat.id !== undefined &&
+        String(parsed.result.chat.id) !== rawChatId
+      ) {
+        return {
+          outcome: "unknown",
+          httpDispatched: true,
+          retryable: false,
+          reason: "ambiguous_provider_response",
+          httpStatus,
+          errorMessage: "Ambiguous response: chat_id in provider result does not match requested recipient",
+          respondedAt,
+        };
+      }
+
+      let providerAcceptedAt = respondedAt;
+      if (
+        typeof parsed.result.date === "number" &&
+        Number.isSafeInteger(parsed.result.date) &&
+        parsed.result.date > 0 &&
+        parsed.result.date <= MAX_TELEGRAM_DATE_SECONDS
+      ) {
+        const d = new Date(parsed.result.date * 1000);
+        if (!Number.isNaN(d.getTime())) {
+          providerAcceptedAt = d.toISOString();
+        }
+      }
+
+      return {
+        outcome: "accepted",
+        deliveryStatus: "provider_accepted",
+        readByRecipient: false,
+        httpDispatched: true,
+        retryable: false,
+        providerMessageId: String(parsed.result.message_id),
+        providerAcceptedAt,
+        respondedAt,
+        httpStatus,
+      };
+    }
+
+    // Helper for retry-after extraction
+    const extractRetryAfterMs = (): number | null => {
+      const params = errorObj?.parameters;
+      if (
+        typeof params?.retry_after === "number" &&
+        Number.isFinite(params.retry_after) &&
+        params.retry_after > 0
+      ) {
+        return Math.ceil(params.retry_after * 1000);
+      }
+      const headerVal = response.headers.get("retry-after") ?? response.headers.get("Retry-After");
+      if (headerVal) {
+        const parsedNum = Number(headerVal);
+        if (Number.isFinite(parsedNum) && parsedNum > 0) {
+          return Math.ceil(parsedNum * 1000);
+        }
+      }
+      return null;
+    };
+
+    // 2. HTTP 429 Rate Limited
+    if (httpStatus === 429) {
+      const retryAfterMs = extractRetryAfterMs();
+      const providerErrorCode =
+        typeof errorObj?.error_code === "number" ? errorObj.error_code : 429;
+
+      return {
+        outcome: "failed_retryable",
+        httpDispatched: true,
+        retryable: true,
+        reason: "rate_limited",
+        httpStatus: 429,
+        providerErrorCode,
+        retryAfterMs,
+        errorMessage,
+        respondedAt,
+      };
+    }
+
+    // 3. HTTP 500..599 Provider Server Error
+    if (httpStatus >= 500 && httpStatus <= 599) {
+      const retryAfterMs = extractRetryAfterMs();
+      const providerErrorCode =
+        typeof errorObj?.error_code === "number" ? errorObj.error_code : httpStatus;
+
+      return {
+        outcome: "failed_retryable",
+        httpDispatched: true,
+        retryable: true,
+        reason: "provider_server_error",
+        httpStatus,
+        providerErrorCode,
+        retryAfterMs,
+        errorMessage,
+        respondedAt,
+      };
+    }
+
+    // 4. HTTP 400..499 (except 429) Permanent Provider Rejection
+    if (httpStatus >= 400 && httpStatus <= 499) {
+      const providerErrorCode =
+        typeof errorObj?.error_code === "number" ? errorObj.error_code : httpStatus;
+
+      return {
+        outcome: "failed_permanent",
+        httpDispatched: true,
+        retryable: false,
+        reason: "provider_rejected_permanent",
+        httpStatus,
+        providerErrorCode,
+        errorMessage,
+        respondedAt,
+      };
+    }
+
+    // 5. Other HTTP status codes (e.g. 3xx redirects)
+    return {
+      outcome: "unknown",
+      httpDispatched: true,
+      retryable: false,
+      reason: "ambiguous_provider_response",
+      httpStatus,
+      errorMessage,
+      respondedAt,
     };
   }
 }
