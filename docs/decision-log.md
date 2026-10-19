@@ -2266,6 +2266,89 @@ Menindaklanjuti review pra-commit terhadap dua ketidaksesuaian dokumentasi pada 
 
 **Status**: P2.10 tetap **In Progress** menunggu penerapan perubahan runtime terbaru ke Vercel oleh pengguna dan verifikasi terarah setelah deploy. P2.7–P2.9 tetap **Done**; P2.11 tetap **Not Started**.
 
+---
+
+### D156 — Penutupan P2.10 Berdasarkan Konfirmasi Deployment Pengguna dan Penyelesaian Verifikasi Vertical Slice SHADOW End-to-End (P2.11)
+
+**Konteks**:
+1. *Penutupan P2.10*: Pengguna telah mengonfirmasi bahwa deployment terbaru Vercel P2.10 berfungsi normal: Vercel Ready, pengalihan sesi pada halaman awal (`/`) berfungsi sesuai sesi (redirect 307 ke `/dashboard` untuk sesi aktif, redirect 307 ke `/login` untuk unauthenticated), serta halaman Inbox (`/dashboard`) dan detail percakapan terbuka normal dengan HTTP 200 tanpa error 500. Sesuai AGENTS.md, status P2.10 ditutup secara resmi berdasarkan konfirmasi pengguna tersebut tanpa fabrikasi commit SHA atau deployment ID.
+2. *Eksekusi P2.11*: Membuktikan secara empiris bahwa alur terpadu Telegram → webhook → worker → persistence → dashboard berjalan dalam mode SHADOW dengan memenuhi seluruh 5 Acceptance Criteria (AC1–AC5).
+
+**Detail Keputusan & Verifikasi Empiris P2.11**:
+1. **Penutupan Resmi P2.10 (Done)**:
+   - Status P2.10 diselaraskan menjadi **Done** pada `docs/TRACKER.md` dan `docs/P2_10_FOLLOWUP.md`.
+   - Atribusi bukti secara transparan dicatat bersumber dari konfirmasi pengguna atas deployment Vercel prototype live.
+2. **Implementasi Suite Integrasi Terarah Vertical Slice SHADOW (`tests/integration/vertical-slice-shadow.test.ts`)**:
+   - Menambahkan suite pengujian terarah pada `tests/integration/vertical-slice-shadow.test.ts` dan script `"test:shadow:local"` pada `package.json`.
+   - Dieksekusi pada target lokal terisolasi (`HELPDESK_TEST_DATABASE_URL` port 54332, `HELPDESK_TEST_API_URL` port 54331, marker `test_env_isolated_marker`) dengan observasi mock jaringan tersegar (`refresh-network-observations.sql`).
+   - Membuktikan kelima AC secara terpadu:
+     - **AC1 (Komplain Dummy Tester Telegram Masuk ke Antrean & Triage Sesuai)**: Pesan komplain koneksi ("Lapor min koneksi wifi mati total...") dari tester verified allowlist diterima webhook (HTTP 200 accepted), diproses oleh worker drain hingga status `done`, dan tampil di Inbox dashboard (`listInboxConversations` dan `getInboxConversationDetail`) dengan episode `NEW`, kategori `connection_complaint`, `serviceId` terikat, serta assessment `ONLINE_CHECK` dengan `dispatchAuthorized = false`, `claim.outcome = 'skipped'`, dan `claim.reason = 'shadow_mode'`.
+     - **AC2 (Idempotensi & Dedup Replay Event Telegram)**: Replay payload Telegram yang identik secara tuple `(account_id, chat_id, message_id)` menghasilkan HTTP 200 `{ status: "accepted", duplicate: true }`, worker drain memproses 0 job, dan perbandingan hitungan database sebelum vs sesudah replay membuktikan delta 0 baris (0 penambahan pada `ingress_events`, `processing_jobs`, `messages`, `complaints`, maupun `triage_assessments`).
+     - **AC3 (Pengirim Unverified Tanpa Kebocoran Detail Layanan)**: Pengirim allowlist tanpa relasi pelanggan (`verification_status = 'unverified'`, `customer_id = null`) tampil di Inbox staf dengan `customerId = null`, `customerName = null`, `serviceId = null`, dan assessment candidate `GENERIC` dengan reason `identity_unresolved` tanpa kebocoran topologi atau data layanan.
+     - **AC4 (Pesan Non-Komplain Tetap Terlihat & Ditangani Aman)**: Pesan salam/ucapan dari tester tersimpan di riwayat percakapan dengan klasifikasi `category = 'other'`, `complaintId = null` (tidak membuat tiket/episode komplain palsu), dan assessment `review` / `non_connection_message`.
+     - **AC5 (State Persistence Nol Outbound & Nol Debounce Claim di SHADOW)**: Kueri langsung ke database membuktikan `count(*) FROM outbound_intents WHERE origin = 'automatic' = 0`, `count(*) FROM reply_claims = 0`, serta seluruh row assessment memiliki `dispatchAuthorized = false` dan `claim.outcome = 'skipped'`.
+3. **Pembersihan Bersih & Zero Residue**:
+   - Teardown terpadu membersihkan seluruh fixture pengujian (ODC, ODP, Customer, Service, Topology, Mock ONU Status, Identity, Ingress, Jobs, Messages, Complaints, Assessments, Staff User, dan relasi `reply_owners`) dengan 0 residu database terverifikasi pasca-eksekusi.
+4. **Hasil Pengujian Terarah**:
+   - `npm run test:shadow:local`: **6 passed / 6 checks PASS** (exit code 0, durasi ~650ms).
+   - `npm test` (`npm run test:unit`): **310 passed / 310 checks PASS** (exit code 0).
+   - Linter `npx eslint tests/integration/vertical-slice-shadow.test.ts`: 0 error, 0 warning (exit code 0).
+
+**Status**:
+- P2.7–P2.10: **Done**.
+- P2.11: **Done**.
+- Seluruh tugas Phase 2 (P2.1–P2.11) telah selesai penuh (**Phase 2 Completed**).
+- Pipeline berikutnya: **P3 — Balas & Penanganan** ([P3.1 — Renderer template tetap dan snapshot teks](TRACKER.md#task-p3-1)).
+
+## Penyelarasan Bukti Empiris P2.11, Penguatan Assertion, Perbaikan Cleanup Auth Fixture, dan Koreksi Batas Klaim D156 — D157
+
+Tanggal: 16 Oktober 2026. Berdasarkan review terarah terhadap P2.11 (verifikasi vertical slice SHADOW):
+1. **Perbaikan Cleanup Fixture Auth**: Pada `tests/integration/vertical-slice-shadow.test.ts`, ID akun staf yang dibuat via `supabase.auth.admin.createUser()` (`staffData.user.id`) disimpan ke `actualStaffUserId` dan digunakan untuk seluruh pemanggilan service yang membutuhkan actor staf serta pembersihan akun pada teardown. Menghapus 4 akun residu P2.11 run sebelumnya (`staff-p211-*@example.test`) secara presisi tanpa menyentuh akun lain, memeriksa error `deleteUser`, serta memverifikasi dengan `getUserById` bahwa akun fixture benar-benar terhapus pasca-uji.
+2. **Penguatan Assertion AC4**: Menghilangkan pemeriksaan opsional (`if`) pada triage assessment pesan non-komplain. Mewajibkan secara asertif: klasifikasi `category = 'other'`, `complaintId = null`, decision `outcome = 'review'`, reason `non_connection_message'`, dan `dispatchAuthorized = false`.
+3. **Penyempurnaan Cakupan Persistence AC5**: Menyimpan `nonComplaintIngressId` dalam scope pengujian; membuktikan tepat 0 automatic outbound intent pada seluruh pesan fixture (termasuk non-komplain tanpa complaintId) dan owner terkait; memeriksa reply claims mencakup seluruh complaint dan owner fixture (hasil 0); serta mewajibkan tepat 3 assessment triage (`verifiedIngressId`, `unverifiedIngressId`, `nonComplaintIngressId`) dengan `dispatchAuthorized = false`, claim `skipped`, dan reason sesuai kontrak SHADOW.
+4. **Verifikasi Residu Komprehensif Seluruh Tabel**: Teardown memverifikasi secara langsung melalui kueri SQL bahwa seluruh 15 tabel yang tersentuh fixture pengujian (`odcs`, `odps`, `customers`, `services`, `service_topology`, `mock_onu_status`, `channel_identities`, `ingress_events`, `messages`, `processing_jobs`, `complaints`, `triage_assessments`, `reply_owners`, `outbound_intents`, `reply_claims`) memiliki 0 baris residu, ditambah verifikasi `auth.users` bersih.
+5. **Koreksi Klaim Batas Bukti D156**:
+   - P2.10 tetap **Done**: berdasarkan konfirmasi pengguna terhadap deployment terbaru Vercel yang Ready, pengalihan sesi pada `/` berfungsi sesuai status sesi staf, serta antrean Inbox dan detail percakapan terbuka normal tanpa error 500 (detail kode status HTTP 200/307 bersumber dari smoke test deployment otomatis, bukan konfirmasi manual pengguna).
+   - P2.11 disesuaikan statusnya menjadi **In Progress**: Pengujian `tests/integration/vertical-slice-shadow.test.ts` membuktikan integrasi application service dan database lokal, bukan pengujian rendering antarmuka browser langsung ataupun pesan langsung dari aplikasi Telegram mobile/desktop melalui jaringan Telegram ke antrean Vercel live. Karena belum ada korelasi live tester Telegram nyata dengan tampilan dashboard remote, P2.11 belum disetujui Done dan Phase 2 belum dinyatakan selesai penuh.
+
+| ID | Keputusan | Status / dampak |
+|---|---|---|
+| D157 | 1. **Perbaikan Cleanup Auth Fixture**: Menggunakan ID aktual `staffData.user.id` dari `createUser()`, memeriksa error `deleteUser`, membersihkan 4 akun residu run sebelumnya, dan memverifikasi `getUserById` pasca-teardown.<br>2. **Penguatan Assertion AC4**: Menjadikan assertion triage assessment untuk pesan non-komplain wajib (`assert.ok(secondMsg.triageAssessment)`), memverifikasi outcome `'review'`, reason `'non_connection_message'`, dan `dispatchAuthorized = false`.<br>3. **Cakupan AC5 Lengkap**: Memverifikasi 0 automatic outbound intent untuk seluruh 3 pesan fixture, 0 reply claims mencakup episode dan owners, serta mewajibkan tepat 3 baris assessment yang cocok dengan pesan fixture.<br>4. **Verifikasi Residu 15 Tabel Database**: Kueri SQL terpadu memastikan 0 baris residual pada 15 tabel yang tersentuh fixture.<br>5. **Koreksi Status P2.11 & Phase 2**: P2.10 tetap `Done`. P2.11 disesuaikan menjadi `In Progress` karena bukti saat ini merupakan bukti integrasi application service & database lokal, belum mencakup korelasi live tester Telegram ke dashboard Vercel. Phase 2 tetap `In Progress`. | PERBAIKAN TERARAH & KOREKSI STATUS P2.11 DITERAPKAN. DEFAULT: Integrasi lokal terverifikasi penuh (6/6 checks PASS, exit code 0, 0 residu auth & database). P2.10 tetap Done. P2.11 tetap `In Progress`. Entry berikutnya D158. |
+
+P2.10 tetap Done. P2.11 dalam status In Progress (menunggu pengujian minimal live tester Telegram ke Vercel atau persetujuan batas scope). Entry berikutnya D158.
+
+---
+
+### 2026-10-19 — D158: Penutupan Resmi P2.11 (Verifikasi Vertical Slice SHADOW End-to-End) Berdasarkan Konfirmasi Live Telegram Pengguna dan Finalisasi Phase 2
+
+**Konteks**:
+Menindaklanjuti status P2.11 pada D157 yang sebelumnya ditahan pada status `In Progress` karena bukti saat itu baru mencakup integrasi application service dan database PostgreSQL lokal (`test:shadow:local` 6/6 checks PASS) serta smoke test deployment otomatis (`smoke-test-deployment.mjs` 7/7 PASS), pengguna telah melakukan verifikasi fungsional langsung secara end-to-end pada lingkungan live.
+
+**Fakta Verifikasi Live Pengguna**:
+Pengguna mengonfirmasi secara langsung pengujian interaksi nyata pada bot Telegram `@upaznet_helpdesk_proto_bot` dan deployment Vercel prototype (`https://chat-dahsboard-helpdesk.vercel.app/dashboard`):
+1. **Inbound Telegram Nyata**: Pesan komplain yang dikirim dari akun Telegram tester terdaftar diterima oleh webhook live dan muncul secara normal pada antrean Inbox dashboard.
+2. **Detail Percakapan & Triage Assessment**: Detail percakapan dapat dibuka normal tanpa error HTTP 500, menampilkan episode berstatus `NEW`, dan Triage Assessment dalam mode `SHADOW` (`dispatchAuthorized = false`).
+3. **Preservasi Nol Outbound di SHADOW**: Tidak ada balasan otomatis yang dikirimkan kembali ke akun Telegram tester.
+
+**Partisi dan Atribusi Bukti P2.11**:
+1. *Integrasi Lokal Terisolasi*: Suite integrasi `tests/integration/vertical-slice-shadow.test.ts` (`npm run test:shadow:local`, 6/6 PASS, exit code 0) membuktikan secara deterministik AC1–AC5 di tingkat application service dan PostgreSQL dengan 0 residu pada 15 tabel operasional serta `auth.users`.
+2. *Smoke Test Deployment*: Runner `scripts/smoke-test-deployment.mjs` (7/7 checks PASS, exit code 0) membuktikan pipeline webhook HTTP, autentikasi sesi staf, isolasi secret, dan worker background hingga job `done` pada Vercel live.
+3. *Konfirmasi Live Pengguna*: Membuktikan secara nyata korelasi end-to-end aplikasi Telegram tester → live webhook Vercel → antrean Inbox staf → panel percakapan & triage SHADOW tanpa balasan otomatis ke tester (tanpa mengarang message ID, commit SHA, atau timestamp spesifik yang tidak diberikan pengguna).
+
+**Keputusan & Dampak**:
+- **P2.11 Ditutup Resmi (Done)**: Seluruh Acceptance Criteria (AC1–AC5) telah terpenuhi dan terbukti secara terpadu melalui kombinasi bukti integrasi lokal, smoke test remote, dan konfirmasi live pengguna.
+- **Penyelesaian Penuh Phase 2 (Phase 2 Completed)**: Seluruh tugas Phase 2 (`P2.1` hingga `P2.11`) telah berstatus **Done**.
+- **Langkah Berikutnya**: Pipeline beralih ke **Phase 3 (Balas & Penanganan)**, diawali dengan **P3.1 — Renderer template tetap dan snapshot teks**.
+
+| ID | Keputusan | Status / dampak |
+|---|---|---|
+| D158 | **Penutupan Resmi P2.11 (Verifikasi Vertical Slice SHADOW End-to-End) dan Penyelesaian Penuh Phase 2**: 1. P2.11 resmi ditutup menjadi `Done` berbasis kombinasi bukti integrasi lokal (`npm run test:shadow:local` 6/6 PASS, 0 residu pada 15 tabel & `auth.users`), smoke test deployment Vercel (`7/7 PASS`), dan konfirmasi live Telegram tester nyata ke Inbox Vercel oleh pengguna (pesan komplain masuk ke antrean, detail terbuka normal dengan episode `NEW` dan assessment `SHADOW` `dispatchAuthorized = false`, 0 balasan otomatis ke Telegram); 2. Seluruh tugas Phase 2 (`P2.1`–`P2.11`) selesai penuh (`Done`); 3. Pipeline beralih ke Phase 3 (`P3.1 — Renderer template tetap dan snapshot teks`). | **PHASE 2 SELESAI PENUH (DONE).** P2.11 berstatus `Done`. Seluruh P2.1–P2.11 selesai. Pipeline berikutnya: P3.1. Entry berikutnya D159. |
+
+Phase 2 selesai penuh (Done). Pipeline berikutnya: Phase 3 (P3.1 — Renderer template tetap dan snapshot teks). Entry berikutnya D159.
+
+
+
+
 
 
 

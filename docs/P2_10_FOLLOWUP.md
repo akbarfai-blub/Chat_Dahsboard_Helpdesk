@@ -162,10 +162,11 @@ Pemisahan secara tegas empat ranah pembuktian yang tersedia:
    - Pengguna memastikan deployment baru aktif dan verifikasi fungsi Inbox tetap normal.
 6. Merekomendasikan status P2.10 **Done** setelah redeployment perubahan terbaru diverifikasi. Setelah itu lanjutkan ke [P2.11](TRACKER.md#task-p2-11) (Verifikasi vertical slice SHADOW end-to-end).
 
-## Isi checkpoint repository
+## Status Terkini Penutupan P2.10 (Berdasarkan Konfirmasi Pengguna) & Transisi ke P2.11
 
-- Sertakan implementasi P2.7/P2.8/P2.10, perbaikan log error diagnostic (`classifyRouteError`), resolver fallback CA X.509, pengujian terarah, dokumentasi, dan bukti empiris.
-- File sementara `scratch/`, environment rahasia, metadata runtime lokal, dan hasil build tidak diperlukan dalam commit checkpoint.
-- Commit dan push dilakukan manual oleh pengguna sesuai AGENTS.md. Catatan ini tidak menyatakan commit atau push sudah dilakukan.
+- **Konfirmasi Pengguna**: Pengguna telah mengonfirmasi bahwa deployment terbaru Vercel P2.10 berfungsi normal: status deployment Vercel **Ready**, pengalihan halaman awal (`/`) berfungsi sesuai sesi pengguna/staf, serta antrean Inbox dan detail percakapan terbuka normal tanpa error 500 (D156, D157).
+- **Atribusi Status**: Berdasarkan konfirmasi operasional tersebut, tugas **P2.10** secara resmi ditutup dengan status ✅ **Done**. Kode status HTTP 200 dan 307 secara spesifik bersumber dari hasil otomatis smoke test deployment sebelumnya (`scripts/smoke-test-deployment.mjs`), bukan klaim inspeksi manual pengguna.
+- **Transisi ke P2.11**: Pekerjaan dilanjutkan ke [P2.11](TRACKER.md#task-p2-11) (Verifikasi vertical slice SHADOW end-to-end).
+
 
 
