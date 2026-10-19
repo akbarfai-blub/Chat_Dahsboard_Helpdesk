@@ -1,5 +1,19 @@
 import type { TemplateKey } from "./triage-contracts";
 
+export type { TemplateKey };
+
+export const VALID_TEMPLATE_KEYS: ReadonlySet<TemplateKey> = Object.freeze(
+  new Set<TemplateKey>([
+    "MASS_GENERAL",
+    "MASS_AREA",
+    "NETWORK_DISRUPTION",
+    "LOS_AREA",
+    "LOS_INDIVIDUAL",
+    "ONLINE_CHECK",
+    "GENERIC",
+  ])
+);
+
 export const SIMULATION_PREFIX = "[SIMULASI DATA DUMMY]";
 export const EMPTY_ESTIMATED_RECOVERY_FALLBACK = "masih dalam pemeriksaan";
 

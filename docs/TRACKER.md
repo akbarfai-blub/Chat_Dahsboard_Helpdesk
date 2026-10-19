@@ -1187,7 +1187,7 @@ P2.11 berstatus ✅ **Done** (D156, D157, D158).
 | Task ID            | Nama Task                                               | Status         | Dependency                          | Decision ID Terkait |
 | ------------------ | ------------------------------------------------------- | -------------- | ----------------------------------- | ------------------- |
 | [P3.1](#task-p3-1) | Renderer template tetap dan snapshot teks               | ✅ Done        | P1.2, P1.4.1                        | D65, D66, D69, D159 |
-| [P3.2](#task-p3-2) | Pemeriksaan terakhir sebelum dispatch                   | ⬜ Not Started | P1.4.3, P2.1, P2.5, P3.1            | D66, D67, D68, D77  |
+| [P3.2](#task-p3-2) | Pemeriksaan terakhir sebelum dispatch                   | ✅ Done        | P1.4.3, P2.1, P2.5, P3.1            | D66, D67, D68, D77, D160 |
 | [P3.3](#task-p3-3) | Pengiriman Telegram melalui ChannelAdapter              | ⬜ Not Started | P2.1, P3.2                          | D50, D65, D67       |
 | [P3.4](#task-p3-4) | Worker outbound, delivery attempt, dan retry aman       | ⬜ Not Started | P3.3                                | D68                 |
 | [P3.5](#task-p3-5) | Composer balasan staf dan takeover automation           | 🟡 In Progress | P2.6, P1.4.5, P3.4                  | D65, D66, D68, D77  |
@@ -1261,11 +1261,45 @@ Sebelum send, periksa handoff tersimpan, tester/private chat, follow-up/takeover
 
 **Bukti/Verifikasi**
 
-—
+`lib/domain/dispatch-contracts.ts`, `lib/domain/dispatch-gate.ts`, `tests/domain/dispatch-gate.test.ts`, `lib/application/helpdesk-persistence.ts`, `tests/integration/dispatch-gate.test.ts`, `package.json` (`test:dispatch:local`), `docs/P3_2_REVIEW.md`, decision log D66, D67, D68, D77, D160:
+- **Domain Murni Gerbang Pra-Dispatch (`lib/domain/dispatch-contracts.ts` & `lib/domain/dispatch-gate.ts`)**:
+  - `evaluatePreDispatchGate`: Menegakkan 9 guard secara deterministik tanpa I/O:
+    1. Status & Struktur Dasar: Intent non-pending langsung gagal tertutup tanpa cancel (`intent_not_pending`, `shouldCancelIntent: false`); validasi kelengkapan field origin (`invalid_intent`).
+    2. Handoff Tersimpan: Episode wajib ada dan sesuai `complaintId`, `conversationId` non-kosong; untuk automatic wajib `messagePersisted`, `assessmentPersisted`, dan `ingress !== null` (`handoff_not_persisted`).
+    3. Tester Allowlist & Private Chat: Channel telegram (`unsupported_channel`), ID safe integer positif, obrolan private 1-on-1 (`chatId === senderExternalId`, menolak grup/supergroup via `non_private_chat`), dan terdaftar di allowlist (`not_in_tester_allowlist`, `empty_tester_allowlist`).
+    4. Follow-up & Staff Takeover: Status `CLOSED` memblokir automatic dan staff (`episode_closed`); automatic diblokir jika episode suppressed atau ada balasan staf (`staff_takeover`), atau bukan pesan pertama / status bukan `NEW` (`follow_up`); balasan staf tetap diizinkan pada `IN_PROGRESS` dan `RESOLVED`.
+    5. Claim & Rekonsiliasi Owner: Validasi owner, rekonsiliasi merged owner (`claim_owner_merged_or_invalid`), deteksi claim conflict oleh intent lain (`claim_conflict`), dan ketiadaan claim wajib (`missing_reply_claim`).
+    6. Template & Body: Validasi snapshot body ber-prefix simulasi, tanpa pengulangan prefix, panjang <= 4096 (`missing_template_snapshot`, `missing_simulation_prefix`, `invalid_outbound_body`, `template_error` untuk placeholder kurung kurawal unreplaced).
+    7. Mode & No SHADOW Replay (AC-06): Diterima saat SHADOW ditolak (`shadow_mode_at_receipt`, tidak memutar ulang backlog), mode aktual SHADOW ditolak (`shadow_mode_current`), template `ONLINE_CHECK` pada mode efektif `LOS_AND_GENERIC` ditolak (`template_blocked_by_mode`). Balasan staf tidak terblokir oleh mode.
+    8. Emergency Stop: Memblokir intent otomatis jika aktif saat receipt (`emergency_stop_at_receipt`) atau saat evaluasi (`emergency_stop_active`). Balasan staf tetap lolos (PRD §8).
+    9. Incident Relevan: Verifikasi insiden ada (`incident_not_found`), aktif (`incident_no_longer_active`), tipe cocok (`incident_type_mismatch`), dan area ODP/ODC pelanggan masih tercakup pada insiden area (`incident_area_no_longer_matches`).
+  - Unit test `tests/domain/dispatch-gate.test.ts`: **13/13 subtests PASS** (total unit suite **332/332 checks PASS**, 0 fail, exit code 0).
+- **Integrasi Persistence Transaksional (`lib/application/helpdesk-persistence.ts`)**:
+  - `evaluateDispatchGate(intentId, options)`: Mengambil intent dengan lock `FOR UPDATE` di dalam `inHelpdeskTransaction`.
+  - Mengumpulkan seluruh dependensi aktual (episode, conversation, message, assessment, ingress, channel identity, claims, settings, dan incident) secara atomik.
+  - Jika `outcome === "blocked"` dan `shouldCancelIntent`: memperbarui status intent menjadi `'cancelled'` dan mencatat audit log `dispatch_blocked` dengan alasan rinci.
+  - Jika `outcome === "authorized"`: status intent tetap `'pending'` (siap diambil worker P3.4) dan mencatat audit log `dispatch_authorized` secara idempoten (tanpa duplikasi log pada evaluasi berulang).
+  - `decideTriage`, `planReplyClaim`, dan `HelpdeskPersistence.process()` strictly tetap mengembalikan `dispatchAuthorized: false`.
+- **Suite Integrasi Database Terisolasi (`tests/integration/dispatch-gate.test.ts`)**:
+  - Dieksekusi via `npm run test:dispatch:local` pada PostgreSQL lokal terisolasi: **6/6 checks PASS (0 fail, 0 skipped, exit code 0, durasi ~1212ms)**:
+    1. Happy Path Automatic & Staff Authorization in LOS_AND_GENERIC: intent otomatis dan manual staf berhasil diotorisasi (`outcome: "authorized"`, `dispatchAuthorized: true`), audit log `dispatch_authorized` tercatat idempoten.
+    2. Staff Takeover Sebelum Send Membatalkan Automatic Intent: start handling oleh staf membatalkan intent otomatis menjadi `'cancelled'`; evaluasi gate menolak intent yang sudah dibatalkan (`intent_not_pending`) maupun intent pending pada episode tersupresi (`staff_takeover`).
+    3. Mode Changes & Emergency Stop + Non-Replay Backlog SHADOW (AC-06): pesan SHADOW menghasilkan 0 intent; peralihan ke FULL tidak memutar ulang backlog SHADOW (tetap 0 intent); penurunan mode ke LOS_AND_GENERIC membatalkan intent `ONLINE_CHECK` (`template_blocked_by_mode`); emergency stop membatalkan intent otomatis tetapi balasan staf tetap authorized.
+    4. Incident Resolved atau Area Berubah Sebelum Send (PRD §6.2): insiden GENERAL aktif mencatat versi insiden terotorisasi; insiden di-resolve sebelum send membatalkan intent (`incident_no_longer_active`); ODP pelanggan dihapus dari insiden AREA_SPECIFIC sebelum send membatalkan intent (`incident_area_no_longer_matches`).
+    5. Tester Allowlist & Private Chat Enforcement: pencabutan tester dari allowlist membatalkan intent (`not_in_tester_allowlist`); allowlist kosong memblokir balasan otomatis dan staf (`empty_tester_allowlist`).
+  - Teardown & Zero Residue: membersihkan seluruh tabel fixture (`reply_claims`, `complaint_evidence_links`, `outbound_intents`, `response_templates`, `incidents`, `reply_owners`, `customers`, `services`, `channel_identities`) sebelum `cleanupFixture`; menghapus staf dari `auth.users`; kueri 10 tabel memvalidasi 0 residual fixtures.
+- **Regresi Baseline & Tooling Pipeline**:
+  - `npm test`: **332/332 checks PASS** (0 fail, exit code 0).
+  - `node tests/tooling/pipeline-tooling.test.mjs`: **53/53 checks PASS** (exit code 0).
+  - `npm run test:template:local`: **8/8 checks PASS** (exit code 0).
+  - `npm run test:persistence:local`: **12/12 checks PASS** (exit code 0).
+  - `npm run test:shadow:local`: **6/6 checks PASS** (exit code 0).
+  - `npx eslint ...`: 0 errors, 0 warnings.
+  - `npx tsc --noEmit`: 0 errors.
 
 **Catatan/Blocker**
 
-Decision engine dan reservasi tetap `dispatchAuthorized=false`; belum ada jalur otorisasi akhir pengiriman.
+P3.2 selesai penuh (**✅ Done**). Gerbang pra-dispatch telah terpasang penuh dan terverifikasi aman. Pipeline siap melanjutkan ke pengiriman Telegram via ChannelAdapter ([P3.3](TRACKER.md#task-p3-3)) dan worker outbound delivery loop ([P3.4](TRACKER.md#task-p3-4)).
 
 </details>
 

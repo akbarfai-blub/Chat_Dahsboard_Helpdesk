@@ -19,6 +19,14 @@ import {
   type StaffEpisodeAction, type StaffMutationResult,
   type ConversationSnapshot, type ConversationMessageItem,
 } from "./persistence-contracts";
+import { evaluatePreDispatchGate } from "../domain/dispatch-gate";
+import type {
+  PreDispatchEvaluationInput,
+  PreDispatchEvaluationResult,
+  IncidentSnapshot,
+} from "../domain/dispatch-contracts";
+import { parseTesterAllowlist } from "../adapters/telegram/telegram-adapter";
+import type { AutomationMode, TriageDecision } from "../domain/triage-contracts";
 
 export type StaffResult = {
   result: StaffMutationResult; inFlightCount: number; createdEpisodeId?: string; manualIntentId?: string;
@@ -440,6 +448,368 @@ export class HelpdeskPersistence {
     return inHelpdeskTransaction(this.pool, async db => {
       const store = new EpisodeStore(db);
       return store.getConversationHistory(conversationId);
+    });
+  }
+
+  async evaluateDispatchGate(
+    intentId: string,
+    options?: {
+      testerAllowlist?: readonly string[] | ReadonlySet<string>;
+      evaluatedAt?: string;
+    }
+  ): Promise<PreDispatchEvaluationResult> {
+    requireId(intentId);
+    const evaluatedAt = options?.evaluatedAt ?? new Date().toISOString();
+    const testerAllowlist =
+      options?.testerAllowlist ??
+      parseTesterAllowlist(process.env.TELEGRAM_TESTER_ALLOWLIST);
+
+    return inHelpdeskTransaction(this.pool, async db => {
+      const store = new EpisodeStore(db);
+
+      // 1. Fetch outbound intent with row-level lock
+      const intentRes = await db.query<{
+        id: string;
+        origin: "automatic" | "staff";
+        status: string;
+        complaint_id: string;
+        owner_id: string | null;
+        message_id: string | null;
+        decision: unknown;
+        staff_id: string | null;
+        client_request_id: string | null;
+        body: string | null;
+        template_version_id: string | null;
+        template_key: string | null;
+        template_version: number | null;
+        template_scope: string | null;
+        template_error: string | null;
+      }>(
+        `select id, origin, status, complaint_id, owner_id, message_id, decision,
+                staff_id, client_request_id, body, template_version_id, template_key,
+                template_version, template_scope, template_error
+         from public.outbound_intents
+         where id = $1
+         for update`,
+        [intentId]
+      );
+
+      if (intentRes.rowCount !== 1) {
+        throw new PersistenceError("intent_not_found");
+      }
+
+      const row = intentRes.rows[0];
+      const intent = {
+        id: row.id,
+        origin: row.origin,
+        status: row.status,
+        complaintId: row.complaint_id,
+        ownerId: row.owner_id,
+        messageId: row.message_id,
+        decision: row.decision as TriageDecision | null,
+        staffId: row.staff_id,
+        clientRequestId: row.client_request_id,
+        body: row.body,
+        templateVersionId: row.template_version_id,
+        templateKey: row.template_key,
+        templateVersion: row.template_version,
+        templateScope: row.template_scope,
+        templateError: row.template_error,
+      };
+
+      // 2. Fetch current settings
+      const dbSettings = await store.settings();
+      const currentSettings = dbSettings
+        ? {
+            mode: dbSettings.mode,
+            emergencyStop: dbSettings.emergency_stop,
+            version: dbSettings.version,
+          }
+        : null;
+
+      // 3. Fetch episode if exists
+      let episode: EpisodeSnapshot | null = null;
+      if (intent.complaintId) {
+        try {
+          episode = await store.episode(intent.complaintId);
+        } catch {
+          episode = null;
+        }
+      }
+
+      // 4. Fetch channel, account, chat, and sender info
+      let channel: string | null = null;
+      let channelAccountId: string | null = null;
+      let chatId: string | null = null;
+      let senderExternalId: string | null = null;
+      let conversationId: string | null = null;
+      let customerVerifiedOwnerId: string | null = null;
+
+      let messagePersisted = false;
+      let assessmentPersisted = false;
+      let ingress: { mode: AutomationMode; emergencyStop: boolean } | null = null;
+      let isFirstMessageOnEpisode = false;
+      let hasStaffReplyOnEpisode = false;
+      let hasOtherActiveOrSentAutoIntentOnEpisode = false;
+
+      if (intent.origin === "automatic" && intent.messageId) {
+        // Fetch message
+        const msgRes = await db.query<{ id: string; conversation_id: string | null; complaint_id: string }>(
+          "select id, conversation_id, complaint_id from public.messages where id = $1",
+          [intent.messageId]
+        );
+        const msgRow = msgRes.rows[0];
+        if (msgRow && msgRow.complaint_id === intent.complaintId && msgRow.conversation_id) {
+          messagePersisted = true;
+          conversationId = msgRow.conversation_id;
+        }
+
+        // Fetch triage assessment
+        const assessRes = await db.query<{ message_id: string }>(
+          "select message_id from public.triage_assessments where message_id = $1",
+          [intent.messageId]
+        );
+        if (assessRes.rowCount === 1) {
+          assessmentPersisted = true;
+        }
+
+        // Fetch ingress event
+        const ingressRes = await db.query<{
+          channel: string;
+          account_id: string;
+          chat_id: string;
+          mode: AutomationMode;
+          emergency_stop: boolean;
+          identity_id: string;
+        }>(
+          "select channel, account_id, chat_id, mode, emergency_stop, identity_id from public.ingress_events where id = $1",
+          [intent.messageId]
+        );
+        const ingressRow = ingressRes.rows[0];
+        if (ingressRow) {
+          ingress = { mode: ingressRow.mode, emergencyStop: ingressRow.emergency_stop };
+          channel = ingressRow.channel;
+          channelAccountId = ingressRow.account_id;
+          chatId = ingressRow.chat_id;
+
+          // Fetch senderExternalId and customerId from channel_identities
+          const identRes = await db.query<{ sender_external_id: string; customer_id: string | null; verification_status: string }>(
+            "select sender_external_id, customer_id, verification_status from public.channel_identities where id = $1",
+            [ingressRow.identity_id]
+          );
+          if (identRes.rows[0]) {
+            senderExternalId = identRes.rows[0].sender_external_id;
+            if (identRes.rows[0].verification_status === "verified" && identRes.rows[0].customer_id) {
+              const custOwnerRes = await db.query<{ id: string }>(
+                "select id from public.reply_owners where customer_id = $1",
+                [identRes.rows[0].customer_id]
+              );
+              if (custOwnerRes.rows[0]) {
+                customerVerifiedOwnerId = custOwnerRes.rows[0].id;
+              }
+            }
+          }
+        }
+
+        // Check if first message on episode
+        if (intent.complaintId) {
+          const firstMsgRes = await db.query<{ id: string }>(
+            "select id from public.messages where complaint_id = $1 order by created_at asc, id asc limit 1",
+            [intent.complaintId]
+          );
+          isFirstMessageOnEpisode = firstMsgRes.rows[0]?.id === intent.messageId;
+
+          // Check if has staff reply on episode
+          const staffReplyRes = await db.query(
+            "select 1 from public.outbound_intents where complaint_id = $1 and origin = 'staff' and status <> 'cancelled' limit 1",
+            [intent.complaintId]
+          );
+          hasStaffReplyOnEpisode = (staffReplyRes.rowCount ?? 0) > 0;
+
+          // Check if has other active or sent auto intent on episode
+          const otherAutoRes = await db.query(
+            "select 1 from public.outbound_intents where complaint_id = $1 and origin = 'automatic' and id <> $2 and status in ('in_flight', 'sent', 'unknown') limit 1",
+            [intent.complaintId, intent.id]
+          );
+          hasOtherActiveOrSentAutoIntentOnEpisode = (otherAutoRes.rowCount ?? 0) > 0;
+        }
+      } else if (intent.origin === "staff") {
+        // For staff reply, channel info is found via episode's identity or latest message
+        if (episode) {
+          const identityId = episode.scope.kind === "service" ? episode.scope.identityId : episode.scope.identityId;
+          const identRes = await db.query<{ channel: string; channel_account_id: string; sender_external_id: string }>(
+            "select channel, channel_account_id, sender_external_id from public.channel_identities where id = $1",
+            [identityId]
+          );
+          if (identRes.rows[0]) {
+            channel = identRes.rows[0].channel;
+            channelAccountId = identRes.rows[0].channel_account_id;
+            senderExternalId = identRes.rows[0].sender_external_id;
+          }
+
+          // Conversation and chat_id from conversation or latest message
+          const convRes = await db.query<{ id: string; chat_id: string }>(
+            "select id, chat_id from public.conversations where identity_id = $1 order by last_activity_at desc limit 1",
+            [identityId]
+          );
+          if (convRes.rows[0]) {
+            conversationId = convRes.rows[0].id;
+            chatId = convRes.rows[0].chat_id;
+          } else {
+            // Fallback to latest message
+            const latestMsgRes = await db.query<{ conversation_id: string; chat_id: string }>(
+              `select m.conversation_id, i.chat_id
+               from public.messages m
+               join public.ingress_events i on i.id = m.id
+               where m.complaint_id = $1
+               order by m.created_at desc limit 1`,
+              [intent.complaintId]
+            );
+            if (latestMsgRes.rows[0]) {
+              conversationId = latestMsgRes.rows[0].conversation_id;
+              chatId = latestMsgRes.rows[0].chat_id;
+            } else {
+              chatId = senderExternalId;
+            }
+          }
+        }
+      }
+
+      // 5. Claims and Owner
+      let intentOwner: { id: string; mergedInto: string | null } | null = null;
+      if (intent.ownerId) {
+        const ownerRes = await db.query<{ id: string; merged_into: string | null }>(
+          "select id, merged_into from public.reply_owners where id = $1",
+          [intent.ownerId]
+        );
+        if (ownerRes.rows[0]) {
+          intentOwner = { id: ownerRes.rows[0].id, mergedInto: ownerRes.rows[0].merged_into };
+        }
+      }
+
+      const existingClaimsRes = await db.query<{
+        owner_id: string;
+        scope_kind: "episode" | "incident" | "event";
+        scope_id: string;
+        outbound_intent_id: string;
+      }>(
+        `select owner_id, scope_kind, scope_id, outbound_intent_id
+         from public.reply_claims
+         where owner_id = $1
+            or ($2::uuid is not null and owner_id = $2)
+            or ($3::uuid is not null and complaint_id = $3)
+            or outbound_intent_id = $4`,
+        [intent.ownerId, intentOwner?.mergedInto ?? null, intent.complaintId, intent.id]
+      );
+      const existingClaims = existingClaimsRes.rows.map((r) => ({
+        ownerId: r.owner_id,
+        scopeKind: r.scope_kind,
+        scopeId: r.scope_id,
+        outboundIntentId: r.outbound_intent_id,
+      }));
+
+      // 6. Current incident if relevant
+      let currentIncident: IncidentSnapshot | null = null;
+      if (intent.decision?.incidentId) {
+        const incRes = await db.query<{
+          id: string;
+          type: "GENERAL" | "AREA_SPECIFIC";
+          status: "ACTIVE" | "RESOLVED" | "CLOSED";
+          version: number;
+          odp_ids: string[];
+          odc_ids: string[];
+        }>(
+          "select id, type, status, version, odp_ids, odc_ids from public.incidents where id = $1 for share",
+          [intent.decision.incidentId]
+        );
+        if (incRes.rows[0]) {
+          currentIncident = {
+            id: incRes.rows[0].id,
+            type: incRes.rows[0].type,
+            status: incRes.rows[0].status,
+            version: incRes.rows[0].version,
+            odpIds: incRes.rows[0].odp_ids ?? [],
+            odcIds: incRes.rows[0].odc_ids ?? [],
+          };
+        }
+      }
+
+      // 7. Evaluate pure gate
+      const evaluationInput: PreDispatchEvaluationInput = {
+        evaluatedAt,
+        testerAllowlist,
+        intent,
+        handoff: {
+          episode,
+          conversationId,
+          channel,
+          channelAccountId,
+          chatId,
+          senderExternalId,
+          customerVerifiedOwnerId,
+          messagePersisted,
+          assessmentPersisted,
+          ingress,
+          isFirstMessageOnEpisode,
+          hasStaffReplyOnEpisode,
+          hasOtherActiveOrSentAutoIntentOnEpisode,
+        },
+        claims: {
+          intentOwner,
+          existingClaims,
+        },
+        currentSettings,
+        currentIncident,
+      };
+
+      const result = evaluatePreDispatchGate(evaluationInput);
+
+      // 8. Transactional side-effects
+      if (result.outcome === "blocked") {
+        if (result.shouldCancelIntent) {
+          await db.query(
+            "update public.outbound_intents set status = 'cancelled', updated_at = now() where id = $1 and status = 'pending'",
+            [intent.id]
+          );
+          await store.audit(
+            intent.complaintId,
+            "dispatch_blocked",
+            {
+              intentId: intent.id,
+              origin: intent.origin,
+              primaryReason: result.primaryReason,
+              blockedReasons: result.blockedReasons,
+            },
+            intent.origin === "staff" ? intent.staffId : null,
+            intent.origin === "automatic" ? intent.messageId : null
+          );
+        }
+      } else {
+        // outcome: "authorized"
+        // Log audit if not already logged
+        const existingAudit = await db.query(
+          "select 1 from public.complaint_audit_log where action = 'dispatch_authorized' and detail->>'intentId' = $1 limit 1",
+          [intent.id]
+        );
+        if ((existingAudit.rowCount ?? 0) === 0) {
+          await store.audit(
+            intent.complaintId,
+            "dispatch_authorized",
+            {
+              intentId: intent.id,
+              origin: intent.origin,
+              effectiveMode: result.effectiveMode,
+              authorizedIncidentId: result.authorizedIncidentId,
+              authorizedIncidentVersion: result.authorizedIncidentVersion,
+              evaluatedAt: result.evaluatedAt,
+            },
+            intent.origin === "staff" ? intent.staffId : null,
+            intent.origin === "automatic" ? intent.messageId : null
+          );
+        }
+      }
+
+      return result;
     });
   }
 }

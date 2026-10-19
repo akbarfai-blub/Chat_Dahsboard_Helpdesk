@@ -21,7 +21,8 @@
     "test:migrations:local": "tsc -p tsconfig.test.json && node --conditions=react-server --env-file=.env.test --test .test-build/tests/integration/migration-runner.test.js",
     "test:classification:local": "tsc -p tsconfig.test.json && node --conditions=react-server --env-file=.env.test --test .test-build/tests/integration/staff-classification.test.js",
     "test:shadow:local": "tsc -p tsconfig.test.json && node --conditions=react-server --env-file=.env.test --test .test-build/tests/integration/vertical-slice-shadow.test.js",
-    "test:template:local": "tsc -p tsconfig.test.json && node --conditions=react-server --env-file=.env.test --test .test-build/tests/integration/template-renderer.test.js"
+    "test:template:local": "tsc -p tsconfig.test.json && node --conditions=react-server --env-file=.env.test --test .test-build/tests/integration/template-renderer.test.js",
+    "test:dispatch:local": "tsc -p tsconfig.test.json && node --conditions=react-server --env-file=.env.test --test .test-build/tests/integration/dispatch-gate.test.js"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",

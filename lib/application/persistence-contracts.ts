@@ -93,3 +93,9 @@ export type StaffMutationResult = EpisodeActionResult | SplitResult | {
 export class PersistenceError extends Error {
   constructor(public readonly code: string) { super(code); this.name = "PersistenceError"; }
 }
+
+export type {
+  PreDispatchEvaluationResult,
+  PreDispatchBlockedReason,
+  PreDispatchEvaluationInput,
+} from "../domain/dispatch-contracts";
