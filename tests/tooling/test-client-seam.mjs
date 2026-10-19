@@ -27,6 +27,7 @@ const MOCK_REPO_VERSIONS = [
   '20261004120000',
   '20261004130000',
   '20261012100000',
+  '20261019120000',
 ];
 
 export function clientFactory(dbConfig) {

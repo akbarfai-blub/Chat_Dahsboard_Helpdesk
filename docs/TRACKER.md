@@ -1186,7 +1186,7 @@ P2.11 berstatus ✅ **Done** (D156, D157, D158).
 
 | Task ID            | Nama Task                                               | Status         | Dependency                          | Decision ID Terkait |
 | ------------------ | ------------------------------------------------------- | -------------- | ----------------------------------- | ------------------- |
-| [P3.1](#task-p3-1) | Renderer template tetap dan snapshot teks               | ⬜ Not Started | P1.2, P1.4.1                        | D65, D66, D69       |
+| [P3.1](#task-p3-1) | Renderer template tetap dan snapshot teks               | ✅ Done        | P1.2, P1.4.1                        | D65, D66, D69, D159 |
 | [P3.2](#task-p3-2) | Pemeriksaan terakhir sebelum dispatch                   | ⬜ Not Started | P1.4.3, P2.1, P2.5, P3.1            | D66, D67, D68, D77  |
 | [P3.3](#task-p3-3) | Pengiriman Telegram melalui ChannelAdapter              | ⬜ Not Started | P2.1, P3.2                          | D50, D65, D67       |
 | [P3.4](#task-p3-4) | Worker outbound, delivery attempt, dan retry aman       | ⬜ Not Started | P3.3                                | D68                 |
@@ -1209,11 +1209,44 @@ Key/placeholder divalidasi; template kosong/invalid memblokir dispatch; estimasi
 
 **Bukti/Verifikasi**
 
-—
+`lib/domain/template-contracts.ts`, `lib/domain/template-renderer.ts`, `tests/domain/template-renderer.test.ts`, `supabase/migrations/20261019120000_create_response_templates.sql`, `supabase/seed.sql`, `lib/application/helpdesk-persistence.ts`, `lib/repositories/episode-store.ts`, `tests/integration/template-renderer.test.ts`, `docs/P3_1_REVIEW.md`, decision log D159:
+- **Domain Murni Renderer (`lib/domain/template-renderer.ts`)**:
+  - Validasi sintaks kurung kurawal ketat (`validateTemplateBody`), menolak kurung kurawal tunggal/menggantung/tidak seimbang (`malformed_placeholder_syntax`) dan placeholder di luar whitelist (`disallowed_placeholder`). Whitelist strictly `["estimated_recovery"]` untuk `MASS_GENERAL` & `MASS_AREA`, dan `[]` untuk 5 template lainnya.
+  - Resolusi template aktif (`resolveActiveTemplate`): validasi kunci template di awal (`invalid_template_key`); override incident-scoped mengalahkan default untuk key sama; fallback ke default jika tidak ada override incident; fail-closed `conflicting_active_templates` jika >1 versi aktif pada scope yang sama; fail-closed `missing_active_template` jika 0 aktif.
+  - Substitusi literal `{{estimated_recovery}}`: fallback otomatis `"masih dalam pemeriksaan"` jika null/kosong/whitespace; dukungan multi-kemunculan via `replaceAll`; pencegahan titik ganda `..`; pencegahan re-evaluasi template injection; penambahan wajib prefix `[SIMULASI DATA DUMMY] `.
+  - Normalisasi balasan manual staf (`renderStaffReplySnapshot`): idempoten melepas pengulangan prefix `[SIMULASI DATA DUMMY]` (2x atau lebih), menolak pesan kosong atau pesan yang hanya berisi prefix simulasi (`empty_message_body`), batas panjang <= 10000.
+  - Unit test `tests/domain/template-renderer.test.ts` (**9/9 checks PASS**, total unit suite **319/319 checks PASS**, exit code 0).
+- **Migrasi Schema & Constraint Database (`20261019120000_create_response_templates.sql`)**:
+  - Kolom `description` dan `estimated_recovery` ditambahkan ke `public.incidents`.
+  - Tabel `public.response_templates` dengan constraint relasi scope `'default'` (`incident_id is null`) dan `'incident'` (`incident_id is not null`).
+  - Tabel `public.template_versions` dengan partial unique index `template_versions_one_active` on `(template_id) where is_active = true`.
+  - Kolom snapshot pada `public.outbound_intents`: `template_version_id`, `template_key`, `template_version`, `template_scope`, `template_error`, serta relaksasi check constraint agar `origin = 'automatic'` dapat menyimpan snapshot teks `body`.
+  - Tooling pipeline test `tests/tooling/pipeline-tooling.test.mjs` (**53/53 checks PASS**, exit code 0).
+- **Integrasi Persistence & Fail-Closed Dispatch**:
+  - Pada `HelpdeskPersistence.process()`: membaca `estimated_recovery` dari active incident; memuat kandidat template aktif; merender template; pada `template_error` memblokir dispatch (`claim.outcome = 'skipped'`, `claim.reason = 'template_error'`, `dispatchAuthorized = false`, 0 outbound intent/claim terbentuk) dan mencatat audit log; pada `rendered` menyimpan snapshot `body`, `template_version_id`, `template_key`, `template_version`, dan `template_scope` di `outbound_intents`.
+  - Menghindari properti ber-value `undefined` pada `ProcessingResult` agar selalu identik secara struktural dengan hasil deserialisasi JSONB database.
+  - Pada `HelpdeskPersistence.staffAction()`: memformat manual reply dengan `renderStaffReplySnapshot` (menolak prefix-only), menyimpan teks ber-prefix di `outbound_intents.body`.
+- **Suite Integrasi Database Terisolasi (`tests/integration/template-renderer.test.ts`)**:
+  - Dieksekusi via `npm run test:template:local` pada PostgreSQL lokal terisolasi: **8/8 checks PASS (0 fail, 0 skipped, exit code 0, durasi ~1160ms)**:
+    1. Schema & Constraints: 7 default templates exist, versi 1 aktif, partial unique index menolak 2 versi aktif, constraint scope incident.
+    2. Inbound Processing LOS_AND_GENERIC: snapshot text ber-prefix, metadata versi, `dispatchAuthorized = false`.
+    3. Immutability Verification: modifikasi template version tidak mengubah snapshot intent historis (FR-07, FR-13).
+    4. Incident Override: template scope incident mengalahkan default dan menyubstitusi `estimated_recovery`.
+    5. Fallback estimasi: `estimated_recovery` null memakai fallback PRD tanpa titik ganda `..`.
+    6. Template Error Fail-Closed: template cacat memblokir dispatch, 0 intent/claim dibuat, audit log tercatat.
+    7. Staff Manual Reply: normalisasi prefix simulasi, idempoten tanpa double prefix, penolakan pesan kosong/prefix-only.
+  - Teardown & Zero Residue: membersihkan child records (`reply_claims`, `complaint_evidence_links`, `outbound_intents`) sebelum menghapus `response_templates` dan `incidents`; membersihkan `reply_owners` sebelum `cleanupFixture`; menghapus staf dari `auth.users` dengan verifikasi `getUserById`; kueri 10 tabel memverifikasi 0 residual fixtures.
+- **Regresi Baseline Integration Suite**:
+  - `npm run test:persistence:local`: **12/12 checks PASS** (0 fail, 0 skipped, exit code 0).
+  - `npm run test:shadow:local`: **6/6 checks PASS** (0 fail, 0 skipped, exit code 0).
+- **Linter & Typecheck**:
+  - `npx eslint ...`: 0 errors, 0 warnings.
+  - `npx tsc --noEmit`: 0 errors.
+- `dispatchAuthorized` strictly dipertahankan `false` di seluruh alur.
 
 **Catatan/Blocker**
 
-README menyatakan renderer belum tersedia; pengelolaan versi melalui UI mengikuti P4.3.
+P3.1 selesai penuh (**✅ Done**). Pre-dispatch final checks (P3.2), dispatch HTTP ke Telegram (P3.3), worker outbound (P3.4), dan UI pengelolaan template (P4.3) berada di luar scope dan tidak diimplementasikan pada task ini.
 
 </details>
 

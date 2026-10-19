@@ -3,6 +3,7 @@ import type { EpisodeSnapshot, EpisodeActionResult } from "../domain/episode-con
 import type { IdentityCandidate, SenderKey } from "../domain/sender-identity";
 import type { AutomationMode, TriageDecision } from "../domain/triage-contracts";
 import type { ClaimTarget } from "../domain/reply-claim";
+import type { TemplateSnapshot } from "../domain/template-contracts";
 import { evaluateConversationGrouping, type ConversationCandidate } from "../domain/conversation";
 import {
   PersistenceError,
@@ -168,13 +169,34 @@ export class EpisodeStore {
     }
   }
 
-  async reserve(ownerId: string, episodeId: string, messageId: string, decision: TriageDecision,
-    targets: ClaimTarget[]): Promise<string | null> {
+  async reserve(
+    ownerId: string,
+    episodeId: string,
+    messageId: string,
+    decision: TriageDecision,
+    targets: ClaimTarget[],
+    snapshot?: TemplateSnapshot | null
+  ): Promise<string | null> {
     await this.db.query("savepoint reply_reservation");
     try {
       const intent = await this.db.query<{ id: string }>(
-        `insert into public.outbound_intents(owner_id,complaint_id,message_id,decision)
-         values ($1,$2,$3,$4::jsonb) returning id`, [ownerId, episodeId, messageId, JSON.stringify(decision)]);
+        `insert into public.outbound_intents(
+           owner_id, complaint_id, message_id, decision,
+           body, template_version_id, template_key, template_version, template_scope
+         )
+         values ($1,$2,$3,$4::jsonb,$5,$6,$7,$8,$9) returning id`,
+        [
+          ownerId,
+          episodeId,
+          messageId,
+          JSON.stringify(decision),
+          snapshot ? snapshot.outboundText : null,
+          snapshot ? snapshot.templateVersionId : null,
+          snapshot ? snapshot.templateKey : null,
+          snapshot ? snapshot.templateVersion : null,
+          snapshot ? snapshot.templateScope : null,
+        ]
+      );
       for (const target of targets) {
         const claim = await this.db.query(
           `insert into public.reply_claims(owner_id,scope_kind,scope_id,complaint_id,outbound_intent_id)

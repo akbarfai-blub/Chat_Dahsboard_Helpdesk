@@ -12,7 +12,7 @@
     "test:network:local": "tsc -p tsconfig.test.json && node --conditions=react-server --test .test-build/tests/integration/network.test.js",
     "test:identity:local": "tsc -p tsconfig.test.json && node --conditions=react-server --test .test-build/tests/integration/identity.test.js",
     "test:triage:local": "tsc -p tsconfig.test.json && node --conditions=react-server --test .test-build/tests/integration/triage.test.js",
-    "test:persistence:local": "tsc -p tsconfig.test.json && node --conditions=react-server --test .test-build/tests/integration/persistence.test.js",
+    "test:persistence:local": "tsc -p tsconfig.test.json && node --conditions=react-server --env-file=.env.test --test .test-build/tests/integration/persistence.test.js",
     "test:telegram:local": "tsc -p tsconfig.test.json && node --conditions=react-server --test .test-build/tests/integration/telegram-webhook.test.js",
     "test:conversation:local": "tsc -p tsconfig.test.json && node --conditions=react-server --test .test-build/tests/integration/conversation.test.js",
     "test:orchestration:local": "tsc -p tsconfig.test.json && node --conditions=react-server --test .test-build/tests/integration/orchestration.test.js",
@@ -20,7 +20,8 @@
     "test:inbox:local": "tsc -p tsconfig.test.json && node --conditions=react-server --env-file=.env.test --test .test-build/tests/integration/inbox.test.js",
     "test:migrations:local": "tsc -p tsconfig.test.json && node --conditions=react-server --env-file=.env.test --test .test-build/tests/integration/migration-runner.test.js",
     "test:classification:local": "tsc -p tsconfig.test.json && node --conditions=react-server --env-file=.env.test --test .test-build/tests/integration/staff-classification.test.js",
-    "test:shadow:local": "tsc -p tsconfig.test.json && node --conditions=react-server --env-file=.env.test --test .test-build/tests/integration/vertical-slice-shadow.test.js"
+    "test:shadow:local": "tsc -p tsconfig.test.json && node --conditions=react-server --env-file=.env.test --test .test-build/tests/integration/vertical-slice-shadow.test.js",
+    "test:template:local": "tsc -p tsconfig.test.json && node --conditions=react-server --env-file=.env.test --test .test-build/tests/integration/template-renderer.test.js"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",

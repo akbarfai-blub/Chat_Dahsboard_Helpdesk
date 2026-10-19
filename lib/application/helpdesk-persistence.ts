@@ -8,7 +8,9 @@ import type { EpisodeSnapshot, StaffCommand } from "../domain/episode-contracts"
 import { classifyMessage } from "../domain/message-classification";
 import { isValidSenderKey, resolveSenderIdentity } from "../domain/sender-identity";
 import { decideTriage } from "../domain/triage-decision";
-import type { ManualIncidentSnapshot } from "../domain/triage-contracts";
+import type { ManualIncidentSnapshot, TemplateKey } from "../domain/triage-contracts";
+import type { TemplateCandidateRecord, TemplateSnapshot } from "../domain/template-contracts";
+import { renderAutomaticTemplate, renderStaffReplySnapshot } from "../domain/template-renderer";
 import { evidenceTargets, planReplyClaim, restrictiveMode } from "../domain/reply-claim";
 import { inHelpdeskTransaction } from "../postgres/transaction";
 import { EpisodeStore } from "../repositories/episode-store";
@@ -152,7 +154,8 @@ export class HelpdeskPersistence {
       // Context snapshots are never used to revive missing, deleted, or resolved incidents.
       const dbIncidentsResult = await db.query<{
         id: string; type: string; status: string; odp_ids: string[]; odc_ids: string[]; version: number;
-      }>("select id, type, status, odp_ids, odc_ids, version from public.incidents where status = 'ACTIVE' for share");
+        description: string | null; estimated_recovery: string | null;
+      }>("select id, type, status, odp_ids, odc_ids, version, description, estimated_recovery from public.incidents where status = 'ACTIVE' for share");
 
       const effectiveIncidents: ManualIncidentSnapshot[] = dbIncidentsResult.rows.map(inc => ({
         id: inc.id,
@@ -201,6 +204,8 @@ export class HelpdeskPersistence {
       }
 
       let claim: ProcessingResult["claim"] = { outcome: "skipped", reason: "review", intentId: null };
+      let templateSnapshot: TemplateSnapshot | null = null;
+      let templateError: string | null = null;
       if (episode) {
         const count = await db.query<{ count: string }>("select count(*) from public.messages where complaint_id=$1", [episode.id]);
         const firstMessage = Number(count.rows[0].count) === 0;
@@ -211,16 +216,106 @@ export class HelpdeskPersistence {
         await store.evidence(episode.id, ownerId, targets,
           decision.automation.mode !== "SHADOW" && !receipt.emergency_stop && !settings.emergency_stop);
         const plan = planReplyClaim(episode, firstMessage, decision);
-        if (plan.reason) claim = { outcome: "skipped", reason: plan.reason, intentId: null };
-        else {
-          const intentId = await store.reserve(ownerId, episode.id, ingressId, decision, plan.targets);
-          claim = intentId ? { outcome: "reserved", reason: "reserved_not_authorized", intentId }
-            : { outcome: "skipped", reason: "claim_conflict", intentId: null };
+        if (plan.reason) {
+          claim = { outcome: "skipped", reason: plan.reason, intentId: null };
+        } else if (decision.effectiveTemplateKey) {
+          let estimatedRecovery: string | null = null;
+          if (decision.incidentId) {
+            const inc = dbIncidentsResult.rows.find(r => r.id === decision.incidentId);
+            estimatedRecovery = inc?.estimated_recovery ?? null;
+          }
+
+          const templateRows = await db.query<{
+            template_id: string;
+            template_key: string;
+            scope: "default" | "incident";
+            incident_id: string | null;
+            version_id: string;
+            version: number;
+            body: string;
+            is_active: boolean;
+          }>(
+            `select
+               rt.id as template_id,
+               rt.template_key,
+               rt.scope,
+               rt.incident_id,
+               tv.id as version_id,
+               tv.version,
+               tv.body,
+               tv.is_active
+             from public.response_templates rt
+             join public.template_versions tv on tv.template_id = rt.id
+             where rt.template_key = $1
+               and (
+                 rt.scope = 'default'
+                 or ($2::uuid is not null and rt.scope = 'incident' and rt.incident_id = $2::uuid)
+               )`,
+            [decision.effectiveTemplateKey, decision.incidentId]
+          );
+
+          const candidates: TemplateCandidateRecord[] = templateRows.rows.map(r => ({
+            id: r.template_id,
+            templateKey: r.template_key as TemplateKey,
+            scope: r.scope,
+            incidentId: r.incident_id,
+            versionId: r.version_id,
+            version: r.version,
+            body: r.body,
+            isActive: r.is_active,
+          }));
+
+          const renderResult = renderAutomaticTemplate({
+            templateKey: decision.effectiveTemplateKey,
+            candidates,
+            incidentId: decision.incidentId,
+            estimatedRecovery,
+            renderedAt: now,
+          });
+
+          if (renderResult.outcome === "template_error") {
+            claim = { outcome: "skipped", reason: "template_error", intentId: null };
+            templateError = renderResult.errorCode;
+            await store.audit(
+              episode.id,
+              "template_error",
+              {
+                errorCode: renderResult.errorCode,
+                reason: renderResult.reason,
+                templateKey: decision.effectiveTemplateKey,
+              },
+              null,
+              ingressId
+            );
+          } else {
+            templateSnapshot = renderResult.snapshot;
+            const intentId = await store.reserve(
+              ownerId,
+              episode.id,
+              ingressId,
+              decision,
+              plan.targets,
+              templateSnapshot
+            );
+            claim = intentId
+              ? { outcome: "reserved", reason: "reserved_not_authorized", intentId }
+              : { outcome: "skipped", reason: "claim_conflict", intentId: null };
+          }
+        } else {
+          claim = { outcome: "skipped", reason: "no_template", intentId: null };
         }
       }
       const result: ProcessingResult = {
-        messageId: ingressId, conversationId, episodeId: episode?.id ?? null, association, decision, claim, dispatchAuthorized: false,
+        messageId: ingressId,
+        conversationId,
+        episodeId: episode?.id ?? null,
+        association,
+        decision,
+        claim,
+        dispatchAuthorized: false,
         providerQuality: context.providerQuality ?? null,
+        ...(templateSnapshot ? { templateSnapshot } : {}),
+        ...(templateError ? { templateError } : {}),
       };
       await db.query(
         "insert into public.triage_assessments(message_id,decision,processing_result) values ($1,$2::jsonb,$3::jsonb)",
@@ -257,8 +352,12 @@ export class HelpdeskPersistence {
 
   async staffAction(staffId: string, input: StaffEpisodeAction): Promise<StaffResult> {
     requireId(staffId); requireId(input.requestId); requireId(input.episodeId);
-    if (input.action === "manual_reply" && (typeof input.body !== "string" ||
-        !input.body.trim() || input.body.length > 10000)) throw new PersistenceError("invalid_reply");
+    let staffOutboundText: string | null = null;
+    if (input.action === "manual_reply") {
+      const staffRender = renderStaffReplySnapshot(input.body);
+      if (staffRender.outcome !== "rendered") throw new PersistenceError("invalid_reply");
+      staffOutboundText = staffRender.outboundText;
+    }
     const hash = fingerprint(["episode", input.episodeId, input.expectedVersion, input.action,
       input.action === "resolve" ? input.note : input.action === "split" ? input.reason :
         input.action === "manual_reply" ? input.body : null]);
@@ -315,7 +414,7 @@ export class HelpdeskPersistence {
       if (input.action === "manual_reply" && result.outcome !== "rejected") {
         const queued = await db.query<{ id: string }>(
           "insert into public.outbound_intents(origin,complaint_id,staff_id,client_request_id,body) values ('staff',$1,$2,$3,$4) returning id",
-          [episode.id, staffId, input.requestId, input.body]);
+          [episode.id, staffId, input.requestId, staffOutboundText]);
         manualIntentId = queued.rows[0].id;
         await store.audit(episode.id, "manual_reply_queued", { intentId: manualIntentId }, staffId, null);
       }

@@ -2346,6 +2346,56 @@ Pengguna mengonfirmasi secara langsung pengujian interaksi nyata pada bot Telegr
 
 Phase 2 selesai penuh (Done). Pipeline berikutnya: Phase 3 (P3.1 — Renderer template tetap dan snapshot teks). Entry berikutnya D159.
 
+---
+
+### 2026-10-19 — D159: Implementasi Renderer Template Tetap, Snapshot Teks Outbound, dan Schema Template (P3.1)
+
+**Konteks**:
+Mengimplementasikan tugas pertama Phase 3: P3.1 — Renderer template tetap dan snapshot teks sesuai PRD §6.2, §7 (FR-07 & FR-08), §10 (FR-13), §11 (FR-19), dan TRACKER.md. Scope strictly dibatasi pada domain renderer, database schema & seed template, integrasi snapshot persistence, dan normalisasi prefix balasan manual staf. Pre-dispatch final checks (P3.2), dispatch HTTP ke Telegram (P3.3), worker outbound (P3.4), dan UI pengelolaan template (P4.3) berada di luar scope; `dispatchAuthorized` strictly dipertahankan `false`.
+
+**Keputusan Implementasi**:
+1. **Domain Murni Renderer (`lib/domain/template-contracts.ts` & `lib/domain/template-renderer.ts`)**:
+   - Menetapkan konstanta resmi `SIMULATION_PREFIX = "[SIMULASI DATA DUMMY]"`, fallback `EMPTY_ESTIMATED_RECOVERY_FALLBACK = "masih dalam pemeriksaan"`, teks ketujuh default template PRD §7, dan whitelist placeholder per template key (`["estimated_recovery"]` untuk `MASS_GENERAL` & `MASS_AREA`, array kosong untuk 5 key lainnya).
+   - `validateTemplateBody`: Memvalidasi batas panjang (1–4096 karakter), memeriksa kurung kurawal tidak seimbang/menggantung (`malformed_placeholder_syntax`), dan menolak placeholder di luar whitelist (`disallowed_placeholder`).
+   - `resolveActiveTemplate`: Menerapkan prioritas FR-07 (scope `'incident'` mengalahkan scope `'default'`), fallback ke `'default'` jika tidak ada override incident, dan menegakkan invariant fail-closed jika ada >1 template aktif (`conflicting_active_templates`) atau 0 template aktif (`missing_active_template`).
+   - `renderAutomaticTemplate`: Memvalidasi kunci template di awal (`VALID_TEMPLATE_KEYS.has(...)`), menjalankan literal replacement via `.replaceAll()` untuk mendukung template dengan multi-kemunculan `{{estimated_recovery}}`, mencegah template injection, mencegah titik ganda `..`, menambahkan prefix simulasi, dan mengembalikan `snapshot` deterministik pada sukses atau `errorCode` pada kegagalan.
+   - `renderStaffReplySnapshot`: Menolak body kosong atau hanya berisi prefix simulasi (`empty_message_body`), memastikan panjang <= 10000, dan menerapkan tepat satu prefix simulasi secara idempoten via `while (body.startsWith(SIMULATION_PREFIX))` untuk menormalkan pengulangan prefix 2x atau lebih.
+2. **Migrasi Schema & Idempotent Seed (`supabase/migrations/20261019120000_create_response_templates.sql` & `supabase/seed.sql`)**:
+   - Menambahkan kolom `description` dan `estimated_recovery` pada `public.incidents`.
+   - Membuat tabel `public.response_templates` (scope constraint `'default'` vs `'incident'`, unique index per scope).
+   - Membuat tabel `public.template_versions` dengan partial unique index `template_versions_one_active` on `(template_id) where is_active = true`.
+   - Menambahkan kolom snapshot pada `public.outbound_intents` (`template_version_id`, `template_key`, `template_version`, `template_scope`, `template_error`) dan merelaksasi check constraint agar `origin = 'automatic'` dapat menyimpan teks `body` hasil snapshot.
+   - Menyemai (seed) ketujuh default template dan versi aktif 1 secara idempoten dengan UUID deterministik (`70000000-0000-4000-8000-000000000001`–`07` dan `71000000-0000-4000-8000-000000000001`–`07`).
+   - Menyelaraskan suite tooling (`scripts/apply-prototype-pipeline.mjs`, `tests/tooling/test-client-seam.mjs`, `tests/tooling/pipeline-tooling.test.mjs`) untuk 14 migrasi repo dan 24 core tables (53/53 checks PASS).
+3. **Integrasi Persistence (`lib/application/helpdesk-persistence.ts` & `lib/repositories/episode-store.ts`)**:
+   - Membaca `estimated_recovery` dari active incident pada `HelpdeskPersistence.process()`.
+   - Saat mereservasi automatic reply: memuat kandidat template aktif untuk `effectiveTemplateKey`, memanggil `renderAutomaticTemplate`.
+   - Jika `template_error`: memblokir pembuatan outbound intent dan claim (`claim.outcome = 'skipped'`, `claim.reason = 'template_error'`, `dispatchAuthorized = false`, 0 row inserted), serta mencatat `template_error` pada `triage_assessments.processing_result` dan `complaint_audit_log`.
+   - Jika `rendered`: menyimpan snapshot `body` (ber-prefix simulasi), `template_version_id`, `template_key`, `template_version`, dan `template_scope` pada `public.outbound_intents`.
+   - Menghindari properti dengan nilai `undefined` pada `ProcessingResult` agar selalu identik secara struktural antara objek in-memory dan objek hasil deserialisasi JSONB dari database.
+   - Pada `staffAction(action = 'manual_reply')`: memvalidasi dan memformat pesan staf via `renderStaffReplySnapshot`, menolak input yang hanya berisi prefix simulasi (`PersistenceError("invalid_reply")`), dan menyimpan teks ber-prefix di `outbound_intents.body`.
+4. **Perbaikan Review & Verifikasi Empiris Database Lokal**:
+   - Menghapus kolom non-existent `created_by` pada `INSERT INTO public.incidents` di test integrasi.
+   - Memperbaiki urutan pembersihan subtest integrasi: menghapus `reply_claims`, `complaint_evidence_links`, `outbound_intents` sebelum menghapus `response_templates` dan `incidents` (mencegah pelanggaran foreign key).
+   - Membersihkan `reply_owners` sebelum `cleanupFixture` untuk mencegah FK constraint violation pada tabel `customers`.
+   - Menghapus blok bypass `try { await pool.query("SELECT 1"); } catch { t.skip(); }` dan mengeksekusi suite integrasi secara nyata terhadap PostgreSQL lokal.
+   - Menguji dan meluluskan penuh seluruh suite:
+     - `npm run test:template:local`: **8/8 checks PASS (0 fail, 0 skipped, exit code 0, durasi ~1160ms)**.
+     - `npm run test:persistence:local`: **12/12 checks PASS (0 fail, 0 skipped, exit code 0, durasi ~1962ms)**.
+     - `npm run test:shadow:local`: **6/6 checks PASS (0 fail, 0 skipped, exit code 0, durasi ~1014ms)**.
+     - `npm test` (unit suite): **319/319 checks PASS (0 fail, exit code 0)**.
+     - `node tests/tooling/pipeline-tooling.test.mjs`: **53/53 checks PASS (0 fail, exit code 0)**.
+     - `npx eslint ...`: 0 error, 0 warning.
+     - `npx tsc --noEmit`: 0 error.
+
+| ID | Keputusan | Status / dampak |
+|---|---|---|
+| D159 | **Implementasi Renderer Template Tetap, Snapshot Teks Outbound, dan Schema Template (P3.1)**: 1. Domain murni renderer `validateTemplateBody`, `resolveActiveTemplate`, `renderAutomaticTemplate`, dan `renderStaffReplySnapshot` selesai dan teruji (9/9 unit test checks); 2. Schema migration `20261019120000_create_response_templates.sql` menambahkan kolom incident `estimated_recovery`, tabel `response_templates`, `template_versions` (partial unique active index), snapshot fields pada `outbound_intents`, serta seed idempoten 7 default template PRD §7; 3. Integrasi persistence pada `HelpdeskPersistence.process()` merender template aktif, menyimpan snapshot teks & versi ke `outbound_intents`, memblokir dispatch saat `template_error` (0 intent/claim terbentuk, audit log tercatat), dan memformat manual reply staf dengan prefix simulasi idempoten; 4. Tooling pipeline sinkron (53/53 PASS, 14 migrations, 24 tables); 5. Suite integrasi database terisolasi dieksekusi nyata dan lulus penuh (`test:template:local` 8/8 PASS, `test:persistence:local` 12/12 PASS, 0 skips); 6. `dispatchAuthorized` strictly tetap `false` di seluruh alur. | **P3.1 SELESAI PENUH (DONE).** P3.1 berstatus `Done`. Pipeline berikutnya: P3.2 (Pemeriksaan terakhir sebelum dispatch). Entry berikutnya D160. |
+
+P3.1 selesai penuh (Done). Pipeline berikutnya: P3.2 (Pemeriksaan terakhir sebelum dispatch). Entry berikutnya D160.
+
+
+
 
 
 

@@ -46,6 +46,8 @@ export const CORE_TABLES = [
   'mock_network_scenarios',
   'mock_onu_status',
   'mock_upstream_status',
+  'response_templates',
+  'template_versions',
 ];
 
 export const EXPECTED_SCENARIO_IDS = [

@@ -1,6 +1,7 @@
 import type { AssociationResult, EpisodeActionResult, SplitResult } from "../domain/episode-contracts";
 import type { SenderKey } from "../domain/sender-identity";
 import type { ManualIncidentSnapshot, TriageDecision, TriageNetworkEvidence } from "../domain/triage-contracts";
+import type { TemplateSnapshot } from "../domain/template-contracts";
 
 export type InboundMessageMetadata = {
   readonly messageType?: string;
@@ -73,6 +74,8 @@ export type ProcessingResult = {
   claim: { outcome: "reserved" | "skipped"; reason: string; intentId: string | null };
   dispatchAuthorized: false;
   providerQuality?: Record<string, unknown> | null;
+  templateSnapshot?: TemplateSnapshot | null;
+  templateError?: string | null;
 };
 export type StaffEpisodeAction = {
   requestId: string;

@@ -36,6 +36,7 @@ const MOCK_REPO_VERSIONS = [
   '20261004120000',
   '20261004130000',
   '20261012100000',
+  '20261019120000',
 ];
 
 // Helper to build a completely valid mock database query handler
@@ -683,11 +684,11 @@ test('Suite 2: Pre-check Guards & Zero-Runner Execution', async (t) => {
 test('Suite 3: Mandatory Directed Verification Assertions', async (t) => {
   await t.test('3.1: Fails when a repository migration is missing in ledger', async () => {
     const client = createValidMockClient({
-      appliedVersions: MOCK_REPO_VERSIONS.slice(0, 12), // missing the 13th
+      appliedVersions: MOCK_REPO_VERSIONS.slice(0, 13), // missing the 14th
     });
     await assert.rejects(
       () => runDirectedVerification(client),
-      /Verification Assertion Failed: Missing migration versions in DB: 20261012100000/
+      /Verification Assertion Failed: Missing migration versions in DB: 20261019120000/
     );
   });
 
@@ -958,8 +959,8 @@ test('Suite 3: Mandatory Directed Verification Assertions', async (t) => {
     const client = createValidMockClient();
     const res = await runDirectedVerification(client);
     assert.equal(res.ok, true);
-    assert.equal(res.summary.migrationsApplied, 13);
-    assert.equal(res.summary.coreTablesVerified, 22);
+    assert.equal(res.summary.migrationsApplied, 14);
+    assert.equal(res.summary.coreTablesVerified, 24);
     assert.equal(res.summary.customers, 12);
     assert.equal(res.summary.services, 12);
     assert.equal(res.summary.odcs, 1);
@@ -1100,8 +1101,8 @@ PROTOTYPE_DATABASE_URL=postgresql://postgres.saysxjdyalnbhxqqmytp:dummyAlphanume
 
     assert.equal(res.code, 0, `Subprocess must exit with code 0 on success. stderr: ${res.stderr}`);
     assert.match(res.stdout, /ALL READ-ONLY ASSERTIONS PASSED ✅/);
-    assert.match(res.stdout, /Migrations: 13\/13 applied/);
-    assert.match(res.stdout, /Core Tables Verified: 22 tables present/);
+    assert.match(res.stdout, /Migrations: 14\/14 applied/);
+    assert.match(res.stdout, /Core Tables Verified: 24 tables present/);
     assert.match(res.stdout, /ONU pairs=180, Uplink pairs=16/);
   });
 

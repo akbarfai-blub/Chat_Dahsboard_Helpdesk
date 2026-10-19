@@ -1,4 +1,4 @@
-﻿-- Fixture lokal; ID Telegram bukan ID akun nyata. Tidak menyentuh auth.users.
+-- Fixture lokal; ID Telegram bukan ID akun nyata. Tidak menyentuh auth.users.
 -- ID tetap + DO NOTHING: pengulangan seed tidak menimpa hasil latihan.
 -- Konflik natural key dengan ID lain menggagalkan transaksi, bukan menautkan akun diam-diam.
 begin;
@@ -50,5 +50,28 @@ insert into public.channel_identities
 values ('60000000-0000-4000-8000-000000000005', 'telegram',
  'dummy-bot-upaznet', 'dummy-sender-unknown', 'Pengirim Dummy Belum Dikenal')
 on conflict (id) do nothing;
+
+insert into public.response_templates (id, scope, incident_id, template_key)
+values
+ ('70000000-0000-4000-8000-000000000001', 'default', null, 'MASS_GENERAL'),
+ ('70000000-0000-4000-8000-000000000002', 'default', null, 'MASS_AREA'),
+ ('70000000-0000-4000-8000-000000000003', 'default', null, 'NETWORK_DISRUPTION'),
+ ('70000000-0000-4000-8000-000000000004', 'default', null, 'LOS_AREA'),
+ ('70000000-0000-4000-8000-000000000005', 'default', null, 'LOS_INDIVIDUAL'),
+ ('70000000-0000-4000-8000-000000000006', 'default', null, 'ONLINE_CHECK'),
+ ('70000000-0000-4000-8000-000000000007', 'default', null, 'GENERIC')
+on conflict (id) do nothing;
+
+insert into public.template_versions (id, template_id, version, body, is_active)
+values
+ ('71000000-0000-4000-8000-000000000001', '70000000-0000-4000-8000-000000000001', 1, 'Saat ini terdapat gangguan jaringan yang berdampak luas. Laporan Anda sudah masuk antrean helpdesk. Estimasi pemulihan: {{estimated_recovery}}.', true),
+ ('71000000-0000-4000-8000-000000000002', '70000000-0000-4000-8000-000000000002', 1, 'Saat ini terdapat gangguan jaringan di area layanan Anda. Laporan Anda sudah masuk antrean helpdesk. Estimasi pemulihan: {{estimated_recovery}}.', true),
+ ('71000000-0000-4000-8000-000000000003', '70000000-0000-4000-8000-000000000003', 1, 'Terdeteksi indikasi gangguan jaringan yang memengaruhi layanan Anda. Laporan Anda sudah masuk antrean helpdesk.', true),
+ ('71000000-0000-4000-8000-000000000004', '70000000-0000-4000-8000-000000000004', 1, 'Terdeteksi indikasi gangguan sinyal yang juga terlihat pada beberapa koneksi di area Anda. Laporan Anda sudah masuk antrean helpdesk.', true),
+ ('71000000-0000-4000-8000-000000000005', '70000000-0000-4000-8000-000000000005', 1, 'Terdeteksi indikasi gangguan sinyal pada koneksi Anda. Laporan Anda sudah masuk antrean helpdesk untuk diperiksa.', true),
+ ('71000000-0000-4000-8000-000000000006', '70000000-0000-4000-8000-000000000006', 1, 'Perangkat koneksi Anda terdeteksi online saat pengecekan. Keluhan Anda tetap kami teruskan ke helpdesk untuk pemeriksaan lebih lanjut.', true),
+ ('71000000-0000-4000-8000-000000000007', '70000000-0000-4000-8000-000000000007', 1, 'Mohon maaf atas kendalanya. Kondisi koneksi Anda belum dapat kami pastikan. Laporan Anda sudah masuk antrean helpdesk untuk pemeriksaan manual.', true)
+on conflict (id) do nothing;
+
 commit;
 
